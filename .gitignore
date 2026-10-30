@@ -1,0 +1,36 @@
+node_modules/
+dist/
+auth_info/
+baileys_auth_info/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+prisma/*.db*
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+temp/
+cookies*.txt
+bin/
+graphify-out/
+*.pem
+*.key
+*.pfx
+*.cer
+serviceAccountKey.json
+credentials.json
+
+# Archivos multimedia privados del grupo
+stickers/
+
+# Artefactos de análisis local
+graph.html
+graph.json

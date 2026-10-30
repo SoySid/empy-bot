@@ -1,0 +1,294 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+model UserProfile {
+  id              String      @id @default(uuid())
+  jid             String      @unique // JID canónico: "<phone>@s.whatsapp.net"
+  lid             String?     @unique // Último LID conocido si existe
+  phone           String      @unique // Dígitos de teléfono canónico (ej: "5491100000001")
+  pushName        String?     // pushName reportado por WhatsApp (ej: "Juan el pro")
+  realName        String?     // Nombre real conocido (ej: "Juan")
+  primaryName     String      // Nombre principal visible (ej: "Juan")
+  role            String      @default("member")
+  sensitiveTopics String      @default("")
+
+  // Sistema de Economía Gamificada y Supervivencia
+  balance         Int         @default(500) // Billetera en mano (sin banco)
+  lastDaily       DateTime    @default(now()) // Timestamp del último cobro pasivo (ciclo 20hs)
+  lastRobAttempt  DateTime?   // Cooldown del agresor para asaltar
+  robShieldUntil  DateTime?   // Escudo de protección temporal post-robo para la víctima
+  lastJob         DateTime?   // Cooldown del comando !laburar
+  
+  // Hambre y Supervivencia
+  hunger          Int         @default(85) // Barra de hambre/energía de 0 a 100
+  hungerWarningSent Boolean   @default(false) // Si ya se le envió aviso de peligro de inanición
+  jobBuffTurns    Int         @default(0) // Turnos de buff de laburo restantes (+30% por comida o bendición)
+  
+  // Título de estatus social y Profesión
+  title           String?     // Título visible (ej: "Papá de Empy")
+  profession      String?     // Oficio elegido: "mecanico", "enfermero", "modelo", "programador", "albanil", "preventista"
+
+  // Estadísticas históricas para rankings
+  jobsCompleted   Int         @default(0)
+  robberiesWon    Int         @default(0)
+  foodEaten       Int         @default(0)
+
+  aliases         UserAlias[]
+  facts           UserFact[]
+  inventory       UserInventoryItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model UserAlias {
+  id         String      @id @default(uuid())
+  userJid    String
+  alias      String      // ej: "Juancito"
+  normalized String      // ej: "juancito" (minúsculas, sin acentos ni signos)
+  isPrimary  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+
+  user UserProfile @relation(fields: [userJid], references: [jid], onDelete: Cascade)
+
+  @@unique([userJid, normalized])
+  @@index([normalized])
+}
+
+model LidMapping {
+  lid         String   @id // LID limpio (ej: "1231241433424243@lid")
+  phoneJid    String   // JID canónico (ej: "5491100000001@s.whatsapp.net")
+  phoneNumber String   // Teléfono limpio (ej: "5491100000001")
+  updatedAt   DateTime @updatedAt
+
+  @@index([phoneJid])
+  @@index([phoneNumber])
+}
+
+model UserFact {
+  id              String    @id @default(uuid())
+  userJid         String
+  tipo            String    // "PERMANENTE" | "TEMPORADA" | "EPISODICO"
+  clave           String    // ej: "ciudad", "main_juego", "trabajo", "estado_actual"
+  valor           String    // ej: "Buenos Aires", "Moba", "Programador"
+  confidence      Float     @default(1.0)
+  weight          Int       @default(1)
+  lastConfirmedAt DateTime  @default(now())
+  expiresAt       DateTime? // Si tiene fecha, se auto-elimina al vencer
+  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+
+  user UserProfile @relation(fields: [userJid], references: [jid], onDelete: Cascade)
+
+  @@unique([userJid, clave])
+  @@index([expiresAt])
+}
+
+model MessageEmbedding {
+  id          String                      @id @default(uuid())
+  userJid     String
+  senderName  String
+  body        String
+  waMessageId String?
+  chatJid     String?
+  vector      String?                     // Representación JSON del array float[]
+  embedding   Unsupported("vector(768)")? // Vector nativo de 768 dimensiones para pgvector
+  createdAt   DateTime                    @default(now())
+
+  @@index([createdAt])
+  @@index([userJid])
+}
+
+model RawMessage {
+  id          String   @id @default(uuid())
+  userJid     String
+  senderName  String
+  body        String
+  waMessageId String?
+  chatJid     String?
+  isBot       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userJid])
+  @@index([waMessageId])
+}
+
+model SocialPromise {
+  id          String    @id @default(uuid())
+  chatJid     String
+  userJid     String
+  senderName  String
+  promiseText String
+  condition   String?
+  waMessageId String?
+  status      String    @default("PENDING") // "PENDING" | "FULFILLED" | "BROKEN"
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@index([chatJid, status])
+  @@index([userJid])
+  @@index([dueDate, status])
+}
+
+model BotLesson {
+  id        String   @id @default(uuid())
+  lesson    String
+  context   String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model BurnedJoke {
+  id        String   @id @default(uuid())
+  topic     String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Reminder {
+  id            String   @id @default(uuid())
+  remoteJid     String
+  creatorJid    String
+  mentionedJids String   @default("[]")
+  message       String
+  targetTime    DateTime
+  completed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([targetTime, completed])
+}
+
+model ServerEconomyState {
+  id               String   @id @default("global")
+  currentEvent     String   @default("NORMAL") // ID del clima/evento activo
+  eventDescription String   @default("Día normal en la ciudad. Sin anomalías climáticas ni gremiales.")
+  eventExpiresAt   DateTime @default(now())    // Fin de la rotación actual de 3 horas
+  messageCounter   Int      @default(0)        // Contador para disparar eventos del destino
+  updatedAt        DateTime @updatedAt
+}
+
+model UserInventoryItem {
+  id        String   @id @default(uuid())
+  userJid   String
+  itemId    String   // ej: "chipa", "guiso", "coquita", "cocido", "pan", "pizza"
+  quantity  Int      @default(1)
+  durability Int     @default(100) // Durabilidad de 0 a 100% para herramientas principales
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user UserProfile @relation(fields: [userJid], references: [jid], onDelete: Cascade)
+
+  @@unique([userJid, itemId])
+  @@index([userJid])
+}
+
+model GroupLexicon {
+  id          String   @id @default(uuid())
+  term        String   @unique   // palabra o frase, ej: "feeded", "pechito", "el ratón"
+  normalized  String             // minúsculas sin acentos para lookup rápido
+  frequency   Int      @default(1)
+  examples    String   @default("[]") // JSON string: array de oraciones de ejemplo
+  category    String   @default("slang") // "slang" | "insult_friendly" | "expression" | "reference"
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([normalized])
+  @@index([frequency])
+}
+
+model ToneSnapshot {
+  id          String   @id @default(uuid())
+  windowStart DateTime
+  windowEnd   DateTime
+  avgTone     String   // "bardo" | "joda" | "serio" | "mixto"
+  textRatio   Float    @default(1.0) // proporción mensajes con texto real vs stickers/emojis
+  activeUsers Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model InterventionStats {
+  id                String    @id @default(uuid())
+  interventionAt    DateTime  @default(now())
+  triggerType       String    // "topic_shift" | "silence_break" | "roast" | "topic_hook" | "llm_contribution"
+  textMsgsBefore    Int       @default(0) // mensajes de texto reales en los últimos 5 min
+  verdict           String    @default("pending") // "positive" | "negative" | "neutral" | "pending"
+  verdictAt         DateTime?
+  msgCountAfter5min Int?      // mensajes de texto reales en los 5min post-intervención
+  uniqueUsersAfter  Int?      // usuarios distintos que escribieron texto en esos 5min
+  conversationDied  Boolean?  // true si no hubo texto en 10min post-intervención
+  details           String?   // texto o sticker enviado
+
+  @@index([interventionAt])
+  @@index([triggerType])
+  @@index([verdict])
+}
+
+model ApiQuotaUsage {
+  id        String   @id @default(uuid())
+  date      String   // "2026-09-11"
+  provider  String   // "gemini" | "groq"
+  model     String   // "gemini-3.5-flash-lite", etc.
+  feature   String   // "conversation" | "memory_synth" | "spontaneous" | "vision" | "classifier"
+  callCount Int      @default(0)
+  tokens    Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, provider, model, feature])
+  @@index([date, model])
+}
+
+model BaileysSession {
+  key       String   @id // Nombre del archivo o identificador (ej: "creds.json")
+  value     String   @db.Text // Contenido en texto JSON del estado/credencial
+  updatedAt DateTime @updatedAt
+}
+
+model CustomSticker {
+  id         String   @id @default(uuid())
+  category   String   // "bardo" | "burla" | "risa" | "triste" | "wtf" | "triggers"
+  filename   String   @unique
+  data       String   @db.Text
+  isAnimated Boolean  @default(false)
+  addedBy    String?
+  createdAt  DateTime @default(now())
+
+  @@index([category])
+}
+
+model CustomVoice {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  referenceId String
+  addedBy     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model UserCommandBan {
+  id        String   @id @default(uuid())
+  userJid   String   @map("user_jid")
+  command   String
+  bannedBy  String?  @map("banned_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userJid, command], map: "user_command_bans_user_jid_command_unique")
+  @@index([userJid], map: "idx_user_command_bans_user_jid")
+  @@map("user_command_bans")
+}

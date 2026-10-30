@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: empy-bot
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --include=dev && npx prisma generate && npx prisma db push --skip-generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROUP_JID
+        sync: false
+      - key: RESET_AUTH_SECRET
+        sync: false
+      - key: COBALT_API_URL
+        sync: false
+      - key: COOKIES_TXT
+        sync: false
+      - key: YOUTUBE_COOKIES
+        sync: false
