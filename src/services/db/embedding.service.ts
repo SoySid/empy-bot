@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
 
 dotenv.config();
@@ -173,22 +174,85 @@ export async function searchRelevantPastMessages(
   }
 }
 
+export interface SearchForensicOptions {
+  excludeWaMessageId?: string;
+  limit?: number;
+  vectorQuery?: string;
+}
+
 /**
  * Búsqueda forense de declaraciones pasadas de un usuario específico para el Fiscal de Contradicciones.
- * Combina búsqueda semántica con pgvector + mensajes directos de RawMessage.
+ * Busca coincidencias precisas por palabras clave en RawMessage y por proximidad semántica en MessageEmbedding.
  */
 export async function searchUserPastStatements(
-  userJid: string,
-  query: string,
-  limit = 6
+  userJidOrList: string | string[],
+  keywordsOrQuery: string | string[],
+  options?: SearchForensicOptions
 ): Promise<ForensicStatementMatch[]> {
   const matches: ForensicStatementMatch[] = [];
   const seenTexts = new Set<string>();
+  const seenIds = new Set<string>();
+
+  const jidList = (Array.isArray(userJidOrList) ? userJidOrList : [userJidOrList]).filter(Boolean);
+  if (jidList.length === 0) return [];
+
+  const limit = options?.limit || 8;
+  const excludeWaId = options?.excludeWaMessageId?.trim() || "";
+
+  // Normalizar palabras clave
+  let rawKeywords: string[] = [];
+  if (Array.isArray(keywordsOrQuery)) {
+    rawKeywords = keywordsOrQuery;
+  } else if (typeof keywordsOrQuery === "string") {
+    rawKeywords = keywordsOrQuery.split(/\s+/);
+  }
+  const keywords = rawKeywords
+    .map((k) => k.toLowerCase().replace(/[^a-záéíóúñ0-9]/gi, "").trim())
+    .filter((k) => k.length >= 3);
 
   try {
-    // 1. Búsqueda vectorial si hay query temática
-    if (query.trim().length >= 3) {
-      const queryVector = await generateTextEmbedding(query, "RETRIEVAL_QUERY");
+    // 1. Búsqueda en RawMessage con los términos de búsqueda (ILIKE / contains insensitive)
+    if (keywords.length > 0) {
+      const orConditions = keywords.map((kw) => ({
+        body: { contains: kw, mode: "insensitive" as const },
+      }));
+
+      const rawRows = await prisma.rawMessage.findMany({
+        where: {
+          userJid: { in: jidList },
+          isBot: false,
+          waMessageId: excludeWaId ? { not: excludeWaId } : { not: null },
+          OR: orConditions,
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit * 3,
+      });
+
+      for (const r of rawRows) {
+        if (!r.waMessageId || seenIds.has(r.waMessageId)) continue;
+        const normBody = r.body.toLowerCase().trim();
+        if (seenTexts.has(normBody)) continue;
+
+        seenIds.add(r.waMessageId);
+        seenTexts.add(normBody);
+        matches.push({
+          id: r.id,
+          senderName: r.senderName,
+          body: r.body,
+          waMessageId: r.waMessageId,
+          chatJid: r.chatJid,
+          createdAt: r.createdAt,
+          source: "raw",
+        });
+
+        if (matches.length >= limit) break;
+      }
+    }
+
+    // 2. Búsqueda semántica con pgvector si hay vectorQuery y aún hay cupo
+    const vectorText = options?.vectorQuery?.trim() || (keywords.length > 0 ? keywords.join(" ") : "");
+    if (vectorText.length >= 4 && matches.length < limit) {
+      const queryVector = await generateTextEmbedding(vectorText, "RETRIEVAL_QUERY");
       if (queryVector) {
         const vectorStr = `[${queryVector.join(",")}]`;
         const rawVectorResults = await prisma.$queryRaw<any[]>`
@@ -201,21 +265,25 @@ export async function searchUserPastStatements(
             "createdAt",
             (1 - ("embedding" <=> ${vectorStr}::vector))::float AS similarity
           FROM "MessageEmbedding"
-          WHERE "embedding" IS NOT NULL AND "userJid" = ${userJid}
+          WHERE "embedding" IS NOT NULL
+            AND "userJid" IN (${Prisma.join(jidList)})
+            ${excludeWaId ? Prisma.sql`AND "waMessageId" != ${excludeWaId}` : Prisma.empty}
           ORDER BY "embedding" <=> ${vectorStr}::vector ASC
           LIMIT ${limit};
         `;
 
         for (const row of rawVectorResults) {
           const sim = Number(row.similarity ?? 0);
-          if (sim >= 0.45 && !seenTexts.has(row.body)) {
-            seenTexts.add(row.body);
+          const cleanBody = (row.body || "").toLowerCase().trim();
+          if (sim >= 0.50 && row.waMessageId && !seenIds.has(row.waMessageId) && !seenTexts.has(cleanBody)) {
+            seenIds.add(row.waMessageId);
+            seenTexts.add(cleanBody);
             matches.push({
               id: row.id,
               senderName: row.senderName,
               body: row.body,
-              waMessageId: row.waMessageId || null,
-              chatJid: row.chatJid || null,
+              waMessageId: row.waMessageId,
+              chatJid: row.chatJid,
               createdAt: new Date(row.createdAt),
               similarity: sim,
               source: "vector",
@@ -223,44 +291,6 @@ export async function searchUserPastStatements(
           }
         }
       }
-    }
-
-    // 2. Traer mensajes recientes de RawMessage con waMessageId no nulo del mismo usuario
-    const rawRows = await prisma.rawMessage.findMany({
-      where: {
-        userJid,
-        isBot: false,
-        waMessageId: { not: null },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    });
-
-    const normQueryWords = query
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((w) => w.length >= 3);
-
-    for (const r of rawRows) {
-      if (seenTexts.has(r.body)) continue;
-
-      const normBody = r.body.toLowerCase();
-      const hasWordMatch = normQueryWords.some((w) => normBody.includes(w));
-
-      if (hasWordMatch || normQueryWords.length === 0 || matches.length < limit) {
-        seenTexts.add(r.body);
-        matches.push({
-          id: r.id,
-          senderName: r.senderName,
-          body: r.body,
-          waMessageId: r.waMessageId,
-          chatJid: r.chatJid,
-          createdAt: r.createdAt,
-          source: "raw",
-        });
-      }
-
-      if (matches.length >= limit * 2) break;
     }
   } catch (err) {
     console.error("[Embedding Service] Error buscando declaraciones forenses:", err);
