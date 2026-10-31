@@ -164,8 +164,6 @@ export async function saveCustomSticker(params: {
       };
     }
 
-    await initStickersTable();
-
     let baseName = "";
     if (params.customName) {
       baseName = params.customName

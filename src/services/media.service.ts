@@ -51,8 +51,20 @@ export function isSafePublicUrl(urlString: string): boolean {
       return false;
     }
 
+    if (host.startsWith("::ffff:") || host.startsWith("0:0:0:0:0:ffff:")) {
+      const mapped = host.split(":").pop() || "";
+      if (mapped) {
+        return isSafePublicUrl(`http://${mapped}`);
+      }
+      return false;
+    }
+
     const ipv4Match = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
     if (ipv4Match) {
+      for (let i = 1; i <= 4; i++) {
+        const seg = ipv4Match[i];
+        if (seg.length > 1 && seg.startsWith("0")) return false; // Notación octal
+      }
       const o1 = parseInt(ipv4Match[1], 10);
       const o2 = parseInt(ipv4Match[2], 10);
       if (o1 === 127) return false;
@@ -1181,17 +1193,24 @@ export async function resolveInstagramRedirects(rawUrl: string): Promise<string>
   if (!/(?:instagram\.com|instagr\.am)\/share\//i.test(rawUrl)) {
     return rawUrl;
   }
+  if (!isSafePublicUrl(rawUrl)) return rawUrl;
   try {
     const res = await axios.get(rawUrl, {
       maxRedirects: 5,
       timeout: 8000,
+      maxContentLength: 1024 * 1024,
+      beforeRedirect: (options: any) => {
+        if (options?.href && !isSafePublicUrl(options.href)) {
+          throw new Error("Redirección bloqueada por política SSRF.");
+        }
+      },
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
       },
       validateStatus: (status: number) => status < 400,
     });
-    if (res.request?.res?.responseUrl) {
+    if (res.request?.res?.responseUrl && isSafePublicUrl(res.request.res.responseUrl)) {
       return res.request.res.responseUrl;
     }
   } catch {
@@ -1237,6 +1256,7 @@ export function normalizeInstagramUrl(rawUrl: string): string {
 }
 
 export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResult | null> {
+  if (!isSafePublicUrl(url)) return null;
   try {
     const res = await axios.get(url, {
       headers: {
@@ -1245,6 +1265,7 @@ export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResul
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       timeout: 15000,
+      maxContentLength: 5 * 1024 * 1024,
     });
 
     const html = res.data;
@@ -1275,9 +1296,12 @@ export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResul
 
     if (videoMatch && videoMatch[1]) {
       const videoUrl = videoMatch[1].replace(/&amp;/g, "&");
+      if (!isSafePublicUrl(videoUrl)) return null;
       const videoRes = await axios.get(videoUrl, {
         responseType: "arraybuffer",
         timeout: 30000,
+        maxContentLength: MAX_WHATSAPP_BYTES,
+        maxBodyLength: MAX_WHATSAPP_BYTES,
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
@@ -1292,9 +1316,12 @@ export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResul
 
     if (imageMatch && imageMatch[1]) {
       const imageUrl = imageMatch[1].replace(/&amp;/g, "&");
+      if (!isSafePublicUrl(imageUrl)) return null;
       const imgRes = await axios.get(imageUrl, {
         responseType: "arraybuffer",
         timeout: 20000,
+        maxContentLength: 20 * 1024 * 1024,
+        maxBodyLength: 20 * 1024 * 1024,
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",

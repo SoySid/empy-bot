@@ -1,5 +1,4 @@
 import { MsEdgeTTS, OUTPUT_FORMAT } from "edge-tts-node";
-import * as googleTTS from "google-tts-api";
 import axios from "axios";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
@@ -95,6 +94,38 @@ export async function convertToWhatsAppPtt(inputBuffer: Buffer): Promise<Buffer>
 /**
  * Genera audio usando Microsoft Edge Neural TTS (Gratuito 🇦🇷) con fallback a Google TTS.
  */
+async function fetchGoogleTtsMp3(text: string, lang = "es"): Promise<Buffer> {
+  const chunks: string[] = [];
+  const words = text.split(/\s+/);
+  let current = "";
+  for (const word of words) {
+    if ((current + " " + word).trim().length <= 180) {
+      current = (current + " " + word).trim();
+    } else {
+      if (current) chunks.push(current);
+      current = word.slice(0, 180);
+    }
+  }
+  if (current) chunks.push(current);
+  if (chunks.length === 0) chunks.push(text.slice(0, 180));
+
+  const buffers: Buffer[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunks[i])}&tl=${encodeURIComponent(lang)}&total=${chunks.length}&idx=${i}&client=tw-ob`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        Referer: "https://translate.google.com/",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`Google TTS HTTP ${res.status}`);
+    const arrayBuf = await res.arrayBuffer();
+    buffers.push(Buffer.from(arrayBuf));
+  }
+  return Buffer.concat(buffers);
+}
+
 export async function generateMicrosoftTTS(
   text: string,
   voice = "es-AR-TomasNeural"
@@ -113,13 +144,7 @@ export async function generateMicrosoftTTS(
     return await convertToWhatsAppPtt(mp3Buffer);
   } catch (edgeErr: any) {
     console.warn("[Microsoft TTS] Falló Edge-TTS WebSocket, usando fallback Google TTS:", edgeErr?.message || edgeErr);
-    const audioChunks = await googleTTS.getAllAudioBase64(cleanText, {
-      lang: "es",
-      slow: false,
-      host: "https://translate.google.com",
-      timeout: 20000,
-    });
-    const mp3Buffer = Buffer.concat(audioChunks.map((chunk) => Buffer.from(chunk.base64, "base64")));
+    const mp3Buffer = await fetchGoogleTtsMp3(cleanText, "es");
     return await convertToWhatsAppPtt(mp3Buffer);
   } finally {
     await fs.promises.unlink(tmpFilePath).catch(() => {});

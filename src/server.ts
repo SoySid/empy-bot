@@ -97,7 +97,12 @@ function checkAdminAuth(req: http.IncomingMessage, parsedUrl: URL): boolean {
   if (cookies.admin_session && isConstantTimeMatch(cookies.admin_session, AUTH_HASH)) {
     return true;
   }
-  const token = parsedUrl.searchParams.get("token") || (req.headers["x-reset-token"] as string) || "";
+  const isSafeMethod = req.method === "GET" || req.method === "HEAD";
+  const token =
+    (isSafeMethod ? parsedUrl.searchParams.get("token") : null) ||
+    (req.headers["x-reset-token"] as string) ||
+    (req.headers["authorization"]?.replace(/^Bearer\s+/i, "")) ||
+    "";
   if (token && (isConstantTimeMatch(token, ADMIN_PASSWORD) || isConstantTimeMatch(token, AUTH_HASH))) {
     return true;
   }
@@ -493,6 +498,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Empy Bot - Panel de Control</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -708,7 +714,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     <!-- Contenedor QR dinámico -->
     <div id="qrContainer">
       <p>Escaneá este código QR con WhatsApp</p>
-      <img id="qrImage" src="" alt="Código QR WhatsApp" width="260" height="260" />
+      <div id="qrBox" style="display: flex; justify-content: center; margin: 14px 0; background: #ffffff; padding: 10px; border-radius: 8px; width: fit-content; margin-left: auto; margin-right: auto;"></div>
       <div class="qr-sub">WhatsApp > Dispositivos vinculados > Vincular un dispositivo</div>
     </div>
 
@@ -733,13 +739,14 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     </div>
 
     <div class="note-box">
-      🔒 <strong>Canales Habilitados:</strong> El bot responde en el grupo principal y en <strong>mensajes privados (DMs)</strong>. Los grupos externos ajenos son completamente ignorados.
+      🔒 <strong>Canales Habilitados:</strong> El bot responde exclusivamente en el grupo principal configurado. Los mensajes privados (DMs) y grupos externos ajenos son ignorados.
     </div>
   </div>
 
   <script>
     let isCurrentlySuspended = false;
     let isCurrentlyConnected = false;
+    let lastRenderedQr = "";
 
     async function fetchStatus() {
       try {
@@ -755,7 +762,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
         const badge = document.getElementById("statusBadge");
         const toggleBtn = document.getElementById("toggleBtn");
         const qrContainer = document.getElementById("qrContainer");
-        const qrImg = document.getElementById("qrImage");
+        const qrBox = document.getElementById("qrBox");
 
         document.getElementById("valPhone").innerText = data.userPhone ? "+" + data.userPhone : "Sin vincular";
         document.getElementById("valUptime").innerText = data.uptime || "0s";
@@ -779,7 +786,23 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
           badge.innerText = "🟡 Esperando Escaneo de QR";
           toggleBtn.className = "btn-action btn-suspend";
           toggleBtn.innerText = "⏸️ Apagar / Suspender Bot";
-          qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=" + encodeURIComponent(data.qrCode);
+          if (data.qrCode !== lastRenderedQr) {
+            lastRenderedQr = data.qrCode;
+            if (qrBox) {
+              qrBox.innerHTML = "";
+              if (window.QRCode) {
+                new QRCode(qrBox, {
+                  text: data.qrCode,
+                  width: 240,
+                  height: 240,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                });
+              } else {
+                qrBox.innerText = data.qrCode;
+              }
+            }
+          }
           qrContainer.style.display = "block";
         } else {
           badge.className = "badge-status badge-offline";

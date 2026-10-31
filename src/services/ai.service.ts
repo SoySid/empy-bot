@@ -413,7 +413,7 @@ Generá el JSON con la respuesta para @${senderName}:`;
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
         if (!GEMINI_API_KEY) continue;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent`;
         const payload = {
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: fullPromptWithHistory }] }],
@@ -426,7 +426,10 @@ Generá el JSON con la respuesta para @${senderName}:`;
 
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+          },
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(45000),
         });

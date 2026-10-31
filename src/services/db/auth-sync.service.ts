@@ -9,6 +9,7 @@ const AUTH_DIR = path.resolve(process.cwd(), "auth_info");
 const SESSION_BUNDLE_KEY = "auth_bundle_v1";
 let syncDebounceTimer: NodeJS.Timeout | null = null;
 let isSyncing = false;
+let pendingSync = false;
 
 function getEncryptionKey(): Buffer | null {
   const secret = process.env.SESSION_ENCRYPTION_KEY || process.env.RESET_AUTH_SECRET;
@@ -107,7 +108,10 @@ export async function restoreAuthFromDb(): Promise<boolean> {
  * Empaqueta archivos de auth_info/, los comprime con gzip, los cifra y los persiste en PostgreSQL vía Prisma.
  */
 export async function syncAuthToDb(): Promise<void> {
-  if (isSyncing) return;
+  if (isSyncing) {
+    pendingSync = true;
+    return;
+  }
   isSyncing = true;
   try {
     if (!fs.existsSync(AUTH_DIR)) return;
@@ -144,6 +148,10 @@ export async function syncAuthToDb(): Promise<void> {
     console.error("[Auth Sync] Error sincronizando credenciales a PostgreSQL:", err?.message || err);
   } finally {
     isSyncing = false;
+    if (pendingSync) {
+      pendingSync = false;
+      syncAuthToDb().catch(() => {});
+    }
   }
 }
 

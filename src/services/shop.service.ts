@@ -1,10 +1,11 @@
 import { prisma, withWriteLock } from "./db/prisma.js";
-import { resolveOrRegisterUser } from "./db/user.service.js";
+import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { SHOP_ITEMS, ShopItem } from "../config/shop.config.js";
 import { buyShield, getUserProfession } from "./economy.service.js";
 import { PROFESSIONS } from "../config/economy.config.js";
 import { getUserEducationDiscounts } from "./education.service.js";
 import { isUserEconomyFrozen } from "./admin-economy.service.js";
+import { renderHungerBar } from "./hunger.service.js";
 
 /**
  * Busca un ítem en el catálogo por ID o alias insensible a mayúsculas/acentos.
@@ -176,6 +177,8 @@ export async function buyItem(
       },
     });
 
+    updateCachedUser(user.jid, { balance: updated.balance });
+
     // 2. Agregar al inventario relacional
     const existing = await (prisma as any).userInventoryItem.findUnique({
       where: {
@@ -299,11 +302,13 @@ export async function useItem(
         },
       });
 
-      const totalBlocks = 10;
-      const filledBlocks = Math.round((newHunger / 100) * totalBlocks);
-      const emptyBlocks = totalBlocks - filledBlocks;
-      const fillChar = newHunger <= 15 ? "🟥" : newHunger <= 40 ? "🟨" : "🟩";
-      hungerBar = `[${fillChar.repeat(filledBlocks)}${"⬜".repeat(emptyBlocks)}] ${newHunger}%`;
+      updateCachedUser(user.jid, {
+        hunger: newHunger,
+        hungerWarningSent: newHunger <= 15,
+        jobBuffTurns,
+      });
+
+      hungerBar = renderHungerBar(newHunger);
     }
 
     return {
@@ -529,6 +534,11 @@ export async function consumeOrAutoBuy(
     let remainingQty = 0;
     let autoBoughtCost = 0;
 
+    const discounts = await getUserEducationDiscounts(curUser.jid);
+    const autoPrice = discounts.foodDiscountPercent > 0
+      ? Math.round(item.price * (1 - discounts.foodDiscountPercent / 100))
+      : item.price;
+
     if (resolved.fromInventory) {
       const invItem = await (prisma as any).userInventoryItem.findUnique({
         where: {
@@ -540,10 +550,13 @@ export async function consumeOrAutoBuy(
       });
 
       if (!invItem || invItem.quantity <= 0) {
-        const discounts = await getUserEducationDiscounts(curUser.jid);
-        const autoPrice = discounts.foodDiscountPercent > 0
-          ? Math.round(item.price * (1 - discounts.foodDiscountPercent / 100))
-          : item.price;
+        const freezeCheck = isUserEconomyFrozen(curUser.jid);
+        if (freezeCheck.frozen) {
+          return {
+            success: false,
+            error: "Tu cuenta se encuentra congelada por administración. No podés comprar comida al paso.",
+          };
+        }
 
         if (curUser.balance < autoPrice) {
           return {
@@ -570,18 +583,26 @@ export async function consumeOrAutoBuy(
         }
       }
     } else {
-      if (curUser.balance < item.price) {
+      const freezeCheck = isUserEconomyFrozen(curUser.jid);
+      if (freezeCheck.frozen) {
         return {
           success: false,
-          error: `No tenés *${item.name}* en tu mochila y no te alcanza el saldo para comprarlo al paso (*$${item.price}* fichas necesarias, tu saldo: *$${curUser.balance}*).`,
+          error: "Tu cuenta se encuentra congelada por administración. No podés comprar comida al paso.",
+        };
+      }
+
+      if (curUser.balance < autoPrice) {
+        return {
+          success: false,
+          error: `No tenés *${item.name}* en tu mochila y no te alcanza el saldo para comprarlo al paso (*$${autoPrice}* fichas necesarias, tu saldo: *$${curUser.balance}*).`,
         };
       }
 
       await prisma.userProfile.update({
         where: { id: curUser.id },
-        data: { balance: { decrement: item.price } },
+        data: { balance: { decrement: autoPrice } },
       });
-      autoBoughtCost = item.price;
+      autoBoughtCost = autoPrice;
     }
 
     let effectMessage = "";
@@ -589,13 +610,11 @@ export async function consumeOrAutoBuy(
     let newHunger = 0;
     let jobBuffTurns = 0;
 
-
-
     if (item.hungerRestore) {
       const oldHunger = typeof (curUser as any).hunger === "number" ? (curUser as any).hunger : 85;
       newHunger = Math.min(100, Math.max(0, oldHunger + item.hungerRestore));
       const curTurns = typeof (curUser as any).jobBuffTurns === "number" ? (curUser as any).jobBuffTurns : 0;
-      jobBuffTurns = curTurns + 3;
+      jobBuffTurns = Math.min(9, curTurns + 3);
 
       await (prisma.userProfile as any).update({
         where: { id: curUser.id },
@@ -607,14 +626,19 @@ export async function consumeOrAutoBuy(
         },
       });
 
-      const totalBlocks = 10;
-      const filledBlocks = Math.round((newHunger / 100) * totalBlocks);
-      const emptyBlocks = totalBlocks - filledBlocks;
-      const fillChar = newHunger <= 15 ? "🟥" : newHunger <= 40 ? "🟨" : "🟩";
-      hungerBar = `[${fillChar.repeat(filledBlocks)}${"⬜".repeat(emptyBlocks)}] ${newHunger}%`;
+      hungerBar = renderHungerBar(newHunger);
     }
 
     const updatedProfile = await prisma.userProfile.findUnique({ where: { id: curUser.id } });
+    if (updatedProfile) {
+      updateCachedUser(curUser.jid, {
+        balance: updatedProfile.balance,
+        hunger: updatedProfile.hunger,
+        hungerWarningSent: updatedProfile.hungerWarningSent,
+        jobBuffTurns: updatedProfile.jobBuffTurns,
+        foodEaten: updatedProfile.foodEaten,
+      });
+    }
 
     return {
       success: true,
@@ -692,6 +716,11 @@ export async function feedOtherUser(
     let giverBalance = curGiver.balance;
     let autoBoughtCost = 0;
 
+    const giverDiscounts = await getUserEducationDiscounts(curGiver.jid);
+    const giverPrice = giverDiscounts.foodDiscountPercent > 0
+      ? Math.round(item.price * (1 - giverDiscounts.foodDiscountPercent / 100))
+      : item.price;
+
     if (resolved.fromInventory) {
       const invItem = await (prisma as any).userInventoryItem.findUnique({
         where: {
@@ -703,18 +732,26 @@ export async function feedOtherUser(
       });
 
       if (!invItem || invItem.quantity <= 0) {
-        if (curGiver.balance < item.price) {
+        const freezeCheck = isUserEconomyFrozen(curGiver.jid);
+        if (freezeCheck.frozen) {
           return {
             success: false,
-            error: `No tenés *${item.name}* en tu mochila ni saldo suficiente para comprárselo (*$${item.price}* fichas necesarias, tu saldo: *$${curGiver.balance}*).`,
+            error: "Tu cuenta se encuentra congelada por administración. No podés comprar comida para invitar.",
+          };
+        }
+
+        if (curGiver.balance < giverPrice) {
+          return {
+            success: false,
+            error: `No tenés *${item.name}* en tu mochila ni saldo suficiente para comprárselo (*$${giverPrice}* fichas necesarias, tu saldo: *$${curGiver.balance}*).`,
           };
         }
         const updatedGiver = await prisma.userProfile.update({
           where: { id: curGiver.id },
-          data: { balance: { decrement: item.price } },
+          data: { balance: { decrement: giverPrice } },
         });
         giverBalance = updatedGiver.balance;
-        autoBoughtCost = item.price;
+        autoBoughtCost = giverPrice;
       } else {
         if (invItem.quantity > 1) {
           await (prisma as any).userInventoryItem.update({
@@ -728,25 +765,33 @@ export async function feedOtherUser(
         }
       }
     } else {
-      if (curGiver.balance < item.price) {
+      const freezeCheck = isUserEconomyFrozen(curGiver.jid);
+      if (freezeCheck.frozen) {
         return {
           success: false,
-          error: `No tenés *${item.name}* en tu mochila ni saldo suficiente para comprárselo (*$${item.price}* fichas necesarias, tu saldo: *$${curGiver.balance}*).`,
+          error: "Tu cuenta se encuentra congelada por administración. No podés comprar comida para invitar.",
+        };
+      }
+
+      if (curGiver.balance < giverPrice) {
+        return {
+          success: false,
+          error: `No tenés *${item.name}* en tu mochila ni saldo suficiente para comprárselo (*$${giverPrice}* fichas necesarias, tu saldo: *$${curGiver.balance}*).`,
         };
       }
       const updatedGiver = await prisma.userProfile.update({
         where: { id: curGiver.id },
-        data: { balance: { decrement: item.price } },
+        data: { balance: { decrement: giverPrice } },
       });
       giverBalance = updatedGiver.balance;
-      autoBoughtCost = item.price;
+      autoBoughtCost = giverPrice;
     }
 
     // 2. Alimentar al destinatario
     const restore = item.hungerRestore || 30;
     const newHunger = Math.min(100, Math.max(0, oldHunger + restore));
     const curBuffTurns = typeof (curTarget as any).jobBuffTurns === "number" ? (curTarget as any).jobBuffTurns : 0;
-    const newBuffTurns = curBuffTurns + 3;
+    const newBuffTurns = Math.min(9, curBuffTurns + 3);
 
     await (prisma.userProfile as any).update({
       where: { id: target.id },
@@ -758,11 +803,16 @@ export async function feedOtherUser(
       },
     });
 
-    const totalBlocks = 10;
-    const filledBlocks = Math.round((newHunger / 100) * totalBlocks);
-    const emptyBlocks = totalBlocks - filledBlocks;
-    const fillChar = newHunger <= 15 ? "🟥" : newHunger <= 40 ? "🟨" : "🟩";
-    const hungerBar = `[${fillChar.repeat(filledBlocks)}${"⬜".repeat(emptyBlocks)}] ${newHunger}%`;
+    const hungerBar = renderHungerBar(newHunger);
+
+    if (autoBoughtCost > 0) {
+      updateCachedUser(curGiver.jid, { balance: giverBalance });
+    }
+    updateCachedUser(curTarget.jid, {
+      hunger: newHunger,
+      hungerWarningSent: newHunger <= 15,
+      jobBuffTurns: newBuffTurns,
+    });
 
     return {
       success: true,

@@ -85,8 +85,6 @@ export async function saveCustomVoice(params: {
       return { success: false, error: "El código / ID de Fish Audio no puede estar vacío." };
     }
 
-    await initCustomVoicesTable();
-
     const id = crypto.randomUUID();
     await prisma.customVoice.upsert({
       where: { name: cleanName },
@@ -120,8 +118,6 @@ export async function deleteCustomVoice(name: string): Promise<{ success: boolea
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9_-]/g, "");
 
-    await initCustomVoicesTable();
-
     const result = await prisma.customVoice.deleteMany({
       where: { name: cleanName },
     });
@@ -141,7 +137,6 @@ export async function deleteCustomVoice(name: string): Promise<{ success: boolea
 
 export async function getAllCustomVoices(): Promise<Array<{ name: string; referenceId: string; addedBy?: string | null }>> {
   try {
-    await initCustomVoicesTable();
     const rows = await prisma.customVoice.findMany({
       select: { name: true, referenceId: true, addedBy: true },
       orderBy: { name: "asc" },

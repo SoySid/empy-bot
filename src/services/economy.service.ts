@@ -1,6 +1,6 @@
 import type { WASocket } from "@whiskeysockets/baileys";
 import { prisma, withWriteLock, withKeyLock } from "./db/prisma.js";
-import { resolveOrRegisterUser, refreshSingleUserCache, getCachedUserProfile, formatUserName } from "./db/user.service.js";
+import { resolveOrRegisterUser, refreshSingleUserCache, getCachedUserProfile, formatUserName, updateCachedUser } from "./db/user.service.js";
 import { getCachedGroupMetadata, findGroupParticipant } from "./whatsapp-identity.js";
 import {
   ECONOMY_CONFIG,
@@ -427,6 +427,11 @@ export async function checkAndApplyPassiveDaily(userJid: string): Promise<{
         },
       });
 
+      updateCachedUser(user.jid, {
+        balance: updated.balance,
+        lastDaily: updated.lastDaily,
+      });
+
       return {
         credited: true,
         amount: totalAmount,
@@ -577,7 +582,7 @@ export async function modifyBalance(
 ): Promise<{ success: boolean; oldBalance: number; newBalance: number; error?: string }> {
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withKeyLock(`user:${user.id}`, async () => {
+  return await withWriteLock(async () => {
     const current = (await prisma.userProfile.findUnique({
       where: { id: user.id },
     })) || user;
@@ -600,10 +605,7 @@ export async function modifyBalance(
       },
     });
 
-    const cached = getCachedUserProfile(user.jid);
-    if (cached) {
-      cached.balance = updated.balance;
-    }
+    updateCachedUser(user.jid, { balance: updated.balance });
 
     return {
       success: true,
@@ -660,6 +662,9 @@ export async function transfer(
           where: { id: target.id },
           data: { balance: { increment: amount } },
         });
+
+        updateCachedUser(sender.jid, { balance: updatedSender.balance });
+        updateCachedUser(target.jid, { balance: updatedTarget.balance });
 
         return {
           success: true,
@@ -838,6 +843,15 @@ export async function executeJob(
       },
     });
 
+    updateCachedUser(user.jid, {
+      balance: updated.balance,
+      lastJob: updated.lastJob,
+      jobBuffTurns: updated.jobBuffTurns,
+      jobsCompleted: updated.jobsCompleted,
+      hunger: updated.hunger,
+      hungerWarningSent: updated.hungerWarningSent,
+    });
+
     // Desgaste de herramienta principal (4% por laburo hasta 0%)
     let toolDurability: number | undefined;
     let isToolBroken: boolean | undefined;
@@ -1009,6 +1023,16 @@ export async function executeRobbery(
         }),
       ]);
 
+      updateCachedUser(aggressor.jid, {
+        balance: updatedAggressor.balance,
+        lastRobAttempt: updatedAggressor.lastRobAttempt,
+        ...(updatedAggressor.robberiesWon !== undefined ? { robberiesWon: updatedAggressor.robberiesWon } : {}),
+      });
+      updateCachedUser(victim.jid, {
+        balance: updatedVictim.balance,
+        robShieldUntil: null,
+      });
+
       aggressorVictimCooldowns.set(sameVictimKey, now.getTime());
       if (aggressorVictimCooldowns.size > 500) {
         const sweepNow = now.getTime();
@@ -1043,6 +1067,14 @@ export async function executeRobbery(
           },
         }),
       ]);
+
+      updateCachedUser(aggressor.jid, {
+        balance: updatedAggressor.balance,
+        lastRobAttempt: updatedAggressor.lastRobAttempt,
+      });
+      updateCachedUser(victim.jid, {
+        balance: updatedVictim.balance,
+      });
 
       aggressorVictimCooldowns.set(sameVictimKey, now.getTime());
       if (aggressorVictimCooldowns.size > 500) {
@@ -1152,6 +1184,8 @@ export async function executeRoulette(
       where: { id: current.id },
       data: { balance: { increment: netProfit } },
     });
+
+    updateCachedUser(user.jid, { balance: updated.balance });
 
     return {
       success: true,
@@ -1264,6 +1298,8 @@ export async function executeSlot(
       where: { id: current.id },
       data: { balance: { increment: netProfit } },
     });
+
+    updateCachedUser(user.jid, { balance: updated.balance });
 
     return {
       success: true,
@@ -1580,6 +1616,11 @@ export async function payBribe(userJid: string): Promise<{
       },
     });
 
+    updateCachedUser(user.jid, {
+      balance: updated.balance,
+      lastRobAttempt: null,
+    });
+
     return {
       success: true,
       newBalance: updated.balance,
@@ -1627,6 +1668,11 @@ export async function buyCustomTitle(
         balance: { decrement: TITLE_PRICE },
         title: cleanTitle,
       },
+    });
+
+    updateCachedUser(user.jid, {
+      balance: updated.balance,
+      title: cleanTitle,
     });
 
     return {
@@ -1707,6 +1753,8 @@ export async function setUserProfession(
     where: { id: user.id },
     data: { profession: match.id },
   });
+
+  updateCachedUser(user.jid, { profession: match.id });
 
   return {
     success: true,
@@ -1822,6 +1870,8 @@ export async function repairTool(userJid: string): Promise<{
       where: { id: user.id },
       data: { balance: { decrement: REPAIR_COST } },
     });
+
+    updateCachedUser(user.jid, { balance: updatedUser.balance });
 
     const wornIds = wornTools.map((inv: any) => inv.id);
     if (wornIds.length > 0) {

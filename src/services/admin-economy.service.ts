@@ -1,6 +1,7 @@
 import { prisma, withWriteLock } from "./db/prisma.js";
-import { resolveOrRegisterUser } from "./db/user.service.js";
+import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { SHOP_ITEMS, ShopItem } from "../config/shop.config.js";
+import { findShopItem } from "./shop.service.js";
 import { PROFESSIONS, ProfessionType } from "../config/economy.config.js";
 import { renderHungerBar } from "./hunger.service.js";
 import type { UserProfile } from "@prisma/client";
@@ -149,6 +150,8 @@ export async function grantCash(
       data: { balance: newBalance },
     });
 
+    updateCachedUser(user.jid, { balance: updated.balance });
+
     return {
       success: true,
       amount,
@@ -190,6 +193,8 @@ export async function seizeCash(
       data: { balance: newBalance },
     });
 
+    updateCachedUser(user.jid, { balance: updated.balance });
+
     return {
       success: true,
       amount: actualSeized,
@@ -221,6 +226,8 @@ export async function clearCash(
       where: { id: user.id },
       data: { balance: 0 },
     });
+
+    updateCachedUser(user.jid, { balance: 0 });
 
     return {
       success: true,
@@ -259,6 +266,11 @@ export async function setHunger(
       },
     });
 
+    updateCachedUser(user.jid, {
+      hunger: updated.hunger,
+      hungerWarningSent: updated.hungerWarningSent,
+    });
+
     return {
       success: true,
       oldHunger,
@@ -294,6 +306,8 @@ export async function modifyBuffTurns(
       data: { jobBuffTurns: newTurns },
     });
 
+    updateCachedUser(user.jid, { jobBuffTurns: updated.jobBuffTurns });
+
     return {
       success: true,
       oldTurns,
@@ -327,6 +341,8 @@ export async function setBuffTurns(
       data: { jobBuffTurns: turns },
     });
 
+    updateCachedUser(user.jid, { jobBuffTurns: updated.jobBuffTurns });
+
     return {
       success: true,
       oldTurns,
@@ -357,6 +373,8 @@ export async function clearBuffTurns(
       where: { id: user.id },
       data: { jobBuffTurns: 0 },
     });
+
+    updateCachedUser(user.jid, { jobBuffTurns: 0 });
 
     return {
       success: true,
@@ -389,6 +407,8 @@ export async function setRobShield(
       data: { robShieldUntil: shieldUntil },
     });
 
+    updateCachedUser(user.jid, { robShieldUntil: updated.robShieldUntil });
+
     return {
       success: true,
       hours: Math.max(0, hours),
@@ -406,31 +426,9 @@ export async function removeRobShield(targetJid: string) {
 }
 
 /**
- * Busca un ítem en SHOP_ITEMS por ID o alias.
+ * Reexporta la búsqueda de ítems para compatibilidad sin duplicar lógica.
  */
-export function lookupShopItem(query: string): ShopItem | undefined {
-  if (!query) return undefined;
-  const clean = query
-    .toLowerCase()
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  if (SHOP_ITEMS[clean]) return SHOP_ITEMS[clean];
-
-  for (const item of Object.values(SHOP_ITEMS)) {
-    if (item.id === clean) return item;
-    for (const alias of item.aliases) {
-      const cleanAlias = alias
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      if (cleanAlias === clean) return item;
-    }
-  }
-
-  return undefined;
-}
+export const lookupShopItem = findShopItem;
 
 /**
  * Otorga cualquier ítem directamente al inventario de un usuario.
@@ -671,6 +669,19 @@ export async function resetUserEconomy(
         robberiesWon: 0,
         foodEaten: 0,
       },
+    });
+
+    updateCachedUser(user.jid, {
+      balance: 500,
+      hunger: 85,
+      hungerWarningSent: false,
+      jobBuffTurns: 0,
+      robShieldUntil: null,
+      lastJob: null,
+      lastRobAttempt: null,
+      jobsCompleted: 0,
+      robberiesWon: 0,
+      foodEaten: 0,
     });
 
     return {

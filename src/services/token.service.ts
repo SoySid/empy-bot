@@ -325,6 +325,16 @@ export async function flushApiQuotaUsage(): Promise<void> {
     }
   } catch (err: any) {
     console.warn("[Quota Tracker] Error persistiendo uso en base de datos:", err?.message || err);
+    for (const item of items) {
+      const key = `${item.date}:${item.provider}:${item.model}:${item.feature}`;
+      const existing = pendingQuotaUsage.get(key);
+      if (existing) {
+        existing.callCount += item.callCount;
+        existing.tokens += item.tokens;
+      } else {
+        pendingQuotaUsage.set(key, { ...item });
+      }
+    }
   } finally {
     isFlushing = false;
   }
