@@ -5,6 +5,7 @@ import {
   resolveSocialPromise,
   findPendingPromiseForUser,
   createSocialPromise,
+  deleteSocialPromise,
 } from "../services/promise.service.js";
 import { buildForensicQuotedMessage } from "../services/db/message.service.js";
 import {
@@ -102,33 +103,40 @@ export const humoCommand: Command = {
         {
           text: `💨 *TABLA OFICIAL DE VENDE-HUMO (EMPYREAL)* 💨\n\n${lines.join(
             "\n"
-          )}\n\n_Para cobrar o marcar una promesa: !humo cumplio @usuario o !humo vendio @usuario_`,
+          )}\n\n_Para resolver una promesa: !humo cumplió @usuario | !humo no cumplió @usuario | !humo borrar @usuario_`,
         },
         { quoted: msg as any }
       );
       return;
     }
 
-    // Subcomando B: Marcar Cumplida o Rota
-    if (["cumplio", "cumplió", "pago", "pagó", "vendio", "vendió", "rompio", "rompió"].includes(sub)) {
-      const isFulfilled = ["cumplio", "cumplió", "pago", "pagó"].includes(sub);
+    // Subcomando B: Marcar Cumplida, No Cumplida o Borrar
+    const isBorrar = ["borrar", "eliminar", "cancelar", "anular"].includes(sub);
+    const isNoCumplio =
+      (sub === "no" && ["cumplio", "cumplió"].includes(args[1]?.toLowerCase().trim())) ||
+      ["nocumplio", "nocumplió", "vendio", "vendió", "rompio", "rompió"].includes(sub);
+    const isCumplio = !isNoCumplio && !isBorrar && ["cumplio", "cumplió", "pago", "pagó"].includes(sub);
+
+    if (isBorrar || isCumplio || isNoCumplio) {
+      const userArg = sub === "no" && isNoCumplio ? args[2] : args[1];
 
       let targetJid: string | null = null;
       if (contextInfo?.participant) {
         targetJid = normalizeToPhoneJid(contextInfo.participant);
       } else if (contextInfo?.mentionedJid && contextInfo.mentionedJid.length > 0) {
         targetJid = normalizeToPhoneJid(contextInfo.mentionedJid[0]);
-      } else if (args[1]) {
-        const query = args[1].replace(/^@/, "").trim();
+      } else if (userArg) {
+        const query = userArg.replace(/^@/, "").trim();
         const found = findUserByNameOrAlias(query);
         if (found) targetJid = found.jid;
       }
 
       if (!targetJid) {
+        const actionLabel = isBorrar ? "borrar" : isCumplio ? "cumplió" : "no cumplió";
         await sock.sendMessage(
           remoteJid,
           {
-            text: `💨 *Uso:* Citá el mensaje de la persona o mencionala: \`!humo ${sub} @usuario\``,
+            text: `💨 *Uso:* Citá el mensaje de la persona o mencionala: \`!humo ${actionLabel} @usuario\``,
           },
           { quoted: msg as any }
         );
@@ -151,7 +159,22 @@ export const humoCommand: Command = {
         return;
       }
 
-      await resolveSocialPromise(pending.id, isFulfilled ? "FULFILLED" : "BROKEN");
+      // Caso A: Cancelar / Borrar sin computar en el ranking
+      if (isBorrar) {
+        await deleteSocialPromise(pending.id);
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text: `🗑️ *Promesa eliminada:* Se canceló el registro de la promesa de @${targetName} ("${pending.promiseText}") sin afectar el ranking.`,
+            mentions: [canonicalJid],
+          },
+          { quoted: msg as any }
+        );
+        return;
+      }
+
+      // Caso B: Resolver como cumplida o no cumplida
+      await resolveSocialPromise(pending.id, isCumplio ? "FULFILLED" : "BROKEN");
 
       const replyQuote = pending.waMessageId
         ? buildForensicQuotedMessage({
@@ -162,7 +185,7 @@ export const humoCommand: Command = {
           })
         : msg;
 
-      if (isFulfilled) {
+      if (isCumplio) {
         await sock.sendMessage(
           remoteJid,
           {
@@ -175,7 +198,7 @@ export const humoCommand: Command = {
         await sock.sendMessage(
           remoteJid,
           {
-            text: `🚨 *VENDE-HUMO CONFIRMADO:* @${targetName} no cumplió con: "${pending.promiseText}". Se computa un punto más al ranking de humo.`,
+            text: `🚨 *NO CUMPLIÓ (VENDE-HUMO):* @${targetName} no cumplió con: "${pending.promiseText}". Se computa un punto más al ranking de humo.`,
             mentions: [canonicalJid],
           },
           { quoted: replyQuote as any }
@@ -208,7 +231,7 @@ export const humoCommand: Command = {
       {
         text: `👀 *PROMESAS Y APUESTAS ACTIVAS EN EL GRUPO* (${pendingList.length}):\n\n${lines.join(
           "\n\n"
-        )}\n\n_Para resolver una promesa: !humo cumplio @usuario o !humo vendio @usuario_\n_Para ver la tabla de humo: !humo ranking_`,
+        )}\n\n_Para resolver: !humo cumplió @usuario | !humo no cumplió @usuario | !humo borrar @usuario_\n_Para ver la tabla de humo: !humo ranking_`,
       },
       { quoted: msg as any }
     );

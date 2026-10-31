@@ -121,6 +121,21 @@ export async function resolveSocialPromise(
 }
 
 /**
+ * Elimina una promesa pendiente de la base de datos (cancelación sin penalización).
+ */
+export async function deleteSocialPromise(promiseId: string): Promise<boolean> {
+  try {
+    await prisma.socialPromise.delete({
+      where: { id: promiseId },
+    });
+    return true;
+  } catch (error) {
+    console.error("[Promise Service] Error eliminando promesa:", error);
+    return false;
+  }
+}
+
+/**
  * Busca promesas pendientes para un usuario particular dentro de un chat.
  */
 export async function findPendingPromiseForUser(
