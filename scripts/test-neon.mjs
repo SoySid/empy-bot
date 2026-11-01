@@ -10,7 +10,7 @@ if (!directUrl) {
 async function testConnection() {
   const client = new pg.Client({ connectionString: directUrl });
   try {
-    console.log("Connecting to Neon PostgreSQL...");
+    console.log("Connecting to PostgreSQL (Supabase)...");
     await client.connect();
     console.log("Connected successfully!");
 

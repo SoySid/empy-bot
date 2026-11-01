@@ -6,7 +6,7 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function verify() {
-  console.log("🔍 Verifying Neon PostgreSQL connection and data...");
+  console.log("🔍 Verifying Supabase PostgreSQL connection and data...");
   const usersCount = await prisma.userProfile.count();
   const factsCount = await prisma.userFact.count();
   const lexiconCount = await prisma.groupLexicon.count();
@@ -21,7 +21,7 @@ async function verify() {
   console.log(`✅ UserFact: ${factsCount} facts`);
   console.log(`✅ GroupLexicon: ${lexiconCount} terms`);
   console.log(`✅ RawMessage: ${rawMsgsCount} messages`);
-  console.log("🏆 Top 3 Users by Balance in Neon:", topUsers);
+  console.log("🏆 Top 3 Users by Balance:", topUsers);
 }
 
 verify()

@@ -11,7 +11,7 @@ async function testPhase4() {
   const testSender = "Cris";
   const testAnecdote = "Ayer a la noche se nos quemó la fuente de la PC mientras jugábamos la final del torneo de LoL y perdimos la promo";
 
-  console.log(`1. Guardando anécdota memorable en Neon con pgvector (768d)...`);
+  console.log(`1. Guardando anécdota memorable en Supabase con pgvector (768d)...`);
   console.log(`📝 "${testAnecdote}"`);
   const saveStart = Date.now();
   await saveMessageEmbedding(testUserJid, testSender, testAnecdote);
