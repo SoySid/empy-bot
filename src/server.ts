@@ -64,18 +64,17 @@ function isConstantTimeMatch(provided: string, expected: string): boolean {
   return crypto.timingSafeEqual(providedBuf, expectedBuf);
 }
 
-const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ||
-  process.env.RESET_AUTH_SECRET ||
-  crypto.randomBytes(16).toString("hex");
+const IS_ADMIN_AUTH_CONFIGURED = Boolean(process.env.ADMIN_PASSWORD || process.env.RESET_AUTH_SECRET);
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.RESET_AUTH_SECRET || "";
 
-if (!process.env.ADMIN_PASSWORD && !process.env.RESET_AUTH_SECRET) {
+if (!IS_ADMIN_AUTH_CONFIGURED) {
   console.warn(
-    "[Server Security] ⚠️ No se definió ADMIN_PASSWORD en .env. Se generó contraseña temporal para esta sesión:",
-    ADMIN_PASSWORD
+    "[Server Security] 🔒 ADMIN_PASSWORD no está configurado en .env. El panel administrativo web permanece deshabilitado por seguridad (Fail-Closed)."
   );
 }
-const AUTH_HASH = crypto.createHash("sha256").update(ADMIN_PASSWORD).digest("hex");
+const AUTH_HASH = IS_ADMIN_AUTH_CONFIGURED
+  ? crypto.createHash("sha256").update(ADMIN_PASSWORD).digest("hex")
+  : "";
 
 function parseCookies(req: http.IncomingMessage): Record<string, string> {
   const list: Record<string, string> = {};
@@ -92,7 +91,21 @@ function parseCookies(req: http.IncomingMessage): Record<string, string> {
   return list;
 }
 
+function isSameOriginRequest(req: http.IncomingMessage, host: string): boolean {
+  const origin = req.headers.origin || req.headers.referer;
+  if (!origin) return true;
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 function checkAdminAuth(req: http.IncomingMessage, parsedUrl: URL): boolean {
+  if (!IS_ADMIN_AUTH_CONFIGURED || !ADMIN_PASSWORD) {
+    return false;
+  }
   const cookies = parseCookies(req);
   if (cookies.admin_session && isConstantTimeMatch(cookies.admin_session, AUTH_HASH)) {
     return true;
@@ -171,7 +184,9 @@ function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
  */
 export function startHttpServer(port = Number(process.env.PORT) || 3000): http.Server {
   const server = http.createServer(async (req, res) => {
-    const rawIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "127.0.0.1";
+    const socketIp = req.socket.remoteAddress || "127.0.0.1";
+    const forwardedHeader = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
+    const rawIp = forwardedHeader ? `${forwardedHeader}#${socketIp}` : socketIp;
 
     if (isIpRateLimited(rawIp)) {
       setSecurityHeaders(res, "application/json");
@@ -202,9 +217,24 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
       return;
     }
 
+    // Validación preventiva de CSRF para métodos que alteran estado
+    if (req.method === "POST" && pathname.startsWith("/api/")) {
+      if (!isSameOriginRequest(req, host)) {
+        setSecurityHeaders(res, "application/json");
+        res.writeHead(403);
+        res.end(JSON.stringify({ error: "Origen no permitido (CSRF check fallido)." }));
+        return;
+      }
+    }
+
     // 2. API: Login con contraseña
     if (req.method === "POST" && pathname === "/api/login") {
       setSecurityHeaders(res, "application/json");
+      if (!IS_ADMIN_AUTH_CONFIGURED) {
+        res.writeHead(503);
+        res.end(JSON.stringify({ error: "Panel de administración deshabilitado por seguridad (ADMIN_PASSWORD no configurado)." }));
+        return;
+      }
       if (isLoginRateLimited(rawIp)) {
         res.writeHead(429);
         res.end(JSON.stringify({ error: "Demasiados intentos fallidos. Intenta nuevamente en 15 minutos." }));
@@ -213,7 +243,9 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
       const data = await parseJsonBody(req);
       const provided = String(data.password || "");
       if (isConstantTimeMatch(provided, ADMIN_PASSWORD)) {
-        res.setHeader("Set-Cookie", `admin_session=${AUTH_HASH}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000`);
+        const isSecure = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
+        const secureFlag = isSecure ? "; Secure" : "";
+        res.setHeader("Set-Cookie", `admin_session=${AUTH_HASH}; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=2592000`);
         res.writeHead(200);
         res.end(JSON.stringify({ success: true, message: "Acceso autorizado." }));
       } else {
@@ -443,13 +475,20 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     
     <div id="errorBox" class="error"></div>
     
-    <form id="loginForm" onsubmit="handleLogin(event)">
+    ${
+      !IS_ADMIN_AUTH_CONFIGURED
+        ? `<div class="error" style="display:block; background:rgba(239,68,68,0.15); color:#fca5a5; padding:12px; border-radius:8px; line-height:1.4;">
+            🔒 <strong>Panel administrativo deshabilitado.</strong><br>
+            Para habilitar la gestión web, configure la variable de entorno <code>ADMIN_PASSWORD</code>.
+          </div>`
+        : `<form id="loginForm" onsubmit="handleLogin(event)">
       <div class="input-group">
         <label for="password">Contraseña</label>
         <input type="password" id="password" required autofocus placeholder="Contraseña de administrador">
       </div>
       <button type="submit" class="btn" id="submitBtn">Acceder</button>
-    </form>
+    </form>`
+    }
   </div>
 
   <script>

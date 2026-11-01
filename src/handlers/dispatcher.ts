@@ -16,7 +16,7 @@ import { detectPromiseIntent, createSocialPromise } from "../services/promise.se
 import { isBotOwner } from "../services/admin-economy.service.js";
 
 
-const TARGET_GROUP_JID: string = process.env.GROUP_JID || "";
+const TARGET_GROUP_JID: string = (process.env.GROUP_JID || "").replace(/['"]/g, "").trim();
 const PREFIX: string = process.env.BOT_PREFIX || "!";
 const BOT_BOOT_TIME = Math.floor(Date.now() / 1000);
 const processedMessageMap = new Map<string, number>();

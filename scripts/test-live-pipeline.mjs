@@ -27,7 +27,7 @@ async function runPipelineSimulation() {
   // Capa 2: Triage en Groq con qwen/qwen3.8-27b
   console.log("⚡ [Capa 2] Ejecutando Triage en Groq (qwen/qwen3.8-27b)...");
   const triageStart = Date.now();
-  const triage = await evaluateTriage(conversationHistory, false, testSpeaker, "Cris");
+  const triage = await evaluateTriage(conversationHistory, false, testSpeaker, "UserB");
   console.log(`⏱️ Triage listo en ${Date.now() - triageStart}ms:`, triage);
 
   if (!triage.should_intervene || triage.intent === "silencio") {

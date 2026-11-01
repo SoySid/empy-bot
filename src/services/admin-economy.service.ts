@@ -7,7 +7,7 @@ import { renderHungerBar } from "./hunger.service.js";
 import type { UserProfile } from "@prisma/client";
 import { cleanJid, extractDigits, ramLidToPhoneMap, ramPhoneToLidMap } from "./whatsapp-identity.js";
 
-// ID canónico, LID y teléfono del Creador (@Sid), configurable exclusivamente vía .env
+// ID canónico, LID y teléfono del Creador, configurable exclusivamente vía .env
 export const BOT_OWNER_PHONE = (process.env.BOT_OWNER_PHONE || "").replace(/\D/g, "");
 export const BOT_OWNER_JID = process.env.BOT_OWNER_JID || (BOT_OWNER_PHONE ? `${BOT_OWNER_PHONE}@s.whatsapp.net` : "");
 export const BOT_OWNER_LID = process.env.BOT_OWNER_LID || "";
@@ -17,7 +17,7 @@ export const BOT_OWNER_LID_DIGITS = (process.env.BOT_OWNER_LID_DIGITS || BOT_OWN
 const frozenUsers = new Map<string, number>();
 
 /**
- * Valida si un usuario es el Creador legítimo (@Sid) mediante comparación canónica estricta.
+ * Valida si un usuario es el Creador legítimo mediante comparación canónica estricta.
  */
 export function isBotOwner(
   senderProfile?: { role?: string; phone?: string | null; jid?: string; lid?: string | null } | null,

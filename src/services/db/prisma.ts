@@ -82,11 +82,48 @@ export async function withKeyLock<T>(key: string, operation: () => Promise<T>, _
   }
 }
 
-// Inicializa y verifica la conexión activa con PostgreSQL (Supabase)
+// Inicializa y verifica la conexión activa con PostgreSQL (Supabase) con blindaje RLS
 export async function initPrisma(): Promise<void> {
   try {
     await prisma.$queryRaw`SELECT 1;`;
     console.log("[Prisma] 🚀 Conexión con PostgreSQL (Supabase) inicializada con éxito.");
+
+    // Blindaje de seguridad Supabase: Activar Row Level Security (RLS) en todas las tablas públicas
+    const tablesToShield = [
+      "UserProfile",
+      "UserAlias",
+      "LidMapping",
+      "UserFact",
+      "MessageEmbedding",
+      "RawMessage",
+      "SocialPromise",
+      "BotLesson",
+      "BurnedJoke",
+      "Reminder",
+      "ServerEconomyState",
+      "UserInventoryItem",
+      "GroupLexicon",
+      "ToneSnapshot",
+      "InterventionStats",
+      "ApiQuotaUsage",
+      "BaileysSession",
+      "CustomSticker",
+      "CustomVoice",
+      "user_command_bans",
+    ];
+
+    for (const tableName of tablesToShield) {
+      try {
+        await prisma.$executeRawUnsafe(
+          `DO $$ BEGIN
+             IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${tableName}') THEN
+               EXECUTE 'ALTER TABLE public."' || '${tableName}' || '" ENABLE ROW LEVEL SECURITY';
+             END IF;
+           END $$;`
+        );
+      } catch {}
+    }
+    console.log("[Prisma] 🛡️ Row Level Security (RLS) asegurado en tablas públicas de Supabase.");
   } catch (error) {
     console.error("[Prisma] Error conectando con la base de datos:", error);
   }

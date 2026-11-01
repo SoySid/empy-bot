@@ -14,6 +14,7 @@ import { initPrisma } from "./services/db/prisma.js";
 import {
   initUserCache,
   syncGroupParticipants,
+  getCachedUserProfile,
 } from "./services/db/user.service.js";
 import { refreshReflectionCache } from "./services/db/reflection.service.js";
 import { initStickersDirectory, syncStickersFromDb } from "./services/sticker.service.js";
@@ -51,7 +52,7 @@ process.on("unhandledRejection", (reason: any) => {
   console.error("[Anti-Crash] Promesa rechazada no capturada:", reason?.message || reason);
 });
 
-const TARGET_GROUP_JID: string = process.env.GROUP_JID || "";
+const TARGET_GROUP_JID: string = (process.env.GROUP_JID || "").replace(/['"]/g, "").trim();
 
 let currentSock: WASocket | null = null;
 let isReconnecting = false;
@@ -293,13 +294,15 @@ async function connectToWhatsApp(): Promise<void> {
     }
   });
 
-  // Escuchar eventos de contactos para aprender mapeos LID <-> Teléfono automáticamente
+  // Escuchar eventos de contactos para aprender mapeos LID <-> Teléfono (filtrando exclusivamente miembros del grupo)
   sock.ev.on("contacts.upsert", async (contacts: any[]) => {
     for (const c of contacts) {
       const id = c.id || "";
       const lid = c.lid || "";
       if (id && lid && id.endsWith("@s.whatsapp.net") && lid.endsWith("@lid")) {
-        await registerLidMapping(lid, id).catch(() => {});
+        if (getCachedUserProfile(id) || getCachedUserProfile(lid)) {
+          await registerLidMapping(lid, id).catch(() => {});
+        }
       }
     }
   });
@@ -309,7 +312,21 @@ async function connectToWhatsApp(): Promise<void> {
       const id = u.id || "";
       const lid = u.lid || "";
       if (id && lid && id.endsWith("@s.whatsapp.net") && lid.endsWith("@lid")) {
-        await registerLidMapping(lid, id).catch(() => {});
+        if (getCachedUserProfile(id) || getCachedUserProfile(lid)) {
+          await registerLidMapping(lid, id).catch(() => {});
+        }
+      }
+    }
+  });
+
+  // Rechazo de llamadas entrantes de audio/video por privado
+  sock.ev.on("call", async (calls: any[]) => {
+    for (const call of calls) {
+      if (call.status === "offer" && call.id && call.from) {
+        try {
+          await sock.rejectCall(call.id, call.from);
+          console.log(`[Anti-Spam] 📵 Llamada rechazada de ${call.from}`);
+        } catch {}
       }
     }
   });

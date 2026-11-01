@@ -22,6 +22,7 @@ import { saveMessageEmbedding } from "../services/db/embedding.service.js";
 import { createSocialPromise } from "../services/promise.service.js";
 import { trackTokens, canUseModel } from "../services/token.service.js";
 import { isSpamOrLowValue } from "../services/ai.service.js";
+import { isBotOwner } from "../services/admin-economy.service.js";
 
 dotenv.config();
 
@@ -322,7 +323,7 @@ export async function runSynthesis(): Promise<void> {
       "trabajojuego", "juegotrabajorol", "roljuego", "juegoapuestas", "juegomecanicoideas",
       "frecuenciamasturbacion", "masturbacion", "sexo", "coima", "casino", "prepucio", "semen",
       "simulador", "oficio virtual", "albanil", "albañil", "mecanico", "mecánico", "espia",
-      "espía", "cartonero", "minero", "jordan", "cv", "curriculum"
+      "espía", "cartonero", "minero", "cv", "curriculum"
     ];
 
     // 1. Aplicar hechos aprendidos (con deduplicación en el lote)
@@ -360,9 +361,14 @@ export async function runSynthesis(): Promise<void> {
       }
     }
 
-    // 2. Aplicar lecciones/reglas aprendidas por el bot
+    // 2. Aplicar lecciones/reglas aprendidas por el bot (restringido a instrucciones explícitas del Creador)
     if (Array.isArray(parsedData.botCorrections) && parsedData.botCorrections.length > 0) {
-      await replaceMasterLessons(parsedData.botCorrections);
+      const hasOwnerInBatch = conversationalBatch.some((m) => isBotOwner(null, m.userJid));
+      if (hasOwnerInBatch) {
+        await replaceMasterLessons(parsedData.botCorrections);
+      } else {
+        console.log(`[Memory Worker] 🛡️ Ignorando botCorrections sin autorización del Creador.`);
+      }
     }
 
     // 3. Aplicar chistes quemados

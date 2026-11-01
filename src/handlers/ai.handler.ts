@@ -110,7 +110,7 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
     ((hasQuotedImage || hasDirectImage || hasQuotedVideo || hasDirectVideo) && wantsStickerCreation) ||
     (hasQuotedSticker && (wantsMediaExtraction || wantsStickerCreation))
   ) {
-    const universalCmd = commandMap.get("sticker");
+    const universalCmd = commandMap.get("s");
     if (universalCmd) {
       await universalCmd.execute({
         sock,
@@ -121,6 +121,7 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
         cleanText: cleanPrompt,
         contextInfo,
         quotedMsg,
+        senderProfile,
       });
       return true;
     }
@@ -267,7 +268,7 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
     switch (aiResult.toolName) {
       case "create_sticker":
       case "sticker_to_image": {
-        const universalCmd = commandMap.get("sticker");
+        const universalCmd = commandMap.get("s");
         if (universalCmd) {
           await universalCmd.execute({
             sock,

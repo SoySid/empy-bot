@@ -7,25 +7,25 @@ dotenv.config();
 async function testLaburar() {
   console.log("🧪 --- PROBANDO COMANDO LABURAR CON NEON POSTGRESQL --- 🧪\n");
 
-  const sid = await prisma.userProfile.findFirst({
-    where: { primaryName: "Sid" },
-  });
+  const testUser = await prisma.userProfile.findFirst({
+    where: { role: "owner" },
+  }) || await prisma.userProfile.findFirst();
 
-  if (!sid) {
-    console.error("Usuario Sid no encontrado.");
+  if (!testUser) {
+    console.error("Ningún usuario encontrado en DB.");
     return;
   }
 
-  console.log(`Usuario encontrado: ${sid.primaryName} (ID: ${sid.id}, JID: ${sid.jid})`);
+  console.log(`Usuario encontrado: ${testUser.primaryName} (ID: ${testUser.id}, JID: ${testUser.jid})`);
 
   // 1. Probar lectura de profesión
   console.log("1. Probando getUserProfession...");
-  const prof = await getUserProfession(sid.id);
+  const prof = await getUserProfession(testUser.id);
   console.log("✅ Profesión obtenida sin errores:", prof);
 
   // 2. Probar ejecución de laburo
   console.log("\n2. Probando executeJob...");
-  const workResult = await executeJob(sid.jid);
+  const workResult = await executeJob(testUser.jid);
   console.log("✅ Resultado de executeJob:", workResult.success ? `Éxito! Ganó $${workResult.earned}` : `Cooldown o fallo: ${workResult.error || workResult.message || 'ok'}`);
 }
 

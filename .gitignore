@@ -34,3 +34,11 @@ stickers/
 # Artefactos de análisis local
 graph.html
 graph.json
+
+# Archivos y directivas internas del entorno
+GEMINI.md
+.gemini/
+.antigravity/
+.agent/
+brain/
+.system_generated/

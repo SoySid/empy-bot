@@ -3,7 +3,6 @@ import { prisma } from "../src/services/db/prisma.js";
 const FORBIDDEN_WORDS = [
   "albañil",
   "albanil",
-  "jordan",
   "guiso",
   "hambre",
   "saldo",
