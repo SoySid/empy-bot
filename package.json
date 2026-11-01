@@ -5,6 +5,8 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
+    "prepare": "node scripts/setup-hooks.mjs",
+    "security:check": "node scripts/security-check.mjs --all",
     "dev": "tsx watch src/index.ts",
     "build": "tsx scripts/ensure-ytdlp.ts && tsc",
     "graph": "graphify . --code-only",
