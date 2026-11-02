@@ -1,39 +1,47 @@
 # empy-bot
 
-Bot para WhatsApp desarrollado en TypeScript y Node.js sobre la librería Baileys. Incluye memoria persistente, síntesis y clonación de voz, integración multimodal con modelos de lenguaje y visión, transcripción de audio, utilidades de grupo y un sistema de economía urbana.
+Bot para WhatsApp desarrollado en TypeScript y Node.js sobre la librería Baileys. Cuenta con memoria semántica persistente, clonación de voz neuronal, procesamiento multimodal, utilidades grupales, minijuegos y un sistema de economía urbana.
+
+> [!NOTE]
+> **Disponibilidad actual y hoja de ruta:**
+> Por diseño de seguridad (*fail-closed*), el bot opera actualmente en una comunidad privada principal mediante la variable `GROUP_JID`.
+> 
+> **Próximamente disponible:**
+> - **Soporte multi-grupo:** Instalación y configuración en múltiples grupos de WhatsApp en simultáneo, con balances de economía, hechos y configuraciones independientes.
+> - **Atención por mensaje directo (DM):** Interacción uno a uno por privado con memoria contextual personal y acceso a utilidades y herramientas.
 
 ---
 
 ## Características principales
 
 - **Memoria persistente y búsqueda vectorial:**
-  - Base de datos relacional PostgreSQL (Neon) gestionada con Prisma ORM.
-  - Conexión optimizada mediante pooler para alta concurrencia y conexión directa para migraciones.
-  - Búsqueda semántica de mensajes pasados utilizando la extensión `pgvector`.
+  - Base de datos relacional PostgreSQL en **Supabase** gestionada a través de [`prisma/schema.prisma`](./prisma/schema.prisma).
+  - Conexión optimizada mediante pooler transaccional (`DATABASE_URL`) y conexión directa para migraciones (`DIRECT_URL`).
+  - Búsqueda semántica de mensajes y contexto previo mediante la extensión `pgvector`.
   - Perfiles de usuario con roles, apodos, hechos conocidos y preferencias.
   - Síntesis periódica de contexto y filtro de chistes repetidos en sesiones.
 
 - **Síntesis y clonación de voz:**
-  - Clonación de voz de alta fidelidad con Fish Audio para personajes conocidos e integrantes del grupo.
-  - Modulación de voz por etiquetas (`[enojado]`, `[cantando]`, `[susurro]`, etc.).
+  - Clonación de voz con Fish Audio para personajes conocidos e integrantes del grupo.
+  - Modulación de voz por etiquetas contextuales (`[enojado]`, `[cantando]`, `[susurro]`, etc.).
   - Motor alternativo de texto a voz mediante Microsoft Edge TTS en español neutro y regional.
 
-- **Modelos de lenguaje y visión artificial:**
+- **Modelos de lenguaje y visión:**
   - Pipeline jerárquico de modelos con gestión automática de cuota y fallback (Gemini Flash, Gemma y Groq).
-  - Capacidad de visión para describir o comentar imágenes y stickers cuando se solicita.
+  - Reconocimiento visual para describir y comentar imágenes o stickers citados.
   - Ejecución de herramientas en lenguaje natural (*tool calling* para descargas y clima).
 
 - **Procesamiento de audio y multimedia:**
   - Transcripción y resumen de notas de voz utilizando Whisper Large v3 en Groq.
   - Reconocimiento musical de pistas en audios y videos citados (`!shazam`) y consulta de letras (`!letra`).
-  - Conversión de audios a formato nativo de WhatsApp (OGG Opus PTT) mediante FFmpeg.
+  - Transcodificación de audio a formato nativo de WhatsApp (OGG Opus PTT) con FFmpeg.
   - Descarga de videos de TikTok, X/Twitter, Facebook e Instagram vía enlace directo o respuesta.
   - Conversión bidireccional entre imágenes/videos y stickers WebP con Sharp, y rotación de stickers personalizados guardados por categoría en base de datos.
-  - Generación gráfica en el servidor: tarjeta de DNI argentino humorística (`!dni`) y capturas simuladas de Twitter/X (`!tweet`).
+  - Generación gráfica en el servidor: tarjeta de DNI paródica (`!dni`) y capturas simuladas de Twitter/X (`!tweet`).
 
-- **Herramientas de grupo y dinamización:**
+- **Herramientas de grupo y dinámica:**
   - Encuestas nativas interactivas en WhatsApp.
-  - Arbitraje de discusiones y debates grupales mediante análisis contextual de mensajes.
+  - Arbitraje de discusiones grupales mediante análisis contextual de mensajes.
   - Cartelera de minijuegos cooperativos y de colección (pesca, Wordle, Pokémon, banderas, jefes grupales y trivia MLBB).
   - Consulta astrológica, horóscopo diario, carta natal, sinastría de compatibilidad y tarot.
   - Consulta en tiempo real de cotizaciones del dólar argentino (DolarApi), pronóstico meteorológico detallado (Open-Meteo), efemérides del día (Wikimedia) e información de cine/series (TMDB).
@@ -41,8 +49,69 @@ Bot para WhatsApp desarrollado en TypeScript y Node.js sobre la librería Bailey
   - Reacciones animadas e interacciones entre miembros (OtakuGIFs).
 
 - **Economía y supervivencia urbana:**
-  - Sistema de balance, transferencias, oficios configurables, herramientas permanentes por tiers y rentas pasivas.
-  - Mecánicas de juego: asaltos con probabilidad de éxito, blackjack, ruleta y urgencias comunitarias vecinales.
+  - Balance, transferencias, oficios configurables, herramientas permanentes por tiers y rentas pasivas.
+  - Mecánicas de juego: asaltos con probabilidad de éxito, blackjack, ruleta y emergencias comunitarias.
+
+---
+
+## Arquitectura y pipeline conversacional
+
+Cuando un miembro menciona al bot (`@Empy`), responde a sus mensajes o se detecta una intervención espontánea oportuna, el flujo se procesa a través de [`src/services/pipeline/index.ts`](./src/services/pipeline/index.ts):
+
+```mermaid
+flowchart TD
+    subgraph Entrada
+        WA[Mensaje de WhatsApp] --> DISP[Dispatcher central]
+    end
+
+    subgraph Pipeline["Pipeline Conversacional de 4 Capas"]
+        C1["Capa 1: Filtro Heurístico Local\n(0 costo - cooldown, menciones y longitud)"]
+        C2["Capa 2: Triage Rápido Groq\n(Qwen - evalúa relevancia o silencio)"]
+        C3["Capa 3: Hidratación RAG\n(RAM Cache + pgvector en Supabase)"]
+        C4["Capa 4: Generación Multimodal\n(Gemma / Gemini / Groq fallback)"]
+    end
+
+    subgraph Persistencia["Persistencia y Audio"]
+        DB[(Supabase PostgreSQL\npgvector + Prisma)]
+        TTS[Fish Audio / Edge TTS]
+    end
+
+    DISP --> C1
+    C1 -->|Pasa condiciones| C2
+    C1 -->|Spam / Ruido| SIL[Descarte silencioso]
+    C2 -->|Aporta valor| C3
+    C2 -->|Sin relevancia| SIL
+    C3 <-->|Perfiles y Embeddings| DB
+    C3 --> C4
+    C4 -->|Genera audio| TTS
+    TTS --> RESP[Respuesta por WhatsApp]
+    C4 -->|Texto directo| RESP
+```
+
+### Detalle de las 4 capas
+
+1. **Capa 1: Filtro Heurístico Local ($0 costo):**
+   - Menciones directas a `@Empy` o respuestas a sus mensajes tienen prioridad inmediata.
+   - En mensajes espontáneos, descarta spam, risas sueltas ("jaja", "xd"), emojis o textos cortos, exigiendo actividad previa en el grupo y un cooldown dinámico.
+2. **Capa 2: Triage Rápido (Groq `qwen/qwen3.8-27b`):**
+   - Evalúa el contexto reciente en ~1 segundo para clasificar la intención (`broma`, `opinión`, `consejo`, `chicana`, `recuerdo` o `silencio`). Si no aporta valor genuino, guarda silencio.
+3. **Capa 3: Hidratación RAG Quirúrgica (RAM Cache + Supabase PostgreSQL):**
+   - Resuelve participantes y apodos en 0ms desde la caché en memoria ([`src/services/db/user-cache.ts`](./src/services/db/user-cache.ts)).
+   - Inyecta hechos relevantes (`UserFact`), términos de jerga comunitaria (`GroupLexicon`), tono del chat o recuerdos vectoriales con `pgvector`.
+4. **Capa 4: Generación Conversacional Natural:**
+   - Modelos principales: Familia Google Gemini / Gemma (`gemma-4-26b-a4b-it`, `gemini-flash-lite-latest`, `gemini-3.1-flash-lite`).
+   - Respaldo ante cuota agotada: Groq (`qwen/qwen3.8-27b`).
+
+---
+
+## Stack tecnológico
+
+- **Entorno de ejecución:** Node.js 20+ con TypeScript en modo ESM nativo.
+- **Conexión WhatsApp:** `@whiskeysockets/baileys` con persistencia de credenciales en base de datos.
+- **Persistencia y embeddings:** PostgreSQL en Supabase gestionado mediante Prisma con la extensión `pgvector`.
+- **Modelos de lenguaje:** Google Gemini / Gemma (`gemma-4-26b-a4b-it`, `gemini-flash-lite-latest`, `gemini-3.1-flash-lite`) y Groq (`qwen/qwen3.8-27b`, `whisper-large-v3`).
+- **Audio y multimedia:** FFmpeg para transcodificación OGG Opus, Fish Audio API para clonación de voz, Edge TTS para síntesis auxiliar y `yt-dlp` para descargas.
+- **Procesamiento de imágenes:** Sharp para transcodificación y compresión WebP.
 
 ---
 
@@ -81,7 +150,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 
 | Comando | Alias | Descripción |
 | :--- | :--- | :--- |
-| `!descargar` | `!d`, `!dl`, `!download`, `!tt`, `!tk`, `!tiktok`, `!x`, `!twitter`, `!fb`, `!facebook`, `!ig`, `!instagram` | Descarga videos de TikTok, Twitter/X, Facebook o Instagram por enlace directo o respondiendo al mensaje. |
+| `!descargar <url>` | `!d`, `!dl`, `!download`, `!tt`, `!tk`, `!tiktok`, `!x`, `!twitter`, `!fb`, `!facebook`, `!ig`, `!instagram` | Descarga videos de TikTok, Twitter/X, Facebook o Instagram por enlace directo o respondiendo al mensaje. |
 
 ---
 
@@ -91,7 +160,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | :--- | :--- | :--- |
 | `!tweet <texto>` | `!faketweet`, `!tweetfalso` | Genera una imagen simulando un tweet verificado de Twitter/X en modo oscuro. Admite etiquetar o citar a otro miembro para atribuirle la autoría. |
 | `!dni [@usuario]` | `!carnet`, `!cedula`, `!identidad` | Genera una tarjeta paródica de DNI argentino con foto de perfil de WhatsApp y campos humorísticos. |
-| `!roast` | `!quemar`, `!criticar`, `!basurear` | Analiza una foto o sticker citado y devuelve un remate mordaz y chicanero. |
+| `!roast` | `!quemar`, `!criticar`, `!basurear` | Analiza una foto o sticker citado y devuelve un remate contextual. |
 
 ---
 
@@ -189,25 +258,6 @@ Sistema de progresión económica con inventario, oficios y eventos grupales:
 | `!coima` | — | Elimina el tiempo de espera para asaltos pagando una tarifa. |
 | `!economia` | `!guiaeco` | Despliega el resumen de tarifas y costos de la economía. |
 
-### Administración divina (Exclusivo Creador / Admin)
-
-| Comando | Alias | Descripción |
-| :--- | :--- | :--- |
-| `!darficha @user <monto>` | `!darplata` | Acredita saldo a la billetera de un usuario. |
-| `!quitarficha @user <monto>` | `!quitarplata` | Descuenta saldo de la billetera de un usuario. |
-| `!darescudo @user <min>` | — | Otorga un escudo de protección anti-robo por X minutos. |
-| `!quitarescudo @user` | — | Remueve el escudo de protección de un usuario. |
-| `!buff @user <turnos>` | — | Otorga buff de laburo (+30% ganancias) por X turnos. |
-| `!quitarbuff @user` | — | Elimina el buff de laburo activo de un usuario. |
-| `!saciar @user` | — | Restaura el hambre/energía de un usuario al 100%. |
-| `!hambrear @user` | `!inanicion` | Reduce el hambre de un usuario al 0% (estado desmayado). |
-| `!daritem @user <item> [cant]` | — | Entrega ítems o consumibles al inventario de un usuario. |
-| `!quitaritem @user <item> [cant]` | — | Elimina ítems del inventario de un usuario. |
-| `!congelar @user` | — | Congela la economía del usuario (bloquea transacciones y changas). |
-| `!descongelar @user` | — | Descongela la economía de un usuario. |
-| `!inspeccionar @user` | `!perfiladmin` | Muestra el estado técnico completo del perfil en base de datos. |
-| `!reiniciareco @user` | — | Restablece los valores económicos iniciales de un usuario. |
-
 #### Tiers de herramientas
 Cada oficio dispone de 5 niveles de herramientas acumulativas ($1.200 a $18.000):
 - **Tier 1:** +10% de cobro permanente.
@@ -230,7 +280,7 @@ Activos que suman rendimientos automáticos al cobro de `!diario`:
 
 | Comando | Alias | Descripción |
 | :--- | :--- | :--- |
-| `!s` | `!pegatina`, `!toimg`, `!img`, `!togif`, `!gif` | Conversión universal: crea stickers WebP estáticos o animados a partir de fotos/videos, o convierte stickers citados a imagen PNG / video MP4. Costo: $50 fichas (no aplicable a fotos/videos de una sola vez). |
+| `!s` | `!pegatina`, `!toimg`, `!img`, `!togif`, `!gif` | Conversión universal: crea stickers WebP estáticos o animados a partir de fotos/videos, o convierte stickers citados a imagen PNG / video MP4. |
 | `!sticker <categoría> [nombre]` | `!guardarsticker`, `!savesticker`, `!addsticker` | Guarda un sticker citado en la rotación del bot clasificado por categoría (`bardo`, `burla`, `risa`, `triste`, `wtf`, `triggers`) y lo sincroniza en PostgreSQL. *(Exclusivo del Creador)*. |
 
 #### Triggers dinámicos y rotación
@@ -248,33 +298,24 @@ Envían animaciones cortas en bucle con mención al usuario objetivo:
 
 ---
 
-## Interacción conversacional (Pipeline de 4 Capas)
+### Administración interna (Exclusivo Creador / Admin)
 
-Cuando se menciona al bot (`@Empy`) o se responde a sus mensajes en el grupo, o en intervenciones espontáneas oportunas, el mensaje se procesa a través de una arquitectura jerárquica de 4 capas:
-
-1. **Capa 1: Filtro Heurístico Local ($0 costo):**
-   - Las menciones directas a `@Empy` o respuestas a sus mensajes tienen prioridad inmediata.
-   - En mensajes espontáneos, descarta spam, risas sueltas ("jaja", "xd"), emojis puros o mensajes cortos, exigiendo un mínimo de actividad en el grupo (3+ mensajes en 5 min) y un cooldown dinámico de 15 minutos.
-2. **Capa 2: Triage Rápido (Groq `qwen/qwen3.8-27b`):**
-   - Evalúa el contexto reciente en ~1 segundo para clasificar la intención (`broma`, `opinión`, `consejo`, `chicana`, `recuerdo` o `silencio`). Si no aporta valor genuino, guarda silencio obligatorio.
-3. **Capa 3: Hidratación RAG Quirúrgica (RAM Cache + PostgreSQL Neon):**
-   - Resuelve participantes y apodos en 0ms desde la caché en RAM (`userCache`).
-   - Inyecta únicamente hechos relevantes (`UserFact`), términos de jerga comunitaria (`GroupLexicon`), tono del chat (`ToneSnapshot`) o recuerdos históricos vectoriales con `pgvector` si se consulta sobre el pasado.
-4. **Capa 4: Generación Conversacional Natural:**
-   - Modelos principales: Familia Google Gemini / Gemma (`gemma-4-26b-a4b-it`, `gemini-flash-lite-latest`, `gemini-3.1-flash-lite`, `gemini-flash-latest`).
-   - Fallback ultrarrápido: Groq (`qwen/qwen3.8-27b`).
-   - Tono: Amigo servicial, despierto y relajado de WhatsApp, con respeto absoluto y formato nativo de menciones interactivas.
-
----
-
-## Arquitectura y tecnologías
-
-- **Entorno:** Node.js 20+ con TypeScript y ejecución ESM mediante `tsx`.
-- **Conexión WhatsApp:** `@whiskeysockets/baileys` con soporte para multi-dispositivo y persistencia de credenciales en base de datos (`BaileysSession`).
-- **Base de datos:** PostgreSQL en Neon a través de `@prisma/client` con extensiones vectoriales (`pgvector`).
-- **Modelos de lenguaje:** Pipeline jerárquico con Google Gemini / Gemma (`gemma-4-26b-a4b-it`, `gemini-flash-lite-latest`, `gemini-3.1-flash-lite`, `gemini-flash-latest`) y Groq (`qwen/qwen3.8-27b`, `whisper-large-v3`, `gpt-oss-120b`).
-- **Audio y multimedia:** FFmpeg para transcodificación OGG Opus, Fish Audio API para clonación de voz, Edge TTS / Google TTS para síntesis auxiliar, y `yt-dlp` para descargas.
-- **Procesamiento de imágenes:** Sharp para buffers, compresión y transcodificación bidireccional WebP.
+| Comando | Alias | Descripción |
+| :--- | :--- | :--- |
+| `!darficha @user <monto>` | `!darplata` | Acredita saldo a la billetera de un usuario. |
+| `!quitarficha @user <monto>` | `!quitarplata` | Descuenta saldo de la billetera de un usuario. |
+| `!darescudo @user <min>` | — | Otorga un escudo de protección anti-robo por X minutos. |
+| `!quitarescudo @user` | — | Remueve el escudo de protección de un usuario. |
+| `!buff @user <turnos>` | — | Otorga buff de laburo (+30% ganancias) por X turnos. |
+| `!quitarbuff @user` | — | Elimina el buff de laburo activo de un usuario. |
+| `!saciar @user` | — | Restaura el hambre/energía de un usuario al 100%. |
+| `!hambrear @user` | `!inanicion` | Reduce el hambre de un usuario al 0% (estado desmayado). |
+| `!daritem @user <item> [cant]` | — | Entrega ítems o consumibles al inventario de un usuario. |
+| `!quitaritem @user <item> [cant]` | — | Elimina ítems del inventario de un usuario. |
+| `!congelar @user` | — | Congela la economía del usuario (bloquea transacciones y changas). |
+| `!descongelar @user` | — | Descongela la economía de un usuario. |
+| `!inspeccionar @user` | `!perfiladmin` | Muestra el estado técnico completo del perfil en base de datos. |
+| `!reiniciareco @user` | — | Restablece los valores económicos iniciales de un usuario. |
 
 ---
 
@@ -285,14 +326,17 @@ empy-bot/
 ├── bin/                   # Binarios auxiliares (yt-dlp para descargas multimedia)
 ├── prisma/
 │   └── schema.prisma      # Esquema Prisma con modelos de usuario, memoria vectorial y economía
-├── scripts/               # Scripts de mantenimiento, sincronización de auth y pruebas
+├── scripts/               # Scripts de seguridad, sincronización de auth y utilidades
+│   ├── security-check.mjs # Auditoría local automatizada anti-fugas y reglas OWASP
+│   └── ensure-ytdlp.ts    # Verificación de binarios de descarga
 ├── stickers/              # Colección local de stickers por categoría y triggers
 ├── src/
 │   ├── commands/          # Módulos de comandos independientes (economía, juegos, astrología, etc.)
 │   ├── config/            # Configuraciones de negocio (economía, educación, tienda, juegos)
 │   ├── handlers/          # Enrutamiento de eventos, anti-spam y despachador de mensajes
+│   │   └── dispatcher.ts  # Control de acceso fail-closed y resolución de comandos
 │   ├── services/          # Integraciones con APIs (Baileys, Gemini, Groq, Fish Audio)
-│   │   ├── db/            # Caché en RAM y acceso a datos con Prisma
+│   │   ├── db/            # Caché en RAM y cliente Prisma con extensión pgvector
 │   │   ├── games/         # Lógica e interceptores de minijuegos
 │   │   └── pipeline/      # Pipeline de Chat en Vivo de 4 Capas (Heurística, Triage, RAG, Generador)
 │   ├── workers/           # Tareas en segundo plano (síntesis de memoria y rotación climática)
@@ -304,4 +348,5 @@ empy-bot/
 ---
 
 ## Licencia
+
 Distribuido bajo licencia **ISC**.

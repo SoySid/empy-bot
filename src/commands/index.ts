@@ -1,4 +1,5 @@
 import { Command } from "./types.js";
+import { bugCommand, ideaCommand } from "./feedback.js";
 import { sCommand } from "./s.js";
 import { stickerCommand } from "./sticker.js";
 import { audioCommand } from "./audio.js";
@@ -193,6 +194,8 @@ const staticCommands: Command[] = [
   unbanCommand,
   desbanCommand,
   bansListCommand,
+  bugCommand,
+  ideaCommand,
 ];
 
 // Comandos dinámicos: un comando por cada FISH_VOICE_* en el .env
