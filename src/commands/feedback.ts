@@ -14,10 +14,12 @@ function extractQuotedText(quotedMsg?: any): string | null {
 
 function resolveAuthorName(ctx: CommandContext): string {
   return (
-    ctx.senderProfile?.nickname ||
-    ctx.senderProfile?.name ||
+    ctx.senderProfile?.primaryName ||
+    ctx.senderProfile?.pushName ||
+    ctx.senderProfile?.realName ||
     ctx.msg.pushName ||
-    (ctx.msg.key.participant ? ctx.msg.key.participant.split("@")[0] : ctx.remoteJid.split("@")[0]) ||
+    ctx.msg.key?.participant?.split("@")[0] ||
+    ctx.remoteJid.split("@")[0] ||
     "Usuario WhatsApp"
   );
 }
