@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empy-Bot Squad HQ • Centro de Operaciones de Agentes</title>
+  <style>
+    :root {
+      --bg-outer: #07090e;
+      --panel-bg: #0d121c;
+      --panel-bg-subtle: #121927;
+      --panel-border: #1e293b;
+      --panel-border-accent: #334155;
+      --accent: #38bdf8;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      /* Agent Identity Colors */
+      --color-sid: #f59e0b;
+      --color-kevin: #3b82f6;
+      --color-bruno: #06b6d4;
+      --color-verito: #ec4899;
+      --color-sofi: #a855f7;
+      --color-nico: #10b981;
+      --color-mateo: #ef4444;
+      --color-luna: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-outer);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Geist", monospace, sans-serif;
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 56px 1fr 64px;
+    }
+
+    /* ==================== HEADER ==================== */
+    header {
+      padding: 0 20px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      color: #fff;
+      font-weight: 800;
+      font-size: 11.5px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.8px;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .brand h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.2px;
+    }
+
+    .header-metrics {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .metric-chip {
+      background: rgba(18, 25, 39, 0.85);
+      border: 1px solid var(--panel-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-chip b {
+      color: #f8fafc;
+      font-weight: 700;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-toggle {
+      background: #141d2d;
+      border: 1px solid var(--panel-border);
+      color: #94a3b8;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-toggle:hover {
+      background: #1e293b;
+      color: #fff;
+      border-color: var(--panel-border-accent);
+    }
+
+    .btn-toggle.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--accent);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 5px 14px;
+      border-radius: 999px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* ==================== MAIN GRID ==================== */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .stage-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #06080d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #officeCanvas {
+      display: block;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.85);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    /* Quick Scenarios Floating Ribbon */
+    .quick-scenarios {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .scenario-btn {
+      pointer-events: auto;
+      background: rgba(13, 18, 28, 0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid #273449;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    .scenario-btn:hover {
+      background: #1a2334;
+      border-color: var(--accent);
+      color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    /* Speed indicator overlay */
+    .speed-badge {
+      position: absolute;
+      bottom: 14px;
+      left: 16px;
+      background: rgba(13, 18, 28, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      z-index: 10;
+    }
+
+    .speed-btn {
+      background: #141c2b;
+      border: 1px solid #233147;
+      color: #94a3b8;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .speed-btn.active {
+      background: var(--accent);
+      color: #07090e;
+      border-color: var(--accent);
+    }
+
+    /* ==================== SIDEBAR ==================== */
+    aside {
+      background: var(--panel-bg);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Sidebar Roster Bar */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      padding: 8px 10px;
+      background: #090e17;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .roster-tab {
+      background: #101622;
+      border: 1px solid #1e293b;
+      color: #94a3b8;
+      padding: 6px 4px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .roster-tab:hover {
+      background: #162030;
+      color: #fff;
+    }
+
+    .roster-tab.active {
+      color: #fff;
+      border-color: var(--accent);
+      background: #1b2537;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Tabs Header (Inspector vs Terminal) */
+    .sidebar-views-nav {
+      display: flex;
+      border-bottom: 1px solid var(--panel-border);
+      background: #0c111a;
+    }
+
+    .view-tab-btn {
+      flex: 1;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .view-tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+      background: #101724;
+    }
+
+    /* Agent Focused Panel */
+    .agent-focus-view {
+      padding: 14px 16px;
+      background: #0e1420;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .agent-header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .agent-avatar-lg {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      background: #141c2c;
+      border: 2px solid var(--accent);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .avatar-live-indicator {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 2px solid #0e1420;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .agent-meta-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .agent-meta-info h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .agent-state-chip {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      letter-spacing: 0.3px;
+    }
+
+    .agent-meta-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Task Progress Bar */
+    .agent-task-box {
+      background: #090e16;
+      border: 1px solid #1c2738;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .task-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .task-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #172131;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #10b981);
+      width: 65%;
+      border-radius: 999px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+
+    /* Mini Live Code/Activity Stream */
+    .live-stream-box {
+      background: #06090f;
+      border: 1px solid #192436;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+      color: #7dd3fc;
+      line-height: 1.5;
+      height: 72px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .live-stream-box::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 24px;
+      background: linear-gradient(to bottom, transparent, #06090f);
+      pointer-events: none;
+    }
+
+    /* Skills Chips */
+    .skills-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .skill-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 7px;
+      background: #121a28;
+      border-radius: 5px;
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    /* Terminal Logs */
+    .terminal-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #090e17;
+    }
+
+    .terminal-toolbar {
+      padding: 7px 14px;
+      background: #0c121d;
+      border-bottom: 1px solid #1a2537;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .terminal {
+      flex: 1;
+      padding: 12px 14px;
+      overflow-y: auto;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 11.5px;
+      line-height: 1.55;
+      background: #080c14;
+    }
+
+    .terminal::-webkit-scrollbar {
+      width: 5px;
+    }
+    .terminal::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+
+    .log-entry {
+      margin-bottom: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px dashed rgba(39, 52, 73, 0.5);
+      word-break: break-word;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-time {
+      color: #475569;
+      margin-right: 5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .log-author {
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    .log-author.sid { color: var(--color-sid); }
+    .log-author.kevin { color: var(--color-kevin); }
+    .log-author.bruno { color: var(--color-bruno); }
+    .log-author.verito { color: var(--color-verito); }
+    .log-author.sofi { color: var(--color-sofi); }
+    .log-author.nico { color: var(--color-nico); }
+    .log-author.mateo { color: var(--color-mateo); }
+    .log-author.luna { color: var(--color-luna); }
+    .log-author.sys { color: #a855f7; }
+
+    .log-text {
+      color: #cbd5e1;
+    }
+
+    /* ==================== FOOTER ==================== */
+    footer {
+      padding: 0 20px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--panel-border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .input-wrapper {
+      flex: 1;
+    }
+
+    .task-input {
+      width: 100%;
+      background: #080c14;
+      border: 1px solid #243248;
+      padding: 10px 16px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.15s;
+    }
+
+    .task-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #2563eb, #0284c7);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge">
+        <span>⚡</span>
+        <span>EMPY SQUAD HQ</span>
+      </div>
+      <h1>Comando de Agentes Especialistas • Sid Team</h1>
+    </div>
+
+    <div class="header-metrics">
+      <div class="metric-chip">
+        <span>👥 Agentes:</span>
+        <b id="activeAgentsCount">8 Activos</b>
+      </div>
+      <div class="metric-chip">
+        <span>⚡ Carga CPU:</span>
+        <b id="cpuUsageVal">42%</b>
+      </div>
+      <div class="metric-chip">
+        <span>🛡️ OWASP:</span>
+        <b style="color: #34d399;">100% Blindado</b>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <button class="btn-toggle active" id="audioToggle" onclick="toggleAudio()">
+        <span id="audioIcon">🔊</span>
+        <span>Sonido</span>
+      </button>
+
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span id="globalState">Escuadrón trabajando a ritmo constante</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <div class="stage-wrapper" id="stageWrapper">
+      <!-- Quick mission buttons -->
+      <div class="quick-scenarios">
+        <button class="scenario-btn" onclick="triggerTask('TP Consorcios: Optimizar stored procedures y vistas SQL con DuckDB')">🎓 TP SQL Consorcios</button>
+        <button class="scenario-btn" onclick="triggerTask('Baileys Socket: Blindar reconexión automática en WhatsApp sin perder sesión')">🤖 Fix Socket Baileys</button>
+        <button class="scenario-btn" onclick="triggerTask('Rediseño UI: Componentes estilo @ibelick con animaciones de 200ms')">🎨 Rediseño UI Craft</button>
+        <button class="scenario-btn" onclick="triggerTask('Humanizer: Reescribir textos del bot para eliminar olor a IA')">✍️ Filtro Humanizer</button>
+        <button class="scenario-btn" onclick="triggerTask('Media Pipeline: Generar stickers animados con Sharp y ffmpeg optimizado')">🎬 Render Multimedia</button>
+        <button class="scenario-btn" onclick="triggerTask('Notion Sync: Registrar bugs de producción y sincronizar backlog')">⚡ Sync Notion Ops</button>
+      </div>
+
+      <canvas id="officeCanvas"></canvas>
+
+      <!-- Simulation speed switcher -->
+      <div class="speed-badge">
+        <span>Simulación:</span>
+        <button class="speed-btn active" id="speed1x" onclick="setSpeed(1)">1x</button>
+        <button class="speed-btn" id="speed2x" onclick="setSpeed(2)">2x</button>
+        <button class="speed-btn" id="speed4x" onclick="setSpeed(4)">4x</button>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside>
+      <!-- All 8 Agents Fast Switcher Bar -->
+      <div class="roster-grid" id="rosterGrid">
+        <div class="roster-tab active" onclick="selectAgentById('sid')">👑 Sid</div>
+        <div class="roster-tab" onclick="selectAgentById('kevin')">💻 Kevin</div>
+        <div class="roster-tab" onclick="selectAgentById('bruno')">🎨 Bruno</div>
+        <div class="roster-tab" onclick="selectAgentById('verito')">📚 Verito</div>
+        <div class="roster-tab" onclick="selectAgentById('sofi')">🎬 Sofi</div>
+        <div class="roster-tab" onclick="selectAgentById('nico')">🔍 Nico</div>
+        <div class="roster-tab" onclick="selectAgentById('mateo')">🛡️ Mateo</div>
+        <div class="roster-tab" onclick="selectAgentById('luna')">⚡ Luna</div>
+      </div>
+
+      <!-- Agent Focused Detail Card -->
+      <div class="agent-focus-view">
+        <div class="agent-header-row">
+          <div class="agent-avatar-lg" id="inspectorAvatar">
+            👑
+            <div class="avatar-live-indicator"></div>
+          </div>
+          <div class="agent-meta-info">
+            <h3>
+              <span id="inspectorName">El Jefe Sid</span>
+              <span class="agent-state-chip" id="inspectorState">LABURANDO</span>
+            </h3>
+            <p id="inspectorRole">Director General & Estratega en Jefe</p>
+          </div>
+        </div>
+
+        <div class="agent-task-box">
+          <div class="task-label-row">
+            <span>Tarea Actual en Progreso</span>
+            <span id="inspectorProgressPct" style="color: #38bdf8; font-weight: 700;">72%</span>
+          </div>
+          <div class="task-title" id="inspectorTaskTitle">
+            <span>⚡</span>
+            <span id="inspectorTaskText">Supervisando arquitectura general y delegando misiones</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar-fill" id="inspectorProgressBar" style="width: 72%;"></div>
+          </div>
+        </div>
+
+        <!-- Live simulated code / data typing box -->
+        <div class="live-stream-box" id="inspectorStream">
+          <span style="color: #64748b;">// Flujo activo</span><br>
+          <span id="streamLine1">await orchestrateTeam({ priority: 'CRITICAL' });</span><br>
+          <span id="streamLine2" style="color: #94a3b8;">> Verificando estado de agentes... [OK]</span>
+        </div>
+
+        <div class="skills-tags" id="inspectorSkills">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- Terminal Logs -->
+      <div class="terminal-container">
+        <div class="terminal-toolbar">
+          <span>Registro en Vivo del Escuadrón</span>
+          <span style="color:#38bdf8;cursor:pointer;font-weight:600;" onclick="clearLogs()">Limpiar</span>
+        </div>
+        <div class="terminal" id="terminalLogs">
+          <!-- Live logs stream here -->
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="input-wrapper">
+      <input type="text" id="taskInput" class="task-input" placeholder="Escribí una orden o consulta para el escuadrón (ej: 'Crear comando !resumen de PDF para la facultad')..." />
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="submitCustomTask()">
+      <span>Despachar Misión</span>
+      <span>🚀</span>
+    </button>
+  </footer>
+
+  <script>
+    // ==================== ENGINE & CANVAS SETUP ====================
+    const canvas = document.getElementById('officeCanvas');
+    const ctx = canvas.getContext('2d');
+    const stageWrapper = document.getElementById('stageWrapper');
+    const terminal = document.getElementById('terminalLogs');
+
+    // Logical world resolution
+    const WORLD_W = 1240;
+    const WORLD_H = 760;
+    let scaleRatio = 1;
+    let simSpeed = 1;
+    let audioEnabled = true;
+
+    function fitCanvas() {
+      const availW = stageWrapper.clientWidth - 28;
+      const availH = stageWrapper.clientHeight - 28;
+      scaleRatio = Math.min(availW / WORLD_W, availH / WORLD_H);
+      
+      // Retina sharp rendering
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(WORLD_W * scaleRatio * dpr);
+      canvas.height = Math.floor(WORLD_H * scaleRatio * dpr);
+      canvas.style.width = `${Math.floor(WORLD_W * scaleRatio)}px`;
+      canvas.style.height = `${Math.floor(WORLD_H * scaleRatio)}px`;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', fitCanvas);
+    fitCanvas();
+
+    function setSpeed(s) {
+      simSpeed = s;
+      ['1x', '2x', '4x'].forEach(lbl => {
+        document.getElementById(`speed${lbl}`).classList.toggle('active', lbl === `${s}x`);
+      });
+      playSound(620, 'sine', 0.05);
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById('audioToggle');
+      btn.classList.toggle('active', audioEnabled);
+      document.getElementById('audioIcon').innerText = audioEnabled ? '🔊' : '🔇';
+      if (audioEnabled) playSound(520, 'triangle', 0.08);
+    }
+
+    // Helper for rounded rects
+    function drawRoundRect(x, y, w, h, r, fill, stroke, lineWidth = 1.5) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      }
+    }
+
+    // Sound Synthesizer (0 external audio dependencies)
+    let audioCtx = null;
+    function playSound(freq = 440, type = 'sine', duration = 0.06) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // ==================== ROSTER DE 8 AGENTES ESPECIALISTAS ====================
+    const agents = {
+      sid: {
+        id: 'sid',
+        name: 'El Jefe Sid',
+        short: 'Jefe Sid',
+        role: 'Director General & Estratega Principal',
+        badge: '👑',
+        color: '#f59e0b',
+        hairColor: '#1e293b',
+        shirtColor: '#d97706',
+        skinColor: '#f1c27d',
+        crown: true,
+        glasses: true,
+        skills: ['orquestación-general', 'revisión-final', 'toma-de-decisiones'],
+        desk: { x: 1060, y: 220 },
+        lounge: { x: 1060, y: 220 },
+        x: 1060, y: 220,
+        targetX: 1060, targetY: 220,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 85,
+        progressSpeed: 0.15,
+        currentTask: 'Supervisando arquitectura general del bot y coordinando equipo',
+        streamCode: [
+          'const mission = orchestrator.dispatch(goals);',
+          'if (code.quality === "EXCELLENT") approve();'
+        ],
+        backlog: [
+          'Supervisando arquitectura general y delegando misiones',
+          'Evaluando propuestas de nuevos comandos para el bot',
+          'Revisando rendimiento y consumo de tokens del equipo',
+          'Alineando entregas de trabajos para la facultad'
+        ]
+      },
+      kevin: {
+        id: 'kevin',
+        name: 'Kevin',
+        short: 'Kevin (Backend)',
+        role: 'Arquitecto Backend & Socket Baileys',
+        badge: '💻',
+        color: '#3b82f6',
+        hairColor: '#0f172a',
+        shirtColor: '#2563eb',
+        skinColor: '#ffdbac',
+        headphones: true,
+        skills: ['baileys-esm', 'supabase-postgres', 'clean-code-yagni'],
+        desk: { x: 410, y: 390 },
+        lounge: { x: 140, y: 170 },
+        x: 410, y: 390,
+        targetX: 410, targetY: 390,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 60,
+        progressSpeed: 0.28,
+        currentTask: 'Optimizando pool de conexiones en Supabase & Baileys socket',
+        streamCode: [
+          'import { makeWASocket } from "@whiskeysockets/baileys";',
+          'const sock = makeWASocket({ auth: state });'
+        ],
+        backlog: [
+          'Optimizando pool de conexiones en Supabase & Baileys socket',
+          'Migrando handlers a TypeScript estricto con imports .js',
+          'Implementando caché en memoria para comandos de alto tráfico',
+          'Refactorizando economía y cooldowns de comandos en Postgres'
+        ]
+      },
+      bruno: {
+        id: 'bruno',
+        name: 'Bruno',
+        short: 'Bruno (Frontend)',
+        role: 'Frontend Engineer & UI/UX Craft',
+        badge: '🎨',
+        color: '#06b6d4',
+        hairColor: '#334155',
+        shirtColor: '#0891b2',
+        skinColor: '#e0ac69',
+        beret: true,
+        skills: ['taste-skill', 'ui-skills-ibelick', 'microinteracciones'],
+        desk: { x: 180, y: 620 },
+        lounge: { x: 220, y: 170 },
+        x: 180, y: 620,
+        targetX: 180, targetY: 620,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 42,
+        progressSpeed: 0.22,
+        currentTask: 'Puliendo contrastes, microinteracciones 200ms y tokens de color',
+        streamCode: [
+          'transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);',
+          'font-variant-numeric: tabular-nums; text-wrap: balance;'
+        ],
+        backlog: [
+          'Puliendo contrastes, microinteracciones 200ms y tokens de color',
+          'Construyendo componentes estilo @ibelick con alto craft',
+          'Optimizando layout responsivo y previniendo el bug de 100vh',
+          'Eliminando clichés genéricos de IA en interfaces web'
+        ]
+      },
+      verito: {
+        id: 'verito',
+        name: 'Verito',
+        short: 'Verito (Académica)',
+        role: 'Fact-Checker & Redacción Universitaria',
+        badge: '📚',
+        color: '#ec4899',
+        hairColor: '#831843',
+        shirtColor: '#db2777',
+        skinColor: '#ffdbac',
+        glasses: true,
+        skills: ['humanizer-pro', 'redacción-académica', 'síntesis-papers'],
+        desk: { x: 520, y: 620 },
+        lounge: { x: 300, y: 170 },
+        x: 520, y: 620,
+        targetX: 520, targetY: 620,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 78,
+        progressSpeed: 0.18,
+        currentTask: 'Revisando informe de consorcios y eliminando clichés de IA',
+        streamCode: [
+          'const cleanText = humanizer.filter(draft, { tone: "academic" });',
+          'assert(!cleanText.includes("en un mundo donde"));'
+        ],
+        backlog: [
+          'Revisando informe de consorcios y eliminando clichés de IA',
+          'Estructurando marco teórico para trabajo de la facultad',
+          'Verificando consistencia en citas bibliográficas y normas APA',
+          'Pulido de ortografía, tono sobrio y síntesis concisa'
+        ]
+      },
+      sofi: {
+        id: 'sofi',
+        name: 'Sofi',
+        short: 'Sofi (Multimedia)',
+        role: 'Especialista en Audio, Video & Edición',
+        badge: '🎬',
+        color: '#a855f7',
+        hairColor: '#581c87',
+        shirtColor: '#9333ea',
+        skinColor: '#fcd34d',
+        headphones: true,
+        skills: ['sharp-optimizer', 'ffmpeg-transcoder', 'edge-tts-audio'],
+        desk: { x: 860, y: 620 },
+        lounge: { x: 180, y: 220 },
+        x: 860, y: 620,
+        targetX: 860, targetY: 620,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 35,
+        progressSpeed: 0.32,
+        currentTask: 'Comprimiendo buffer de video con ffmpeg sin perder nitidez',
+        streamCode: [
+          'ffmpeg(stream).outputOptions(["-c:v libx264", "-crf 24"])',
+          '.format("mp4").pipe(dest);'
+        ],
+        backlog: [
+          'Comprimiendo buffer de video con ffmpeg sin perder nitidez',
+          'Generando stickers WebP circulares con metadatos EXIF',
+          'Sintetizando notas de voz ultra-claras con Edge-TTS',
+          'Ajustando niveles de audio y normalización R128'
+        ]
+      },
+      nico: {
+        id: 'nico',
+        name: 'Nico',
+        short: 'Nico (Research)',
+        role: 'Deep Researcher & Web Scraping',
+        badge: '🔍',
+        color: '#10b981',
+        hairColor: '#1c1917',
+        shirtColor: '#059669',
+        skinColor: '#d6d3d1',
+        glasses: true,
+        skills: ['duckdb-analytics', 'astronomy-math', 'web-intel'],
+        desk: { x: 740, y: 390 },
+        lounge: { x: 260, y: 220 },
+        x: 740, y: 390,
+        targetX: 740, targetY: 390,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 92,
+        progressSpeed: 0.24,
+        currentTask: 'Extrayendo tablas de PDF y ejecutando consultas en DuckDB',
+        streamCode: [
+          'SELECT consorcio_id, COUNT(*) FROM lotes.parquet',
+          'GROUP BY 1 HAVING sum(monto) > 0 ORDER BY 2 DESC;'
+        ],
+        backlog: [
+          'Extrayendo tablas de PDF y ejecutando consultas en DuckDB',
+          'Calculando efemérides planetarias con astronomy-engine',
+          'Mapeando estructura de endpoints y schemas externos',
+          'Indexando apuntes de base de datos para búsqueda instantánea'
+        ]
+      },
+      mateo: {
+        id: 'mateo',
+        name: 'Mateo',
+        short: 'Mateo (SecOps)',
+        role: 'Auditor de Ciberseguridad & OWASP',
+        badge: '🛡️',
+        color: '#ef4444',
+        hairColor: '#450a0a',
+        shirtColor: '#dc2626',
+        skinColor: '#fca5a5',
+        visor: true,
+        skills: ['owasp-top-10', 'zod-sanitizer', 'anti-credential-leak'],
+        desk: { x: 180, y: 390 },
+        lounge: { x: 340, y: 220 },
+        x: 180, y: 390,
+        targetX: 180, targetY: 390,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 55,
+        progressSpeed: 0.2,
+        currentTask: 'Auditando inputs y validando esquemas Zod contra inyecciones',
+        streamCode: [
+          'const safeInput = UserCommandSchema.parse(payload);',
+          'if (detectPromptInjection(safeInput)) sanitize();'
+        ],
+        backlog: [
+          'Auditando inputs y validando esquemas Zod contra inyecciones',
+          'Blindando rate limits en token.service contra flooding',
+          'Verificando .gitignore preventivo para impedir fugas de .env',
+          'Escaneando dependencias npm con security-check automatizado'
+        ]
+      },
+      luna: {
+        id: 'luna',
+        name: 'Luna',
+        short: 'Luna (Notion Ops)',
+        role: 'Notion Sync & Cron Task Orchestrator',
+        badge: '⚡',
+        color: '#eab308',
+        hairColor: '#422006',
+        shirtColor: '#ca8a04',
+        skinColor: '#fde047',
+        headband: true,
+        skills: ['notion-mcp', 'scheduled-crons', 'database-sync'],
+        desk: { x: 970, y: 390 },
+        lounge: { x: 140, y: 220 },
+        x: 970, y: 390,
+        targetX: 970, targetY: 390,
+        state: 'WORKING',
+        bubble: '',
+        bubbleTimer: 0,
+        progress: 48,
+        progressSpeed: 0.25,
+        currentTask: 'Sincronizando reportes de !bug e !idea en base de datos Notion',
+        streamCode: [
+          'await notion.pages.create({ parent: { database_id } });',
+          'console.log("Ticket Notion sincronizado con éxito");'
+        ],
+        backlog: [
+          'Sincronizando reportes de !bug e !idea en base de datos Notion',
+          'Monitoreando crons programados de limpieza de archivos temp/',
+          'Organizando backlog de mejoras y feedback de usuarios',
+          'Registrando métricas de uptime y latencia de respuestas'
+        ]
+      }
+    };
+
+    let selectedAgent = agents.sid;
+
+    // Coffee machine steam particles
+    const steamParticles = [
+      { x: 105, y: 110, alpha: 0.8, vy: -0.4 },
+      { x: 112, y: 102, alpha: 0.5, vy: -0.5 },
+      { x: 108, y: 94, alpha: 0.2, vy: -0.45 }
+    ];
+
+    // Flying document packets
+    const activePackets = [];
+
+    // ==================== INSPECTOR & UI CONTROLS ====================
+    function selectAgentById(id) {
+      const agent = agents[id];
+      if (!agent) return;
+      selectedAgent = agent;
+      
+      const avatarEl = document.getElementById('inspectorAvatar');
+      avatarEl.innerHTML = `${agent.badge}<div class="avatar-live-indicator" style="background:${agent.color};box-shadow:0 0 10px ${agent.color};"></div>`;
+      avatarEl.style.borderColor = agent.color;
+      
+      document.getElementById('inspectorName').innerText = agent.name;
+      document.getElementById('inspectorRole').innerText = agent.role;
+      
+      const stateEl = document.getElementById('inspectorState');
+      stateEl.innerText = agent.state === 'WORKING' ? 'LABURANDO' : (agent.state === 'WALKING' ? 'EN MOVIMIENTO' : 'STANDBY');
+      stateEl.style.color = agent.color;
+      stateEl.style.borderColor = `${agent.color}55`;
+      stateEl.style.backgroundColor = `${agent.color}15`;
+
+      document.getElementById('inspectorTaskText').innerText = agent.currentTask;
+      document.getElementById('inspectorProgressPct').innerText = `${Math.floor(agent.progress)}%`;
+      document.getElementById('inspectorProgressPct').style.color = agent.color;
+      document.getElementById('inspectorProgressBar').style.width = `${Math.floor(agent.progress)}%`;
+      document.getElementById('inspectorProgressBar').style.background = `linear-gradient(90deg, ${agent.color}, #38bdf8)`;
+
+      document.getElementById('streamLine1').innerText = agent.streamCode[0] || '// Procesando datos...';
+      document.getElementById('streamLine2').innerText = agent.streamCode[1] || '> Esperando siguiente instrucción.';
+
+      document.getElementById('inspectorSkills').innerHTML = agent.skills
+        .map(s => `<span class="skill-tag" style="border-color:${agent.color}44; color:${agent.color};">${s}</span>`).join('');
+
+      document.querySelectorAll('.roster-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.innerText.toLowerCase().includes(agent.name.toLowerCase().split(' ')[0]));
+      });
+
+      playSound(540, 'sine', 0.04);
+    }
+    selectAgentById('sid');
+
+    function clearLogs() {
+      terminal.innerHTML = '';
+    }
+
+    function addLog(authorId, text) {
+      const now = new Date();
+      const t = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      const agent = agents[authorId];
+      const label = agent ? agent.short : 'SISTEMA';
+      div.innerHTML = `
+        <span class="log-time">${t}</span>
+        <span class="log-author ${authorId}">[${label}]</span>
+        <span class="log-text">${text}</span>
+      `;
+      terminal.appendChild(div);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function moveAgent(agent, tx, ty, cb) {
+      agent.targetX = tx;
+      agent.targetY = ty;
+      agent.state = 'WALKING';
+      agent.onArrival = cb || null;
+    }
+
+    function say(agent, text, sec = 3) {
+      agent.bubble = text;
+      agent.bubbleTimer = Math.floor(sec * 60);
+    }
+
+    function sendPacket(fromAgent, toAgent, label = '📄') {
+      activePackets.push({
+        x: fromAgent.x,
+        y: fromAgent.y - 20,
+        tx: toAgent.x,
+        ty: toAgent.y - 20,
+        color: fromAgent.color,
+        label: label,
+        speed: 8
+      });
+      playSound(780, 'sine', 0.04);
+    }
+
+    // ==================== RENDERING: TEXTURED MODERN HQ ====================
+    function drawOfficeEnvironment() {
+      // 1. Dark Oak Floor with Planks Texture
+      ctx.fillStyle = '#111722';
+      ctx.fillRect(0, 96, WORLD_W, WORLD_H - 96);
+
+      // Floor plank lines
+      const plankW = 72;
+      const plankH = 26;
+      for (let y = 96; y < WORLD_H; y += plankH) {
+        const rowOffset = ((y / plankH) % 2) * (plankW / 2);
+        for (let x = -plankW; x < WORLD_W; x += plankW) {
+          const shade = ((x + y) % 3 === 0) ? '#161f2d' : ((x + y) % 2 === 0 ? '#141c29' : '#111723');
+          ctx.fillStyle = shade;
+          ctx.fillRect(x + rowOffset, y, plankW - 1, plankH - 1);
+        }
+      }
+
+      // 2. High-Tech Back Wall
+      ctx.fillStyle = '#0a0e17';
+      ctx.fillRect(0, 0, WORLD_W, 96);
+      ctx.fillStyle = '#141c2c';
+      for (let x = 0; x < WORLD_W; x += 36) {
+        ctx.fillRect(x, 0, 18, 88);
+      }
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 88, WORLD_W, 8); // Wall molding baseboard
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 96, WORLD_W, 4); // Drop shadow
+
+      // Panoramic Skyline Windows
+      const winPositions = [260, 560, 840];
+      winPositions.forEach(wx => {
+        drawRoundRect(wx, 12, 110, 64, 4, '#060a12', '#334155', 2);
+        // Stars
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(wx + 15, 22, 2, 2);
+        ctx.fillRect(wx + 70, 26, 2, 2);
+        ctx.fillRect(wx + 92, 18, 2, 2);
+        // City skyline silhouette
+        ctx.fillStyle = '#131b28';
+        ctx.fillRect(wx + 8, 44, 24, 28);
+        ctx.fillRect(wx + 34, 34, 26, 38);
+        ctx.fillRect(wx + 62, 48, 38, 24);
+        // Window frames
+        ctx.fillStyle = '#263346';
+        ctx.fillRect(wx + 54, 12, 2, 64);
+        ctx.fillRect(wx, 42, 110, 2);
+      });
+
+      // Neon HQ Banner
+      drawRoundRect(20, 16, 200, 48, 8, '#0b101a', '#f59e0b', 2);
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ SID HQ • OPS ROOM', 120, 44);
+
+      // ==================== ZONE 1: CAFETERÍA & LOUNGE (Top-Left) ====================
+      drawRoundRect(16, 104, 360, 160, 10, '#101724', '#202d42', 2);
+      // Kitchen counter
+      drawRoundRect(28, 114, 160, 42, 6, '#1e293b', '#334155', 1.5);
+      drawRoundRect(32, 118, 152, 34, 4, '#38475e', null); // Countertop
+      
+      // Espresso machine
+      drawRoundRect(85, 116, 40, 32, 4, '#b91c1c', '#7f1d1d', 1.5);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(94, 134, 22, 10);
+      
+      // Steam
+      steamParticles.forEach(p => {
+        p.y += p.vy * simSpeed;
+        p.alpha -= 0.006 * simSpeed;
+        if (p.alpha <= 0) {
+          p.y = 118;
+          p.alpha = 0.8;
+        }
+        ctx.fillStyle = `rgba(226, 232, 240, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Cups & Snack Box
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(52, 135, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(66, 135, 5, 0, Math.PI * 2); ctx.fill();
+      drawRoundRect(140, 122, 38, 26, 3, '#ca8a04', '#854d0e', 1);
+
+      // Water Cooler
+      drawRoundRect(210, 114, 28, 36, 4, '#e2e8f0', '#94a3b8', 1.5);
+      drawRoundRect(214, 106, 20, 18, 6, '#38bdf8', null);
+
+      // Lounge Sofa & Rug
+      drawRoundRect(90, 180, 240, 72, 8, '#132135', '#2563eb', 1);
+      drawRoundRect(110, 172, 200, 26, 6, '#1e2d42', '#334155', 1.5);
+      drawPlant(345, 125);
+      drawPlant(40, 240);
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('☕ CAFETERÍA & RELAX', 30, 252);
+
+      // ==================== ZONE 2: SERVERS & NOTION RACKS (Top-Center) ====================
+      drawRoundRect(395, 104, 390, 160, 10, '#0c121d', '#1f2c40', 2);
+      
+      // Server Racks (Baileys WA, Supabase DB, Notion Cloud)
+      const racks = [
+        { x: 415, label: 'WA-SOCKET' },
+        { x: 505, label: 'SUPABASE' },
+        { x: 595, label: 'DUCKDB' },
+        { x: 685, label: 'NOTION-SYNC' }
+      ];
+
+      const blink = Math.floor(Date.now() / (280 / simSpeed)) % 2 === 0;
+
+      racks.forEach((rk, idx) => {
+        drawRoundRect(rk.x, 114, 75, 110, 4, '#060910', '#334155', 2);
+        for (let s = 0; s < 4; s++) {
+          const sy = 124 + s * 22;
+          ctx.fillStyle = '#141c2b';
+          ctx.fillRect(rk.x + 6, sy, 63, 14);
+          
+          // Glowing LEDs
+          const ledColor = (idx + s) % 3 === 0 ? (blink ? '#10b981' : '#059669') : ((idx + s) % 2 === 0 ? '#38bdf8' : '#f59e0b');
+          ctx.fillStyle = ledColor;
+          ctx.fillRect(rk.x + 10, sy + 5, 4, 4);
+          ctx.fillRect(rk.x + 18, sy + 5, 4, 4);
+          ctx.fillRect(rk.x + 26, sy + 5, 4, 4);
+        }
+        ctx.font = 'bold 8.5px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText(rk.label, rk.x + 37, 214);
+      });
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.fillText('🗄️ INFRAESTRUCTURA DE SERVIDORES & CLOUD', 590, 252);
+
+      // ==================== ZONE 3: DESPACHO CENTRAL DEL JEFE SID (Top-Right) ====================
+      drawRoundRect(805, 104, 415, 160, 10, '#26121b', '#d97706', 2.5);
+      drawRoundRect(815, 114, 395, 140, 8, '#3b1627', '#f59e0b', 1);
+      drawEstateDesk(1060, 220, agents.sid, '👑 DESPACHO DEL JEFE SID', true);
+      drawPlant(835, 130);
+      drawPlant(1190, 130);
+
+      // ==================== MIDDLE ROW DESKS (Kevin, Mateo, Nico, Luna) ====================
+      drawEstateDesk(180, 390, agents.mateo, '🛡️ SECOPS (MATEO)', false);
+      drawEstateDesk(410, 390, agents.kevin, '💻 BACKEND (KEVIN)', false);
+      drawEstateDesk(740, 390, agents.nico, '🔍 RESEARCH (NICO)', false);
+      drawEstateDesk(970, 390, agents.luna, '⚡ NOTION OPS (LUNA)', false);
+
+      // Floor Cable Ducts connecting servers to middle desks
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(590, 264);
+      ctx.lineTo(590, 340);
+      ctx.moveTo(180, 340);
+      ctx.lineTo(970, 340);
+      ctx.stroke();
+
+      // ==================== BOTTOM ROW DESKS (Bruno, Verito, Sofi) ====================
+      drawEstateDesk(180, 620, agents.bruno, '🎨 FRONTEND (BRUNO)', false);
+      drawEstateDesk(520, 620, agents.verito, '📚 REDACCIÓN ACADÉMICA (VERITO)', false);
+      drawEstateDesk(860, 620, agents.sofi, '🎬 MULTIMEDIA (SOFI)', false);
+
+      // Decorative plants in bottom area
+      drawPlant(30, 480);
+      drawPlant(30, 700);
+      drawPlant(1210, 480);
+      drawPlant(1210, 700);
+    }
+
+    function drawPlant(x, y) {
+      drawRoundRect(x - 12, y - 4, 24, 20, 4, '#78350f', '#451a03', 1.5);
+      ctx.fillStyle = '#166534';
+      ctx.beginPath(); ctx.arc(x - 8, y - 10, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 8, y - 10, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(x, y - 15, 10, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawEstateDesk(dx, dy, agent, label, isBoss) {
+      // Glow under desk
+      const isFocused = selectedAgent === agent;
+      const grad = ctx.createRadialGradient(dx, dy - 8, 4, dx, dy - 8, isBoss ? 110 : 85);
+      grad.addColorStop(0, agent.state === 'WORKING' ? `${agent.color}40` : 'rgba(255,255,255,0.05)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(dx, dy - 8, isBoss ? 110 : 85, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ergonomic Chair behind desk
+      drawRoundRect(dx - 22, dy - 18, 44, 38, 9, '#111827', agent.color, 1.5);
+
+      // Desk Tabletop
+      const deskW = isBoss ? 175 : 154;
+      const deskH = isBoss ? 66 : 58;
+      const woodFill = isBoss ? '#451d11' : '#1e293b';
+      const woodStroke = isFocused ? '#38bdf8' : (isBoss ? '#f59e0b' : agent.color);
+      drawRoundRect(dx - deskW / 2, dy - 50, deskW, deskH, 8, woodFill, woodStroke, isFocused ? 3 : 1.6);
+
+      // Dual Monitors
+      drawRoundRect(dx - 45, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
+      drawRoundRect(dx + 3, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
+
+      // Streaming code / visual effects on screens
+      if (agent.state === 'WORKING') {
+        ctx.fillStyle = agent.color;
+        const offset = Math.floor(Date.now() / (100 / simSpeed)) % 6;
+        ctx.fillRect(dx - 40, dy - 42 + offset, 28, 2.5);
+        ctx.fillRect(dx - 40, dy - 34, 20, 2.5);
+        ctx.fillRect(dx + 8, dy - 42, 26, 2.5);
+        ctx.fillRect(dx + 8, dy - 34 + (offset % 4), 22, 2.5);
+      } else {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(dx - 40, dy - 40, 24, 2.5);
+        ctx.fillRect(dx + 8, dy - 40, 24, 2.5);
+      }
+
+      // Keyboard & Mouse
+      drawRoundRect(dx - 22, dy - 18, 36, 12, 2, '#0f172a', '#334155', 1);
+      drawRoundRect(dx + 22, dy - 16, 7, 10, 3, '#334155', null);
+
+      // Coffee Cup
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 3, 0, Math.PI * 2); ctx.fill();
+
+      // Label Plate under desk
+      drawRoundRect(dx - 75, dy + 24, 150, 20, 5, '#090e17', agent.color, 1);
+      ctx.font = 'bold 9.5px sans-serif';
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, dx, dy + 37);
+    }
+
+    // ==================== CHIBI PIXEL CHARACTER RENDERER ====================
+    function drawCharacter(agent) {
+      // Position update
+      const dx = agent.targetX - agent.x;
+      const dy = agent.targetY - agent.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 3) {
+        agent.x += (dx / dist) * 4.2 * simSpeed;
+        agent.y += (dy / dist) * 4.2 * simSpeed;
+      } else if (agent.state === 'WALKING') {
+        agent.x = agent.targetX;
+        agent.y = agent.targetY;
+        if (agent.onArrival) {
+          const cb = agent.onArrival;
+          agent.onArrival = null;
+          cb();
+        }
+      }
+
+      ctx.save();
+      ctx.translate(agent.x, agent.y);
+
+      const isWalking = agent.state === 'WALKING';
+      const isWorking = agent.state === 'WORKING';
+      const walkCycle = isWalking ? Math.sin(Date.now() / (70 / simSpeed)) * 5 : 0;
+      const bounceY = isWalking ? Math.abs(Math.sin(Date.now() / (70 / simSpeed))) * -4 : (isWorking ? Math.sin(Date.now() / (80 / simSpeed)) * 1.5 : 0);
+
+      // Floor Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 20, 16, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Legs
+      ctx.fillStyle = '#0f172a';
+      drawRoundRect(-9, 7 + walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
+      drawRoundRect(2, 7 - walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
+
+      // Torso / Jacket
+      drawRoundRect(-14, -10 + bounceY, 28, 20, 6, agent.shirtColor, '#0f172a', 1.5);
+
+      // Tie / Tie clip for Sid
+      if (agent.crown) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(-2, -6 + bounceY, 4, 11);
+      }
+
+      // Arms (Rapid typing motion when working)
+      const armOffset = isWorking ? Math.sin(Date.now() / (40 / simSpeed)) * 3 : walkCycle * 0.4;
+      drawRoundRect(-18, -7 + bounceY + armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
+      drawRoundRect(12, -7 + bounceY - armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
+
+      // Head
+      drawRoundRect(-13, -29 + bounceY, 26, 21, 8, agent.skinColor, '#0f172a', 1.5);
+
+      // Hair
+      drawRoundRect(-14, -33 + bounceY, 28, 9, 5, agent.hairColor, null);
+
+      // Eyes
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-6, -20 + bounceY, 3, 4);
+      ctx.fillRect(3, -20 + bounceY, 3, 4);
+
+      // Accessories
+      if (agent.glasses) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-9, -22 + bounceY, 8, 6);
+        ctx.strokeRect(1, -22 + bounceY, 8, 6);
+      }
+      if (agent.visor) {
+        drawRoundRect(-10, -22 + bounceY, 20, 5, 2, '#ef4444', '#b91c1c', 1);
+      }
+      if (agent.headphones) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -23 + bounceY, 15, Math.PI, 0);
+        ctx.stroke();
+      }
+      if (agent.beret) {
+        drawRoundRect(-14, -36 + bounceY, 28, 7, 4, '#0891b2', '#164e63', 1);
+      }
+      if (agent.headband) {
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(-13, -31 + bounceY, 26, 4);
+      }
+      if (agent.crown) {
+        // Golden Boss Crown
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(-10, -32 + bounceY);
+        ctx.lineTo(-10, -42 + bounceY);
+        ctx.lineTo(-4, -36 + bounceY);
+        ctx.lineTo(0, -44 + bounceY);
+        ctx.lineTo(4, -36 + bounceY);
+        ctx.lineTo(10, -42 + bounceY);
+        ctx.lineTo(10, -32 + bounceY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Name Tag Under Character
+      drawRoundRect(-34, 21, 68, 15, 4, 'rgba(11, 16, 26, 0.92)', agent.color, 1);
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(agent.short, 0, 32);
+
+      // Speech Bubble
+      if (agent.bubbleTimer > 0) {
+        agent.bubbleTimer -= simSpeed;
+        ctx.font = 'bold 11px sans-serif';
+        const tw = ctx.measureText(agent.bubble).width;
+        const bw = tw + 18;
+        const bh = 24;
+        drawRoundRect(-bw / 2, -64 + bounceY, bw, bh, 6, '#090e17', agent.color, 1.8);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(agent.bubble, 0, -48 + bounceY);
+      }
+
+      ctx.restore();
+    }
+
+    // ==================== PACKET & FLIGHT SYSTEM ====================
+    function updateAndDrawPackets() {
+      for (let i = activePackets.length - 1; i >= 0; i--) {
+        const p = activePackets[i];
+        const dx = p.tx - p.x;
+        const dy = p.ty - p.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 8) {
+          p.x += (dx / dist) * p.speed * simSpeed;
+          p.y += (dy / dist) * p.speed * simSpeed;
+          
+          drawRoundRect(p.x - 14, p.y - 14, 28, 28, 6, '#0f172a', p.color, 2);
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.label, p.x, p.y + 5);
+        } else {
+          activePackets.splice(i, 1);
+        }
+      }
+    }
+
+    // ==================== CONTINUOUS AUTONOMOUS WORK CYCLE ====================
+    // This solves "no parecen que laburen": Agents continuously progress their tasks and log micro-actions!
+    setInterval(() => {
+      Object.values(agents).forEach(agent => {
+        if (agent.state === 'WORKING') {
+          agent.progress += (agent.progressSpeed * simSpeed);
+          
+          // When an agent reaches 100%, finish task and pick next from backlog!
+          if (agent.progress >= 100) {
+            agent.progress = 0;
+            const completedTask = agent.currentTask;
+            const nextTask = agent.backlog[Math.floor(Math.random() * agent.backlog.length)];
+            agent.currentTask = nextTask;
+            
+            // Randomly log micro-completion
+            if (Math.random() > 0.4) {
+              addLog(agent.id, `✓ Completado: "${completedTask.substring(0, 48)}...". Siguiente: ${nextTask.substring(0, 42)}.`);
+            }
+
+            // Brief celebration thought bubble
+            const icons = ['💡', '⚡', '☕', '✓', '🚀', '📊', '🛡️', '📝'];
+            say(agent, icons[Math.floor(Math.random() * icons.length)], 1.8);
+          }
+        }
+      });
+
+      // Update focused sidebar details
+      if (selectedAgent) {
+        document.getElementById('inspectorProgressPct').innerText = `${Math.floor(selectedAgent.progress)}%`;
+        document.getElementById('inspectorProgressBar').style.width = `${Math.floor(selectedAgent.progress)}%`;
+        document.getElementById('inspectorTaskText').innerText = selectedAgent.currentTask;
+      }
+
+      // Slightly oscillate simulated CPU usage for realism
+      const cpu = 38 + Math.floor(Math.sin(Date.now() / 2000) * 15) + (simSpeed * 8);
+      document.getElementById('cpuUsageVal').innerText = `${cpu}%`;
+    }, 150);
+
+    // Occasional wandering / coffee break simulation
+    setInterval(() => {
+      // Pick a random agent (not Sid) to stretch legs or fetch espresso
+      const agentKeys = ['kevin', 'bruno', 'verito', 'sofi', 'nico', 'mateo', 'luna'];
+      const key = agentKeys[Math.floor(Math.random() * agentKeys.length)];
+      const agent = agents[key];
+
+      if (agent && agent.state === 'WORKING' && !isMissionBusy) {
+        // Walk to coffee machine or lounge
+        const target = Math.random() > 0.5 ? { x: 130, y: 140 } : agent.lounge;
+        say(agent, "Recargando café ☕...", 2.2);
+        moveAgent(agent, target.x, target.y, () => {
+          setTimeout(() => {
+            say(agent, "¡Listo! De vuelta al laburo 💪", 2);
+            moveAgent(agent, agent.desk.x, agent.desk.y, () => {
+              agent.state = 'WORKING';
+            });
+          }, 3000 / simSpeed);
+        });
+      }
+    }, 14000);
+
+    // ==================== CLICK DETECTOR ====================
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const wx = (e.clientX - rect.left) / scaleRatio;
+      const wy = (e.clientY - rect.top) / scaleRatio;
+
+      for (const agent of Object.values(agents)) {
+        const dChar = Math.hypot(agent.x - wx, agent.y - wy);
+        const dDesk = Math.hypot(agent.desk.x - wx, (agent.desk.y - 20) - wy);
+        if (dChar < 40 || dDesk < 60) {
+          selectAgentById(agent.id);
+          return;
+        }
+      }
+    });
+
+    // ==================== MULTI-AGENT MISSION PIPELINE ====================
+    let isMissionBusy = false;
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms / simSpeed));
+
+    async function runSquadPipeline(taskText) {
+      if (isMissionBusy) return;
+      isMissionBusy = true;
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('globalState').innerText = "Misión prioritaria en curso...";
+      playSound(660, 'square', 0.12);
+
+      // 1. EL JEFE SID ASIGNA Y COORDINA
+      selectAgentById('sid');
+      say(agents.sid, "¡Equipo, orden urgente recibida!", 3);
+      addLog('sid', `⚡ ORDEN RECIBIDA: "${taskText}". Desglosando requerimientos técnicos y distribuyendo misiones.`);
+      await sleep(1500);
+
+      // Determine team based on prompt keywords
+      const isSql = /sql|facu|consorcio|tp|tabla/i.test(taskText);
+      const isMedia = /video|audio|sticker|sharp|ffmpeg|multimedia/i.test(taskText);
+      const isUi = /ui|front|diseño|web|craft|componente/i.test(taskText);
+      const isNotion = /notion|sync|bug|idea|backlog/i.test(taskText);
+
+      if (isSql) {
+        // Flow: Nico (Data) -> Kevin (DB) -> Verito (Informe) -> Sid
+        sendPacket(agents.sid, agents.nico, '📊');
+        selectAgentById('nico');
+        say(agents.nico, "Consultando DuckDB...", 2.5);
+        addLog('nico', 'Extrayendo esquema de Consorcios y procesando lote de datos con DuckDB en memoria.');
+        await sleep(2200);
+
+        sendPacket(agents.nico, agents.kevin, '🗄️');
+        selectAgentById('kevin');
+        say(agents.kevin, "Optimizando queries SQL...", 2.5);
+        addLog('kevin', 'Creando índices B-Tree y normalizando tablas relacionales para evitar cuellos de botella.');
+        await sleep(2200);
+
+        sendPacket(agents.kevin, agents.verito, '📑');
+        selectAgentById('verito');
+        say(agents.verito, "Redactando informe sin IA...", 2.5);
+        addLog('verito', 'Redactando entrega universitaria con formato sobrio, sin introducción inflada ni clichés.');
+        await sleep(2200);
+      } else if (isMedia) {
+        // Flow: Sofi (Media) -> Mateo (Security) -> Sid
+        sendPacket(agents.sid, agents.sofi, '🎬');
+        selectAgentById('sofi');
+        say(agents.sofi, "Transcodificando audio/video...", 2.5);
+        addLog('sofi', 'Procesando pipeline multimedia con ffmpeg y sharp: optimizando compresión a WebP.');
+        await sleep(2400);
+
+        sendPacket(agents.sofi, agents.mateo, '🛡️');
+        selectAgentById('mateo');
+        say(agents.mateo, "Auditando buffer...", 2);
+        addLog('mateo', 'Verificando límite de bytes para evitar ataques DoS por descompresión de imágenes.');
+        await sleep(2000);
+      } else if (isUi) {
+        // Flow: Bruno (UI) -> Mateo (OWASP) -> Verito (Copy) -> Sid
+        sendPacket(agents.sid, agents.bruno, '🎨');
+        selectAgentById('bruno');
+        say(agents.bruno, "Aplicando taste-skill...", 2.5);
+        addLog('bruno', 'Diseñando interfaz con paleta 60-30-10, Geist typography y microinteracciones de 180ms.');
+        await sleep(2400);
+
+        sendPacket(agents.bruno, agents.verito, '✍️');
+        selectAgentById('verito');
+        say(agents.verito, "Pulido de textos UI...", 2);
+        addLog('verito', 'Filtro Humanizer aplicado: copys directos y concisos, cero lenguaje de chatbot.');
+        await sleep(2000);
+      } else if (isNotion) {
+        // Flow: Luna (Notion) -> Kevin (API) -> Sid
+        sendPacket(agents.sid, agents.luna, '⚡');
+        selectAgentById('luna');
+        say(agents.luna, "Conectando Notion MCP...", 2.5);
+        addLog('luna', 'Consultando base de datos de sugerencias e indexando tickets de bug con status "Pendiente".');
+        await sleep(2400);
+
+        sendPacket(agents.luna, agents.kevin, '💻');
+        selectAgentById('kevin');
+        say(agents.kevin, "Actualizando estado...", 2);
+        addLog('kevin', 'Mapeando schema Zod de Notion y guardando identificadores para trazabilidad.');
+        await sleep(2000);
+      } else {
+        // Default general engineering flow: Kevin (Dev) -> Mateo (SecOps) -> Verito (QA) -> Sid
+        sendPacket(agents.sid, agents.kevin, '💻');
+        selectAgentById('kevin');
+        say(agents.kevin, "Escribiendo código limpio...", 2.5);
+        addLog('kevin', 'Aplicando ponytail (YAGNI) y surgical-tweak: handler modularizado con TypeScript estricto.');
+        await sleep(2200);
+
+        sendPacket(agents.kevin, agents.mateo, '🛡️');
+        selectAgentById('mateo');
+        say(agents.mateo, "Blindando con Zod...", 2.5);
+        addLog('mateo', 'Validación de esquema Zod superada. Cero credenciales expuestas y sanitización OWASP completada.');
+        await sleep(2200);
+
+        sendPacket(agents.mateo, agents.verito, '📚');
+        selectAgentById('verito');
+        say(agents.verito, "Verificando calidad final...", 2.5);
+        addLog('verito', 'Revisión técnica de errores y legibilidad aprobada. Enviando al Jefe Sid.');
+        await sleep(2200);
+      }
+
+      // Final Boss Approval
+      sendPacket(agents.verito, agents.sid, '🏆');
+      selectAgentById('sid');
+      say(agents.sid, "¡Misión aprobada con honores!", 3.5);
+      addLog('sid', `🏆 ÉXITO: Misión completada satisfactoriamente en el primer intento por el escuadrón.`);
+      playSound(880, 'triangle', 0.16);
+
+      setTimeout(() => {
+        document.getElementById('globalState').innerText = "Escuadrón trabajando a ritmo constante";
+        document.getElementById('sendBtn').disabled = false;
+        isMissionBusy = false;
+      }, 1500);
+    }
+
+    function triggerTask(text) {
+      document.getElementById('taskInput').value = text;
+      runSquadPipeline(text);
+    }
+
+    function submitCustomTask() {
+      const input = document.getElementById('taskInput');
+      const val = input.value.trim();
+      if (!val) return;
+      input.value = '';
+      runSquadPipeline(val);
+    }
+
+    document.getElementById('taskInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitCustomTask();
+    });
+
+    // ==================== MAIN ANIMATION LOOP ====================
+    function renderLoop() {
+      ctx.save();
+      ctx.setTransform(scaleRatio, 0, 0, scaleRatio, 0, 0);
+      ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+
+      drawOfficeEnvironment();
+
+      // Sort characters by Y depth
+      const sortedAgents = Object.values(agents).sort((a, b) => a.y - b.y);
+      sortedAgents.forEach(agent => drawCharacter(agent));
+
+      updateAndDrawPackets();
+
+      ctx.restore();
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Initial Welcome Log
+    addLog('sid', 'Oficina central operativa. El escuadrón completo de 8 especialistas (Sid, Kevin, Bruno, Verito, Sofi, Nico, Mateo y Luna) está activo en sus estaciones.');
+    renderLoop();
+  </script>
+</body>
+</html>
