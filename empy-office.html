@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Empy-Bot Squad HQ • Centro de Operaciones de Agentes</title>
+  <title>Empy-Bot Squad HQ • Centro de Operaciones & Sala de Debate</title>
   <style>
     :root {
-      --bg-outer: #07090e;
-      --panel-bg: #0d121c;
-      --panel-bg-subtle: #121927;
-      --panel-border: #1e293b;
+      --bg-outer: #06080d;
+      --panel-bg: #0c111a;
+      --panel-bg-subtle: #111826;
+      --panel-border: #1d283a;
       --panel-border-accent: #334155;
       --accent: #38bdf8;
       --text: #f1f5f9;
@@ -90,7 +90,7 @@
     }
 
     .metric-chip {
-      background: rgba(18, 25, 39, 0.85);
+      background: rgba(17, 24, 38, 0.9);
       border: 1px solid var(--panel-border);
       padding: 4px 10px;
       border-radius: 6px;
@@ -151,6 +151,13 @@
       border: 1px solid rgba(16, 185, 129, 0.35);
       padding: 5px 14px;
       border-radius: 999px;
+      transition: all 0.2s ease;
+    }
+
+    .status-pill.debating {
+      background: rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.45);
+      color: #fcd34d;
     }
 
     .status-dot {
@@ -160,6 +167,11 @@
       background: #10b981;
       box-shadow: 0 0 10px #10b981;
       animation: pulse 1.8s infinite;
+    }
+
+    .status-pill.debating .status-dot {
+      background: #f59e0b;
+      box-shadow: 0 0 10px #f59e0b;
     }
 
     @keyframes pulse {
@@ -179,7 +191,7 @@
       position: relative;
       width: 100%;
       height: 100%;
-      background: #06080d;
+      background: #05070c;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -208,9 +220,9 @@
 
     .scenario-btn {
       pointer-events: auto;
-      background: rgba(13, 18, 28, 0.92);
+      background: rgba(12, 17, 26, 0.92);
       backdrop-filter: blur(10px);
-      border: 1px solid #273449;
+      border: 1px solid #233045;
       color: #e2e8f0;
       padding: 6px 12px;
       border-radius: 7px;
@@ -231,12 +243,23 @@
       transform: translateY(-1px);
     }
 
+    .scenario-btn.debate-btn {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fde68a;
+    }
+    .scenario-btn.debate-btn:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b;
+      color: #fff;
+    }
+
     /* Speed indicator overlay */
     .speed-badge {
       position: absolute;
       bottom: 14px;
       left: 16px;
-      background: rgba(13, 18, 28, 0.88);
+      background: rgba(12, 17, 26, 0.88);
       backdrop-filter: blur(8px);
       border: 1px solid var(--panel-border);
       border-radius: 8px;
@@ -277,19 +300,18 @@
       overflow: hidden;
     }
 
-    /* Sidebar Roster Bar */
     .roster-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 4px;
       padding: 8px 10px;
-      background: #090e17;
+      background: #080c14;
       border-bottom: 1px solid var(--panel-border);
     }
 
     .roster-tab {
-      background: #101622;
-      border: 1px solid #1e293b;
+      background: #0f1522;
+      border: 1px solid #1c2638;
       color: #94a3b8;
       padding: 6px 4px;
       border-radius: 6px;
@@ -308,48 +330,18 @@
     }
 
     .roster-tab:hover {
-      background: #162030;
+      background: #151e2e;
       color: #fff;
     }
 
     .roster-tab.active {
       color: #fff;
       border-color: var(--accent);
-      background: #1b2537;
+      background: #192336;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
     }
 
-    /* Tabs Header (Inspector vs Terminal) */
-    .sidebar-views-nav {
-      display: flex;
-      border-bottom: 1px solid var(--panel-border);
-      background: #0c111a;
-    }
-
-    .view-tab-btn {
-      flex: 1;
-      padding: 10px 12px;
-      background: transparent;
-      border: none;
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-    }
-
-    .view-tab-btn.active {
-      color: #38bdf8;
-      border-bottom-color: #38bdf8;
-      background: #101724;
-    }
-
-    /* Agent Focused Panel */
+    /* Agent Focused Detail Card */
     .agent-focus-view {
       padding: 14px 16px;
       background: #0e1420;
@@ -421,7 +413,6 @@
       margin-top: 2px;
     }
 
-    /* Task Progress Bar */
     .agent-task-box {
       background: #090e16;
       border: 1px solid #1c2738;
@@ -469,7 +460,6 @@
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
     }
 
-    /* Mini Live Code/Activity Stream */
     .live-stream-box {
       background: #06090f;
       border: 1px solid #192436;
@@ -479,7 +469,7 @@
       font-size: 11px;
       color: #7dd3fc;
       line-height: 1.5;
-      height: 72px;
+      height: 68px;
       overflow: hidden;
       position: relative;
     }
@@ -490,12 +480,11 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 24px;
+      height: 20px;
       background: linear-gradient(to bottom, transparent, #06090f);
       pointer-events: none;
     }
 
-    /* Skills Chips */
     .skills-tags {
       display: flex;
       gap: 5px;
@@ -518,13 +507,13 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-      background: #090e17;
+      background: #080c14;
     }
 
     .terminal-toolbar {
       padding: 7px 14px;
-      background: #0c121d;
-      border-bottom: 1px solid #1a2537;
+      background: #0b101a;
+      border-bottom: 1px solid #182333;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
@@ -542,21 +531,16 @@
       font-family: "Cascadia Code", Consolas, monospace;
       font-size: 11.5px;
       line-height: 1.55;
-      background: #080c14;
+      background: #070a10;
     }
 
-    .terminal::-webkit-scrollbar {
-      width: 5px;
-    }
-    .terminal::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 4px;
-    }
+    .terminal::-webkit-scrollbar { width: 5px; }
+    .terminal::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 4px; }
 
     .log-entry {
       margin-bottom: 8px;
       padding-bottom: 7px;
-      border-bottom: 1px dashed rgba(39, 52, 73, 0.5);
+      border-bottom: 1px dashed rgba(35, 48, 68, 0.5);
       word-break: break-word;
       animation: fadeIn 0.2s ease;
     }
@@ -587,9 +571,7 @@
     .log-author.luna { color: var(--color-luna); }
     .log-author.sys { color: #a855f7; }
 
-    .log-text {
-      color: #cbd5e1;
-    }
+    .log-text { color: #cbd5e1; }
 
     /* ==================== FOOTER ==================== */
     footer {
@@ -602,14 +584,12 @@
       z-index: 20;
     }
 
-    .input-wrapper {
-      flex: 1;
-    }
+    .input-wrapper { flex: 1; }
 
     .task-input {
       width: 100%;
       background: #080c14;
-      border: 1px solid #243248;
+      border: 1px solid #233147;
       padding: 10px 16px;
       border-radius: 8px;
       color: #fff;
@@ -659,13 +639,17 @@
         <span>⚡</span>
         <span>EMPY SQUAD HQ</span>
       </div>
-      <h1>Comando de Agentes Especialistas • Sid Team</h1>
+      <h1>Comando de Agentes Especialistas • Mesa Central de Debate</h1>
     </div>
 
     <div class="header-metrics">
       <div class="metric-chip">
-        <span>👥 Agentes:</span>
-        <b id="activeAgentsCount">8 Activos</b>
+        <span>👥 Escuadrón:</span>
+        <b id="activeAgentsCount">8 Especialistas</b>
+      </div>
+      <div class="metric-chip">
+        <span>🏛️ Sala:</span>
+        <b id="tableStateVal" style="color: #38bdf8;">Conferencia Lista</b>
       </div>
       <div class="metric-chip">
         <span>⚡ Carga CPU:</span>
@@ -683,7 +667,7 @@
         <span>Sonido</span>
       </button>
 
-      <div class="status-pill">
+      <div class="status-pill" id="globalStatusPill">
         <div class="status-dot"></div>
         <span id="globalState">Escuadrón trabajando a ritmo constante</span>
       </div>
@@ -693,14 +677,14 @@
   <!-- MAIN -->
   <main>
     <div class="stage-wrapper" id="stageWrapper">
-      <!-- Quick mission buttons -->
+      <!-- Quick scenario and debate buttons -->
       <div class="quick-scenarios">
-        <button class="scenario-btn" onclick="triggerTask('TP Consorcios: Optimizar stored procedures y vistas SQL con DuckDB')">🎓 TP SQL Consorcios</button>
-        <button class="scenario-btn" onclick="triggerTask('Baileys Socket: Blindar reconexión automática en WhatsApp sin perder sesión')">🤖 Fix Socket Baileys</button>
-        <button class="scenario-btn" onclick="triggerTask('Rediseño UI: Componentes estilo @ibelick con animaciones de 200ms')">🎨 Rediseño UI Craft</button>
-        <button class="scenario-btn" onclick="triggerTask('Humanizer: Reescribir textos del bot para eliminar olor a IA')">✍️ Filtro Humanizer</button>
-        <button class="scenario-btn" onclick="triggerTask('Media Pipeline: Generar stickers animados con Sharp y ffmpeg optimizado')">🎬 Render Multimedia</button>
-        <button class="scenario-btn" onclick="triggerTask('Notion Sync: Registrar bugs de producción y sincronizar backlog')">⚡ Sync Notion Ops</button>
+        <button class="scenario-btn debate-btn" onclick="triggerDebate('Persistencia: Supabase Postgres vs SQLite local para alta concurrencia')">⚖️ Debate: Supabase vs SQLite</button>
+        <button class="scenario-btn debate-btn" onclick="triggerDebate('Seguridad: Puntos ciegos de inyección y rate-limits en comandos Baileys')">🛡️ Auditoría: Puntos Ciegos SecOps</button>
+        <button class="scenario-btn debate-btn" onclick="triggerDebate('Lluvia de Ideas: 3 comandos top para monetización y comunidad')">💡 Lluvia de Ideas: 3 Comandos</button>
+        <button class="scenario-btn" onclick="triggerTask('TP Consorcios: Optimizar vistas analíticas SQL y redactar informe')">🎓 TP Consorcios SQL</button>
+        <button class="scenario-btn" onclick="triggerTask('Multimedia: Transcodificar buffer de audio y generar sticker WebP circular')">🎬 Pipeline Multimedia</button>
+        <button class="scenario-btn" onclick="triggerTask('Notion MCP: Sincronizar reporte de bugs pendientes en base de datos')">⚡ Sync Notion Ops</button>
       </div>
 
       <canvas id="officeCanvas"></canvas>
@@ -765,9 +749,7 @@
           <span id="streamLine2" style="color: #94a3b8;">> Verificando estado de agentes... [OK]</span>
         </div>
 
-        <div class="skills-tags" id="inspectorSkills">
-          <!-- Injected via JS -->
-        </div>
+        <div class="skills-tags" id="inspectorSkills"></div>
       </div>
 
       <!-- Terminal Logs -->
@@ -776,9 +758,7 @@
           <span>Registro en Vivo del Escuadrón</span>
           <span style="color:#38bdf8;cursor:pointer;font-weight:600;" onclick="clearLogs()">Limpiar</span>
         </div>
-        <div class="terminal" id="terminalLogs">
-          <!-- Live logs stream here -->
-        </div>
+        <div class="terminal" id="terminalLogs"></div>
       </div>
     </aside>
   </main>
@@ -786,10 +766,10 @@
   <!-- FOOTER -->
   <footer>
     <div class="input-wrapper">
-      <input type="text" id="taskInput" class="task-input" placeholder="Escribí una orden o consulta para el escuadrón (ej: 'Crear comando !resumen de PDF para la facultad')..." />
+      <input type="text" id="taskInput" class="task-input" placeholder="Escribí una orden o consulta (ej: 'Debatir si conviene SQLite', 'Investigar API de Spotify', 'Hacer TP SQL')..." />
     </div>
     <button class="send-btn" id="sendBtn" onclick="submitCustomTask()">
-      <span>Despachar Misión</span>
+      <span>Despachar Orden / Debate</span>
       <span>🚀</span>
     </button>
   </footer>
@@ -801,7 +781,6 @@
     const stageWrapper = document.getElementById('stageWrapper');
     const terminal = document.getElementById('terminalLogs');
 
-    // Logical world resolution
     const WORLD_W = 1240;
     const WORLD_H = 760;
     let scaleRatio = 1;
@@ -813,7 +792,6 @@
       const availH = stageWrapper.clientHeight - 28;
       scaleRatio = Math.min(availW / WORLD_W, availH / WORLD_H);
       
-      // Retina sharp rendering
       const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.floor(WORLD_W * scaleRatio * dpr);
       canvas.height = Math.floor(WORLD_H * scaleRatio * dpr);
@@ -840,22 +818,13 @@
       if (audioEnabled) playSound(520, 'triangle', 0.08);
     }
 
-    // Helper for rounded rects
     function drawRoundRect(x, y, w, h, r, fill, stroke, lineWidth = 1.5) {
       ctx.beginPath();
       ctx.roundRect(x, y, w, h, r);
-      if (fill) {
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
-      if (stroke) {
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = lineWidth;
-        ctx.stroke();
-      }
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
     }
 
-    // Sound Synthesizer (0 external audio dependencies)
     let audioCtx = null;
     function playSound(freq = 440, type = 'sine', duration = 0.06) {
       if (!audioEnabled) return;
@@ -889,7 +858,7 @@
         skinColor: '#f1c27d',
         crown: true,
         glasses: true,
-        skills: ['orquestación-general', 'revisión-final', 'toma-de-decisiones'],
+        skills: ['orquestación-general', 'revisión-final', 'síntesis-ganadora'],
         desk: { x: 1060, y: 220 },
         lounge: { x: 1060, y: 220 },
         x: 1060, y: 220,
@@ -923,10 +892,10 @@
         skinColor: '#ffdbac',
         headphones: true,
         skills: ['baileys-esm', 'supabase-postgres', 'clean-code-yagni'],
-        desk: { x: 410, y: 390 },
+        desk: { x: 380, y: 380 },
         lounge: { x: 140, y: 170 },
-        x: 410, y: 390,
-        targetX: 410, targetY: 390,
+        x: 380, y: 380,
+        targetX: 380, targetY: 380,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -956,10 +925,10 @@
         skinColor: '#e0ac69',
         beret: true,
         skills: ['taste-skill', 'ui-skills-ibelick', 'microinteracciones'],
-        desk: { x: 180, y: 620 },
+        desk: { x: 180, y: 630 },
         lounge: { x: 220, y: 170 },
-        x: 180, y: 620,
-        targetX: 180, targetY: 620,
+        x: 180, y: 630,
+        targetX: 180, targetY: 630,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -989,10 +958,10 @@
         skinColor: '#ffdbac',
         glasses: true,
         skills: ['humanizer-pro', 'redacción-académica', 'síntesis-papers'],
-        desk: { x: 520, y: 620 },
+        desk: { x: 420, y: 630 },
         lounge: { x: 300, y: 170 },
-        x: 520, y: 620,
-        targetX: 520, targetY: 620,
+        x: 420, y: 630,
+        targetX: 420, targetY: 630,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -1022,10 +991,10 @@
         skinColor: '#fcd34d',
         headphones: true,
         skills: ['sharp-optimizer', 'ffmpeg-transcoder', 'edge-tts-audio'],
-        desk: { x: 860, y: 620 },
+        desk: { x: 800, y: 630 },
         lounge: { x: 180, y: 220 },
-        x: 860, y: 620,
-        targetX: 860, targetY: 620,
+        x: 800, y: 630,
+        targetX: 800, targetY: 630,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -1055,10 +1024,10 @@
         skinColor: '#d6d3d1',
         glasses: true,
         skills: ['duckdb-analytics', 'astronomy-math', 'web-intel'],
-        desk: { x: 740, y: 390 },
+        desk: { x: 780, y: 380 },
         lounge: { x: 260, y: 220 },
-        x: 740, y: 390,
-        targetX: 740, targetY: 390,
+        x: 780, y: 380,
+        targetX: 780, targetY: 380,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -1088,10 +1057,10 @@
         skinColor: '#fca5a5',
         visor: true,
         skills: ['owasp-top-10', 'zod-sanitizer', 'anti-credential-leak'],
-        desk: { x: 180, y: 390 },
+        desk: { x: 180, y: 380 },
         lounge: { x: 340, y: 220 },
-        x: 180, y: 390,
-        targetX: 180, targetY: 390,
+        x: 180, y: 380,
+        targetX: 180, targetY: 380,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -1121,10 +1090,10 @@
         skinColor: '#fde047',
         headband: true,
         skills: ['notion-mcp', 'scheduled-crons', 'database-sync'],
-        desk: { x: 970, y: 390 },
+        desk: { x: 1040, y: 630 },
         lounge: { x: 140, y: 220 },
-        x: 970, y: 390,
-        targetX: 970, targetY: 390,
+        x: 1040, y: 630,
+        targetX: 1040, targetY: 630,
         state: 'WORKING',
         bubble: '',
         bubbleTimer: 0,
@@ -1146,17 +1115,31 @@
 
     let selectedAgent = agents.sid;
 
-    // Coffee machine steam particles
+    // Steam particles
     const steamParticles = [
       { x: 105, y: 110, alpha: 0.8, vy: -0.4 },
       { x: 112, y: 102, alpha: 0.5, vy: -0.5 },
       { x: 108, y: 94, alpha: 0.2, vy: -0.45 }
     ];
 
-    // Flying document packets
+    // Flying packets
     const activePackets = [];
 
-    // ==================== INSPECTOR & UI CONTROLS ====================
+    // ==================== SALA CENTRAL DE DEBATE HOLOGRÁFICA ====================
+    const CONF_CENTER = { x: 580, y: 490 };
+    const CONF_SEATS = [
+      { x: 580, y: 430, label: 'Head (Sid)' },        // Seat 0: Sid (Head)
+      { x: 655, y: 460, label: 'Seat A' },           // Seat 1
+      { x: 655, y: 530, label: 'Seat B' },           // Seat 2
+      { x: 580, y: 560, label: 'Seat C' },           // Seat 3
+      { x: 505, y: 530, label: 'Seat D' },           // Seat 4
+      { x: 505, y: 460, label: 'Seat E' }            // Seat 5
+    ];
+
+    let isDebateActive = false;
+    let hologramText = '⚡ SALA DE JUNTAS';
+    let hologramAlpha = 0.3;
+
     function selectAgentById(id) {
       const agent = agents[id];
       if (!agent) return;
@@ -1170,7 +1153,7 @@
       document.getElementById('inspectorRole').innerText = agent.role;
       
       const stateEl = document.getElementById('inspectorState');
-      stateEl.innerText = agent.state === 'WORKING' ? 'LABURANDO' : (agent.state === 'WALKING' ? 'EN MOVIMIENTO' : 'STANDBY');
+      stateEl.innerText = agent.state === 'WORKING' ? 'LABURANDO' : (agent.state === 'DEBATING' ? 'DEBATIENDO' : (agent.state === 'WALKING' ? 'EN MOVIMIENTO' : 'STANDBY'));
       stateEl.style.color = agent.color;
       stateEl.style.borderColor = `${agent.color}55`;
       stateEl.style.backgroundColor = `${agent.color}15`;
@@ -1195,9 +1178,7 @@
     }
     selectAgentById('sid');
 
-    function clearLogs() {
-      terminal.innerHTML = '';
-    }
+    function clearLogs() { terminal.innerHTML = ''; }
 
     function addLog(authorId, text) {
       const now = new Date();
@@ -1240,19 +1221,18 @@
       playSound(780, 'sine', 0.04);
     }
 
-    // ==================== RENDERING: TEXTURED MODERN HQ ====================
+    // ==================== RENDERING ====================
     function drawOfficeEnvironment() {
       // 1. Dark Oak Floor with Planks Texture
-      ctx.fillStyle = '#111722';
+      ctx.fillStyle = '#10151f';
       ctx.fillRect(0, 96, WORLD_W, WORLD_H - 96);
 
-      // Floor plank lines
       const plankW = 72;
       const plankH = 26;
       for (let y = 96; y < WORLD_H; y += plankH) {
         const rowOffset = ((y / plankH) % 2) * (plankW / 2);
         for (let x = -plankW; x < WORLD_W; x += plankW) {
-          const shade = ((x + y) % 3 === 0) ? '#161f2d' : ((x + y) % 2 === 0 ? '#141c29' : '#111723');
+          const shade = ((x + y) % 3 === 0) ? '#151e2c' : ((x + y) % 2 === 0 ? '#131b28' : '#101622');
           ctx.fillStyle = shade;
           ctx.fillRect(x + rowOffset, y, plankW - 1, plankH - 1);
         }
@@ -1262,29 +1242,24 @@
       ctx.fillStyle = '#0a0e17';
       ctx.fillRect(0, 0, WORLD_W, 96);
       ctx.fillStyle = '#141c2c';
-      for (let x = 0; x < WORLD_W; x += 36) {
-        ctx.fillRect(x, 0, 18, 88);
-      }
+      for (let x = 0; x < WORLD_W; x += 36) { ctx.fillRect(x, 0, 18, 88); }
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(0, 88, WORLD_W, 8); // Wall molding baseboard
+      ctx.fillRect(0, 88, WORLD_W, 8);
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 96, WORLD_W, 4); // Drop shadow
+      ctx.fillRect(0, 96, WORLD_W, 4);
 
       // Panoramic Skyline Windows
       const winPositions = [260, 560, 840];
       winPositions.forEach(wx => {
         drawRoundRect(wx, 12, 110, 64, 4, '#060a12', '#334155', 2);
-        // Stars
         ctx.fillStyle = '#fef08a';
         ctx.fillRect(wx + 15, 22, 2, 2);
         ctx.fillRect(wx + 70, 26, 2, 2);
         ctx.fillRect(wx + 92, 18, 2, 2);
-        // City skyline silhouette
         ctx.fillStyle = '#131b28';
         ctx.fillRect(wx + 8, 44, 24, 28);
         ctx.fillRect(wx + 34, 34, 26, 38);
         ctx.fillRect(wx + 62, 48, 38, 24);
-        // Window frames
         ctx.fillStyle = '#263346';
         ctx.fillRect(wx + 54, 12, 2, 64);
         ctx.fillRect(wx, 42, 110, 2);
@@ -1295,121 +1270,137 @@
       ctx.font = 'bold 13px monospace';
       ctx.fillStyle = '#fbbf24';
       ctx.textAlign = 'center';
-      ctx.fillText('⚡ SID HQ • OPS ROOM', 120, 44);
+      ctx.fillText('⚡ SID HQ • WAR ROOM', 120, 44);
 
-      // ==================== ZONE 1: CAFETERÍA & LOUNGE (Top-Left) ====================
-      drawRoundRect(16, 104, 360, 160, 10, '#101724', '#202d42', 2);
-      // Kitchen counter
-      drawRoundRect(28, 114, 160, 42, 6, '#1e293b', '#334155', 1.5);
-      drawRoundRect(32, 118, 152, 34, 4, '#38475e', null); // Countertop
+      // ZONE 1: CAFETERÍA (Top-Left)
+      drawRoundRect(16, 104, 350, 155, 10, '#0f1624', '#1f2b3e', 2);
+      drawRoundRect(28, 114, 150, 40, 6, '#1e293b', '#334155', 1.5);
+      drawRoundRect(32, 118, 142, 32, 4, '#38475e', null);
+      drawRoundRect(80, 116, 38, 30, 4, '#b91c1c', '#7f1d1d', 1.5);
+      ctx.fillStyle = '#cbd5e1'; ctx.fillRect(88, 132, 20, 10);
       
-      // Espresso machine
-      drawRoundRect(85, 116, 40, 32, 4, '#b91c1c', '#7f1d1d', 1.5);
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(94, 134, 22, 10);
-      
-      // Steam
       steamParticles.forEach(p => {
         p.y += p.vy * simSpeed;
         p.alpha -= 0.006 * simSpeed;
-        if (p.alpha <= 0) {
-          p.y = 118;
-          p.alpha = 0.8;
-        }
+        if (p.alpha <= 0) { p.y = 118; p.alpha = 0.8; }
         ctx.fillStyle = `rgba(226, 232, 240, ${p.alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill();
       });
 
-      // Cups & Snack Box
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(52, 135, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(66, 135, 5, 0, Math.PI * 2); ctx.fill();
-      drawRoundRect(140, 122, 38, 26, 3, '#ca8a04', '#854d0e', 1);
+      ctx.beginPath(); ctx.arc(50, 134, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(64, 134, 5, 0, Math.PI * 2); ctx.fill();
+      drawRoundRect(134, 122, 36, 24, 3, '#ca8a04', '#854d0e', 1);
 
-      // Water Cooler
-      drawRoundRect(210, 114, 28, 36, 4, '#e2e8f0', '#94a3b8', 1.5);
-      drawRoundRect(214, 106, 20, 18, 6, '#38bdf8', null);
+      drawRoundRect(195, 114, 26, 36, 4, '#e2e8f0', '#94a3b8', 1.5);
+      drawRoundRect(198, 106, 20, 18, 6, '#38bdf8', null);
 
-      // Lounge Sofa & Rug
-      drawRoundRect(90, 180, 240, 72, 8, '#132135', '#2563eb', 1);
-      drawRoundRect(110, 172, 200, 26, 6, '#1e2d42', '#334155', 1.5);
-      drawPlant(345, 125);
-      drawPlant(40, 240);
+      drawRoundRect(85, 175, 230, 70, 8, '#132135', '#2563eb', 1);
+      drawRoundRect(105, 168, 190, 24, 6, '#1e2d42', '#334155', 1.5);
+      drawPlant(330, 125);
+      drawPlant(40, 235);
 
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 9.5px sans-serif';
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'left';
-      ctx.fillText('☕ CAFETERÍA & RELAX', 30, 252);
+      ctx.fillText('☕ CAFETERÍA & RELAX', 28, 248);
 
-      // ==================== ZONE 2: SERVERS & NOTION RACKS (Top-Center) ====================
-      drawRoundRect(395, 104, 390, 160, 10, '#0c121d', '#1f2c40', 2);
-      
-      // Server Racks (Baileys WA, Supabase DB, Notion Cloud)
+      // ZONE 2: SERVERS (Top-Center)
+      drawRoundRect(385, 104, 395, 155, 10, '#0b101a', '#1e2a3c', 2);
       const racks = [
-        { x: 415, label: 'WA-SOCKET' },
-        { x: 505, label: 'SUPABASE' },
-        { x: 595, label: 'DUCKDB' },
-        { x: 685, label: 'NOTION-SYNC' }
+        { x: 405, label: 'WA-SOCKET' },
+        { x: 495, label: 'SUPABASE' },
+        { x: 585, label: 'DUCKDB' },
+        { x: 675, label: 'NOTION-SYNC' }
       ];
 
       const blink = Math.floor(Date.now() / (280 / simSpeed)) % 2 === 0;
 
       racks.forEach((rk, idx) => {
-        drawRoundRect(rk.x, 114, 75, 110, 4, '#060910', '#334155', 2);
+        drawRoundRect(rk.x, 114, 75, 105, 4, '#060910', '#334155', 2);
         for (let s = 0; s < 4; s++) {
-          const sy = 124 + s * 22;
+          const sy = 124 + s * 21;
           ctx.fillStyle = '#141c2b';
-          ctx.fillRect(rk.x + 6, sy, 63, 14);
-          
-          // Glowing LEDs
+          ctx.fillRect(rk.x + 6, sy, 63, 13);
           const ledColor = (idx + s) % 3 === 0 ? (blink ? '#10b981' : '#059669') : ((idx + s) % 2 === 0 ? '#38bdf8' : '#f59e0b');
           ctx.fillStyle = ledColor;
-          ctx.fillRect(rk.x + 10, sy + 5, 4, 4);
-          ctx.fillRect(rk.x + 18, sy + 5, 4, 4);
-          ctx.fillRect(rk.x + 26, sy + 5, 4, 4);
+          ctx.fillRect(rk.x + 10, sy + 4, 4, 4);
+          ctx.fillRect(rk.x + 18, sy + 4, 4, 4);
+          ctx.fillRect(rk.x + 26, sy + 4, 4, 4);
         }
         ctx.font = 'bold 8.5px monospace';
         ctx.fillStyle = '#94a3b8';
         ctx.textAlign = 'center';
-        ctx.fillText(rk.label, rk.x + 37, 214);
+        ctx.fillText(rk.label, rk.x + 37, 210);
       });
 
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 9.5px sans-serif';
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'center';
-      ctx.fillText('🗄️ INFRAESTRUCTURA DE SERVIDORES & CLOUD', 590, 252);
+      ctx.fillText('🗄️ INFRAESTRUCTURA DE SERVIDORES & CLOUD', 582, 248);
 
-      // ==================== ZONE 3: DESPACHO CENTRAL DEL JEFE SID (Top-Right) ====================
-      drawRoundRect(805, 104, 415, 160, 10, '#26121b', '#d97706', 2.5);
-      drawRoundRect(815, 114, 395, 140, 8, '#3b1627', '#f59e0b', 1);
+      // ZONE 3: DESPACHO DEL JEFE SID (Top-Right)
+      drawRoundRect(800, 104, 420, 155, 10, '#241019', '#d97706', 2.5);
+      drawRoundRect(810, 114, 400, 135, 8, '#351322', '#f59e0b', 1);
       drawEstateDesk(1060, 220, agents.sid, '👑 DESPACHO DEL JEFE SID', true);
-      drawPlant(835, 130);
+      drawPlant(830, 130);
       drawPlant(1190, 130);
 
-      // ==================== MIDDLE ROW DESKS (Kevin, Mateo, Nico, Luna) ====================
-      drawEstateDesk(180, 390, agents.mateo, '🛡️ SECOPS (MATEO)', false);
-      drawEstateDesk(410, 390, agents.kevin, '💻 BACKEND (KEVIN)', false);
-      drawEstateDesk(740, 390, agents.nico, '🔍 RESEARCH (NICO)', false);
-      drawEstateDesk(970, 390, agents.luna, '⚡ NOTION OPS (LUNA)', false);
+      // ==================== SALA CENTRAL DE DEBATE HOLOGRÁFICA ====================
+      // Acoustic carpet under the conference area
+      drawRoundRect(CONF_CENTER.x - 170, CONF_CENTER.y - 105, 340, 210, 16, '#0b1424', isDebateActive ? '#f59e0b' : '#1e3048', isDebateActive ? 2.5 : 1.5);
 
-      // Floor Cable Ducts connecting servers to middle desks
+      // Conference Chairs
+      CONF_SEATS.forEach((st, idx) => {
+        const chairColor = isDebateActive ? '#38bdf8' : '#334155';
+        drawRoundRect(st.x - 14, st.y - 12, 28, 24, 6, '#111827', chairColor, 1.2);
+      });
+
+      // Conference Table (Dark Tinted Glass with Neon Rim)
+      drawRoundRect(CONF_CENTER.x - 110, CONF_CENTER.y - 50, 220, 100, 28, '#070c14', isDebateActive ? '#f59e0b' : '#22d3ee', isDebateActive ? 3 : 2);
+      drawRoundRect(CONF_CENTER.x - 95, CONF_CENTER.y - 38, 190, 76, 20, '#0e1726', null);
+
+      // Holographic Emitter Core in Table Center
+      const holoPulse = Math.sin(Date.now() / (180 / simSpeed)) * 0.2 + 0.8;
+      ctx.fillStyle = isDebateActive ? `rgba(245, 158, 11, ${0.2 * holoPulse})` : `rgba(56, 189, 248, ${0.15 * holoPulse})`;
+      ctx.beginPath();
+      ctx.arc(CONF_CENTER.x, CONF_CENTER.y, 44 * holoPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hologram Projection Beams
+      ctx.strokeStyle = isDebateActive ? '#f59e0b' : '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(CONF_CENTER.x, CONF_CENTER.y, 16, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Holographic Title Badge
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = isDebateActive ? '#fef08a' : '#7dd3fc';
+      ctx.textAlign = 'center';
+      ctx.fillText(hologramText, CONF_CENTER.x, CONF_CENTER.y + 4);
+
+      // Cable Ducts from Servers to Conference & Desks
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(590, 264);
-      ctx.lineTo(590, 340);
-      ctx.moveTo(180, 340);
-      ctx.lineTo(970, 340);
+      ctx.moveTo(580, 259);
+      ctx.lineTo(580, CONF_CENTER.y - 105);
+      ctx.moveTo(180, 320);
+      ctx.lineTo(780, 320);
       ctx.stroke();
 
-      // ==================== BOTTOM ROW DESKS (Bruno, Verito, Sofi) ====================
-      drawEstateDesk(180, 620, agents.bruno, '🎨 FRONTEND (BRUNO)', false);
-      drawEstateDesk(520, 620, agents.verito, '📚 REDACCIÓN ACADÉMICA (VERITO)', false);
-      drawEstateDesk(860, 620, agents.sofi, '🎬 MULTIMEDIA (SOFI)', false);
+      // WORKSTATIONS
+      drawEstateDesk(180, 380, agents.mateo, '🛡️ SECOPS (MATEO)', false);
+      drawEstateDesk(380, 380, agents.kevin, '💻 BACKEND (KEVIN)', false);
+      drawEstateDesk(780, 380, agents.nico, '🔍 RESEARCH (NICO)', false);
 
-      // Decorative plants in bottom area
+      drawEstateDesk(180, 630, agents.bruno, '🎨 FRONTEND (BRUNO)', false);
+      drawEstateDesk(420, 630, agents.verito, '📚 ACADÉMICA (VERITO)', false);
+      drawEstateDesk(800, 630, agents.sofi, '🎬 MULTIMEDIA (SOFI)', false);
+      drawEstateDesk(1040, 630, agents.luna, '⚡ NOTION OPS (LUNA)', false);
+
+      // Floor plants
       drawPlant(30, 480);
       drawPlant(30, 700);
       drawPlant(1210, 480);
@@ -1426,7 +1417,6 @@
     }
 
     function drawEstateDesk(dx, dy, agent, label, isBoss) {
-      // Glow under desk
       const isFocused = selectedAgent === agent;
       const grad = ctx.createRadialGradient(dx, dy - 8, 4, dx, dy - 8, isBoss ? 110 : 85);
       grad.addColorStop(0, agent.state === 'WORKING' ? `${agent.color}40` : 'rgba(255,255,255,0.05)');
@@ -1450,7 +1440,6 @@
       drawRoundRect(dx - 45, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
       drawRoundRect(dx + 3, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
 
-      // Streaming code / visual effects on screens
       if (agent.state === 'WORKING') {
         ctx.fillStyle = agent.color;
         const offset = Math.floor(Date.now() / (100 / simSpeed)) % 6;
@@ -1464,17 +1453,14 @@
         ctx.fillRect(dx + 8, dy - 40, 24, 2.5);
       }
 
-      // Keyboard & Mouse
       drawRoundRect(dx - 22, dy - 18, 36, 12, 2, '#0f172a', '#334155', 1);
       drawRoundRect(dx + 22, dy - 16, 7, 10, 3, '#334155', null);
 
-      // Coffee Cup
       ctx.fillStyle = '#f8fafc';
       ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#78350f';
       ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 3, 0, Math.PI * 2); ctx.fill();
 
-      // Label Plate under desk
       drawRoundRect(dx - 75, dy + 24, 150, 20, 5, '#090e17', agent.color, 1);
       ctx.font = 'bold 9.5px sans-serif';
       ctx.fillStyle = '#f8fafc';
@@ -1482,16 +1468,15 @@
       ctx.fillText(label, dx, dy + 37);
     }
 
-    // ==================== CHIBI PIXEL CHARACTER RENDERER ====================
+    // ==================== CHARACTER RENDERER ====================
     function drawCharacter(agent) {
-      // Position update
       const dx = agent.targetX - agent.x;
       const dy = agent.targetY - agent.y;
       const dist = Math.hypot(dx, dy);
 
       if (dist > 3) {
-        agent.x += (dx / dist) * 4.2 * simSpeed;
-        agent.y += (dy / dist) * 4.2 * simSpeed;
+        agent.x += (dx / dist) * 4.4 * simSpeed;
+        agent.y += (dy / dist) * 4.4 * simSpeed;
       } else if (agent.state === 'WALKING') {
         agent.x = agent.targetX;
         agent.y = agent.targetY;
@@ -1506,50 +1491,37 @@
       ctx.translate(agent.x, agent.y);
 
       const isWalking = agent.state === 'WALKING';
-      const isWorking = agent.state === 'WORKING';
+      const isWorking = agent.state === 'WORKING' || agent.state === 'DEBATING';
       const walkCycle = isWalking ? Math.sin(Date.now() / (70 / simSpeed)) * 5 : 0;
       const bounceY = isWalking ? Math.abs(Math.sin(Date.now() / (70 / simSpeed))) * -4 : (isWorking ? Math.sin(Date.now() / (80 / simSpeed)) * 1.5 : 0);
 
-      // Floor Shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.beginPath();
-      ctx.ellipse(0, 20, 16, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 20, 16, 7, 0, 0, Math.PI * 2); ctx.fill();
 
-      // Legs
       ctx.fillStyle = '#0f172a';
       drawRoundRect(-9, 7 + walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
       drawRoundRect(2, 7 - walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
 
-      // Torso / Jacket
       drawRoundRect(-14, -10 + bounceY, 28, 20, 6, agent.shirtColor, '#0f172a', 1.5);
 
-      // Tie / Tie clip for Sid
       if (agent.crown) {
         ctx.fillStyle = '#fbbf24';
         ctx.fillRect(-2, -6 + bounceY, 4, 11);
       }
 
-      // Arms (Rapid typing motion when working)
       const armOffset = isWorking ? Math.sin(Date.now() / (40 / simSpeed)) * 3 : walkCycle * 0.4;
       drawRoundRect(-18, -7 + bounceY + armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
       drawRoundRect(12, -7 + bounceY - armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
 
-      // Head
       drawRoundRect(-13, -29 + bounceY, 26, 21, 8, agent.skinColor, '#0f172a', 1.5);
-
-      // Hair
       drawRoundRect(-14, -33 + bounceY, 28, 9, 5, agent.hairColor, null);
 
-      // Eyes
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(-6, -20 + bounceY, 3, 4);
       ctx.fillRect(3, -20 + bounceY, 3, 4);
 
-      // Accessories
       if (agent.glasses) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
         ctx.strokeRect(-9, -22 + bounceY, 8, 6);
         ctx.strokeRect(1, -22 + bounceY, 8, 6);
       }
@@ -1557,11 +1529,8 @@
         drawRoundRect(-10, -22 + bounceY, 20, 5, 2, '#ef4444', '#b91c1c', 1);
       }
       if (agent.headphones) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(0, -23 + bounceY, 15, Math.PI, 0);
-        ctx.stroke();
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, -23 + bounceY, 15, Math.PI, 0); ctx.stroke();
       }
       if (agent.beret) {
         drawRoundRect(-14, -36 + bounceY, 28, 7, 4, '#0891b2', '#164e63', 1);
@@ -1571,7 +1540,6 @@
         ctx.fillRect(-13, -31 + bounceY, 26, 4);
       }
       if (agent.crown) {
-        // Golden Boss Crown
         ctx.fillStyle = '#fbbf24';
         ctx.beginPath();
         ctx.moveTo(-10, -32 + bounceY);
@@ -1583,19 +1551,15 @@
         ctx.lineTo(10, -32 + bounceY);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#b45309';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1; ctx.stroke();
       }
 
-      // Name Tag Under Character
       drawRoundRect(-34, 21, 68, 15, 4, 'rgba(11, 16, 26, 0.92)', agent.color, 1);
       ctx.font = 'bold 9px sans-serif';
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
       ctx.fillText(agent.short, 0, 32);
 
-      // Speech Bubble
       if (agent.bubbleTimer > 0) {
         agent.bubbleTimer -= simSpeed;
         ctx.font = 'bold 11px sans-serif';
@@ -1610,7 +1574,6 @@
       ctx.restore();
     }
 
-    // ==================== PACKET & FLIGHT SYSTEM ====================
     function updateAndDrawPackets() {
       for (let i = activePackets.length - 1; i >= 0; i--) {
         const p = activePackets[i];
@@ -1632,67 +1595,38 @@
       }
     }
 
-    // ==================== CONTINUOUS AUTONOMOUS WORK CYCLE ====================
-    // This solves "no parecen que laburen": Agents continuously progress their tasks and log micro-actions!
+    // Continuous autonomous progression
     setInterval(() => {
       Object.values(agents).forEach(agent => {
         if (agent.state === 'WORKING') {
           agent.progress += (agent.progressSpeed * simSpeed);
-          
-          // When an agent reaches 100%, finish task and pick next from backlog!
           if (agent.progress >= 100) {
             agent.progress = 0;
             const completedTask = agent.currentTask;
             const nextTask = agent.backlog[Math.floor(Math.random() * agent.backlog.length)];
             agent.currentTask = nextTask;
             
-            // Randomly log micro-completion
-            if (Math.random() > 0.4) {
+            if (Math.random() > 0.4 && !isDebateActive) {
               addLog(agent.id, `✓ Completado: "${completedTask.substring(0, 48)}...". Siguiente: ${nextTask.substring(0, 42)}.`);
             }
 
-            // Brief celebration thought bubble
             const icons = ['💡', '⚡', '☕', '✓', '🚀', '📊', '🛡️', '📝'];
             say(agent, icons[Math.floor(Math.random() * icons.length)], 1.8);
           }
         }
       });
 
-      // Update focused sidebar details
       if (selectedAgent) {
         document.getElementById('inspectorProgressPct').innerText = `${Math.floor(selectedAgent.progress)}%`;
         document.getElementById('inspectorProgressBar').style.width = `${Math.floor(selectedAgent.progress)}%`;
         document.getElementById('inspectorTaskText').innerText = selectedAgent.currentTask;
       }
 
-      // Slightly oscillate simulated CPU usage for realism
       const cpu = 38 + Math.floor(Math.sin(Date.now() / 2000) * 15) + (simSpeed * 8);
       document.getElementById('cpuUsageVal').innerText = `${cpu}%`;
     }, 150);
 
-    // Occasional wandering / coffee break simulation
-    setInterval(() => {
-      // Pick a random agent (not Sid) to stretch legs or fetch espresso
-      const agentKeys = ['kevin', 'bruno', 'verito', 'sofi', 'nico', 'mateo', 'luna'];
-      const key = agentKeys[Math.floor(Math.random() * agentKeys.length)];
-      const agent = agents[key];
-
-      if (agent && agent.state === 'WORKING' && !isMissionBusy) {
-        // Walk to coffee machine or lounge
-        const target = Math.random() > 0.5 ? { x: 130, y: 140 } : agent.lounge;
-        say(agent, "Recargando café ☕...", 2.2);
-        moveAgent(agent, target.x, target.y, () => {
-          setTimeout(() => {
-            say(agent, "¡Listo! De vuelta al laburo 💪", 2);
-            moveAgent(agent, agent.desk.x, agent.desk.y, () => {
-              agent.state = 'WORKING';
-            });
-          }, 3000 / simSpeed);
-        });
-      }
-    }, 14000);
-
-    // ==================== CLICK DETECTOR ====================
+    // Click detector
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const wx = (e.clientX - rect.left) / scaleRatio;
@@ -1708,120 +1642,163 @@
       }
     });
 
-    // ==================== MULTI-AGENT MISSION PIPELINE ====================
-    let isMissionBusy = false;
+    // ==================== PROTOCOLO DE DEBATE TÁCTICO ====================
+    let isPipelineBusy = false;
     const sleep = (ms) => new Promise(r => setTimeout(r, ms / simSpeed));
 
+    async function runSquadDebate(topic) {
+      if (isPipelineBusy) return;
+      isPipelineBusy = true;
+      isDebateActive = true;
+
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('globalStatusPill').classList.add('debating');
+      document.getElementById('globalState').innerText = "🏛️ MESA CENTRAL: Debate y deliberación técnica en curso";
+      document.getElementById('tableStateVal').innerText = "Debate Activo";
+      document.getElementById('tableStateVal').style.color = "#f59e0b";
+
+      hologramText = "⚡ DELIBERACIÓN";
+      playSound(520, 'square', 0.15);
+
+      addLog('sid', `📢 CONVOCATORIA A MESA DE DEBATE: "${topic}". Convocando especialistas a la sala central.`);
+
+      // Auto-select debating squad based on topic
+      let debaters = [];
+      const lower = topic.toLowerCase();
+      if (/sql|postgres|supabase|sqlite|bd|persistencia|db/i.test(lower)) {
+        debaters = [agents.kevin, agents.mateo, agents.nico];
+      } else if (/seguridad|owasp|inyeccion|rate|privacidad|token/i.test(lower)) {
+        debaters = [agents.mateo, agents.kevin, agents.bruno];
+      } else if (/idea|comando|feature|funcionalidad|nuevo/i.test(lower)) {
+        debaters = [agents.bruno, agents.sofi, agents.luna];
+      } else if (/facu|tp|informe|consorcio|escrito|paper/i.test(lower)) {
+        debaters = [agents.verito, agents.nico, agents.kevin];
+      } else {
+        debaters = [agents.kevin, agents.mateo, agents.verito];
+      }
+
+      // 1. Move debaters and Sid to Conference Table
+      moveAgent(agents.sid, CONF_SEATS[0].x, CONF_SEATS[0].y, () => { agents.sid.state = 'DEBATING'; });
+      debaters.forEach((ag, idx) => {
+        const seat = CONF_SEATS[idx + 1];
+        moveAgent(ag, seat.x, seat.y, () => { ag.state = 'DEBATING'; });
+      });
+
+      await sleep(1800);
+      selectAgentById('sid');
+      say(agents.sid, "Mesa abierta. Escucho posturas.", 3);
+      playSound(660, 'sine', 0.08);
+      await sleep(1400);
+
+      // 2. Ronda 1: Tesis Inicial (Debater 1)
+      const d1 = debaters[0];
+      selectAgentById(d1.id);
+      say(d1, "Tesis: Máxima velocidad y simplicidad", 3);
+      if (d1.id === 'kevin') {
+        addLog(d1.id, `Postura: Conviene priorizar rendimiento nativo sin dependencias pesadas ni latencia innecesaria.`);
+      } else if (d1.id === 'bruno') {
+        addLog(d1.id, `Postura: La clave es la retención visual y feedback interactivo inmediato en menos de 200ms.`);
+      } else {
+        addLog(d1.id, `Postura: El enfoque estructurado y datos validados empíricamente evitan retrabajo posterior.`);
+      }
+      sendPacket(d1, agents.sid, '💡');
+      await sleep(2200);
+
+      // 3. Ronda 2: Antítesis y Crítica a Puntos Ciegos (Debater 2)
+      const d2 = debaters[1];
+      selectAgentById(d2.id);
+      say(d2, "¡Objeción! Hay riesgos y puntos ciegos", 3);
+      if (d2.id === 'mateo') {
+        addLog(d2.id, `Objeción: Cuidado con desestimar la seguridad; si no hay rate limiting o sanitización Zod, exponemos el bot.`);
+      } else if (d2.id === 'nico') {
+        addLog(d2.id, `Objeción: Los benchmarks locales demuestran que bajo concurrencia esa opción degrada tiempos de respuesta.`);
+      } else {
+        addLog(d2.id, `Objeción: Esa alternativa genera textos con olor a IA y sobreingeniería que confunde al usuario.`);
+      }
+      sendPacket(d2, d1, '⚠️');
+      await sleep(2400);
+
+      // 4. Ronda 3: Conciliación Técnica (Debater 3)
+      const d3 = debaters[2];
+      selectAgentById(d3.id);
+      say(d3, "Propongo solución híbrida equilibrada", 3);
+      addLog(d3.id, `Propuesta de Consenso: Integramos la velocidad de ${d1.short} con el escudo de validación de ${d2.short}.`);
+      sendPacket(d3, agents.sid, '🛡️');
+      await sleep(2200);
+
+      // 5. Veredicto Final del Jefe Sid
+      selectAgentById('sid');
+      hologramText = "🏆 CONSENSO ALCANZADO";
+      say(agents.sid, "¡Decisión tomada! Solución blindada.", 3.5);
+      playSound(880, 'triangle', 0.18);
+      addLog('sid', `🏆 VEREDICTO DE LA MESA: Se aprueba la solución técnica con consenso total en el primer intento.`);
+      await sleep(2000);
+
+      // 6. Regresan a sus puestos de trabajo
+      moveAgent(agents.sid, agents.sid.desk.x, agents.sid.desk.y, () => { agents.sid.state = 'WORKING'; });
+      debaters.forEach(ag => {
+        moveAgent(ag, ag.desk.x, ag.desk.y, () => { ag.state = 'WORKING'; });
+      });
+
+      setTimeout(() => {
+        isDebateActive = false;
+        hologramText = "⚡ SALA DE JUNTAS";
+        document.getElementById('globalStatusPill').classList.remove('debating');
+        document.getElementById('globalState').innerText = "Escuadrón trabajando a ritmo constante";
+        document.getElementById('tableStateVal').innerText = "Conferencia Lista";
+        document.getElementById('tableStateVal').style.color = "#38bdf8";
+        document.getElementById('sendBtn').disabled = false;
+        isPipelineBusy = false;
+      }, 1800);
+    }
+
+    // Pipeline estándar de tareas directas
     async function runSquadPipeline(taskText) {
-      if (isMissionBusy) return;
-      isMissionBusy = true;
+      if (isPipelineBusy) return;
+      isPipelineBusy = true;
       document.getElementById('sendBtn').disabled = true;
       document.getElementById('globalState').innerText = "Misión prioritaria en curso...";
       playSound(660, 'square', 0.12);
 
-      // 1. EL JEFE SID ASIGNA Y COORDINA
       selectAgentById('sid');
-      say(agents.sid, "¡Equipo, orden urgente recibida!", 3);
-      addLog('sid', `⚡ ORDEN RECIBIDA: "${taskText}". Desglosando requerimientos técnicos y distribuyendo misiones.`);
+      say(agents.sid, "¡Equipo, orden prioritaria!", 3);
+      addLog('sid', `⚡ ORDEN RECIBIDA: "${taskText}". Desglosando requerimientos técnicos.`);
       await sleep(1500);
 
-      // Determine team based on prompt keywords
-      const isSql = /sql|facu|consorcio|tp|tabla/i.test(taskText);
-      const isMedia = /video|audio|sticker|sharp|ffmpeg|multimedia/i.test(taskText);
-      const isUi = /ui|front|diseño|web|craft|componente/i.test(taskText);
-      const isNotion = /notion|sync|bug|idea|backlog/i.test(taskText);
+      sendPacket(agents.sid, agents.kevin, '💻');
+      selectAgentById('kevin');
+      say(agents.kevin, "Escribiendo código limpio...", 2.5);
+      addLog('kevin', 'Aplicando ponytail (YAGNI) y surgical-tweak: TypeScript estricto sin dependencias redundantes.');
+      await sleep(2200);
 
-      if (isSql) {
-        // Flow: Nico (Data) -> Kevin (DB) -> Verito (Informe) -> Sid
-        sendPacket(agents.sid, agents.nico, '📊');
-        selectAgentById('nico');
-        say(agents.nico, "Consultando DuckDB...", 2.5);
-        addLog('nico', 'Extrayendo esquema de Consorcios y procesando lote de datos con DuckDB en memoria.');
-        await sleep(2200);
+      sendPacket(agents.kevin, agents.mateo, '🛡️');
+      selectAgentById('mateo');
+      say(agents.mateo, "Blindando con Zod...", 2.5);
+      addLog('mateo', 'Validación Zod superada: sanitización OWASP y cero credenciales expuestas.');
+      await sleep(2200);
 
-        sendPacket(agents.nico, agents.kevin, '🗄️');
-        selectAgentById('kevin');
-        say(agents.kevin, "Optimizando queries SQL...", 2.5);
-        addLog('kevin', 'Creando índices B-Tree y normalizando tablas relacionales para evitar cuellos de botella.');
-        await sleep(2200);
+      sendPacket(agents.mateo, agents.verito, '📚');
+      selectAgentById('verito');
+      say(agents.verito, "Revisión final de calidad...", 2.5);
+      addLog('verito', 'Filtro Humanizer aplicado: textos claros, directos y concisos.');
+      await sleep(2200);
 
-        sendPacket(agents.kevin, agents.verito, '📑');
-        selectAgentById('verito');
-        say(agents.verito, "Redactando informe sin IA...", 2.5);
-        addLog('verito', 'Redactando entrega universitaria con formato sobrio, sin introducción inflada ni clichés.');
-        await sleep(2200);
-      } else if (isMedia) {
-        // Flow: Sofi (Media) -> Mateo (Security) -> Sid
-        sendPacket(agents.sid, agents.sofi, '🎬');
-        selectAgentById('sofi');
-        say(agents.sofi, "Transcodificando audio/video...", 2.5);
-        addLog('sofi', 'Procesando pipeline multimedia con ffmpeg y sharp: optimizando compresión a WebP.');
-        await sleep(2400);
-
-        sendPacket(agents.sofi, agents.mateo, '🛡️');
-        selectAgentById('mateo');
-        say(agents.mateo, "Auditando buffer...", 2);
-        addLog('mateo', 'Verificando límite de bytes para evitar ataques DoS por descompresión de imágenes.');
-        await sleep(2000);
-      } else if (isUi) {
-        // Flow: Bruno (UI) -> Mateo (OWASP) -> Verito (Copy) -> Sid
-        sendPacket(agents.sid, agents.bruno, '🎨');
-        selectAgentById('bruno');
-        say(agents.bruno, "Aplicando taste-skill...", 2.5);
-        addLog('bruno', 'Diseñando interfaz con paleta 60-30-10, Geist typography y microinteracciones de 180ms.');
-        await sleep(2400);
-
-        sendPacket(agents.bruno, agents.verito, '✍️');
-        selectAgentById('verito');
-        say(agents.verito, "Pulido de textos UI...", 2);
-        addLog('verito', 'Filtro Humanizer aplicado: copys directos y concisos, cero lenguaje de chatbot.');
-        await sleep(2000);
-      } else if (isNotion) {
-        // Flow: Luna (Notion) -> Kevin (API) -> Sid
-        sendPacket(agents.sid, agents.luna, '⚡');
-        selectAgentById('luna');
-        say(agents.luna, "Conectando Notion MCP...", 2.5);
-        addLog('luna', 'Consultando base de datos de sugerencias e indexando tickets de bug con status "Pendiente".');
-        await sleep(2400);
-
-        sendPacket(agents.luna, agents.kevin, '💻');
-        selectAgentById('kevin');
-        say(agents.kevin, "Actualizando estado...", 2);
-        addLog('kevin', 'Mapeando schema Zod de Notion y guardando identificadores para trazabilidad.');
-        await sleep(2000);
-      } else {
-        // Default general engineering flow: Kevin (Dev) -> Mateo (SecOps) -> Verito (QA) -> Sid
-        sendPacket(agents.sid, agents.kevin, '💻');
-        selectAgentById('kevin');
-        say(agents.kevin, "Escribiendo código limpio...", 2.5);
-        addLog('kevin', 'Aplicando ponytail (YAGNI) y surgical-tweak: handler modularizado con TypeScript estricto.');
-        await sleep(2200);
-
-        sendPacket(agents.kevin, agents.mateo, '🛡️');
-        selectAgentById('mateo');
-        say(agents.mateo, "Blindando con Zod...", 2.5);
-        addLog('mateo', 'Validación de esquema Zod superada. Cero credenciales expuestas y sanitización OWASP completada.');
-        await sleep(2200);
-
-        sendPacket(agents.mateo, agents.verito, '📚');
-        selectAgentById('verito');
-        say(agents.verito, "Verificando calidad final...", 2.5);
-        addLog('verito', 'Revisión técnica de errores y legibilidad aprobada. Enviando al Jefe Sid.');
-        await sleep(2200);
-      }
-
-      // Final Boss Approval
       sendPacket(agents.verito, agents.sid, '🏆');
       selectAgentById('sid');
       say(agents.sid, "¡Misión aprobada con honores!", 3.5);
-      addLog('sid', `🏆 ÉXITO: Misión completada satisfactoriamente en el primer intento por el escuadrón.`);
+      addLog('sid', `🏆 ÉXITO: Entrega terminada satisfactoriamente en el primer intento.`);
       playSound(880, 'triangle', 0.16);
 
       setTimeout(() => {
         document.getElementById('globalState').innerText = "Escuadrón trabajando a ritmo constante";
         document.getElementById('sendBtn').disabled = false;
-        isMissionBusy = false;
+        isPipelineBusy = false;
       }, 1500);
+    }
+
+    function triggerDebate(topic) {
+      document.getElementById('taskInput').value = topic;
+      runSquadDebate(topic);
     }
 
     function triggerTask(text) {
@@ -1834,14 +1811,18 @@
       const val = input.value.trim();
       if (!val) return;
       input.value = '';
-      runSquadPipeline(val);
+
+      if (/debat|discut|investig|opin|conviene|compar|evalu/i.test(val)) {
+        runSquadDebate(val);
+      } else {
+        runSquadPipeline(val);
+      }
     }
 
     document.getElementById('taskInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') submitCustomTask();
     });
 
-    // ==================== MAIN ANIMATION LOOP ====================
     function renderLoop() {
       ctx.save();
       ctx.setTransform(scaleRatio, 0, 0, scaleRatio, 0, 0);
@@ -1849,7 +1830,6 @@
 
       drawOfficeEnvironment();
 
-      // Sort characters by Y depth
       const sortedAgents = Object.values(agents).sort((a, b) => a.y - b.y);
       sortedAgents.forEach(agent => drawCharacter(agent));
 
@@ -1859,8 +1839,7 @@
       requestAnimationFrame(renderLoop);
     }
 
-    // Initial Welcome Log
-    addLog('sid', 'Oficina central operativa. El escuadrón completo de 8 especialistas (Sid, Kevin, Bruno, Verito, Sofi, Nico, Mateo y Luna) está activo en sus estaciones.');
+    addLog('sid', 'Oficina central y Sala de Debate Táctico operativas. El escuadrón completo de 8 especialistas está activo.');
     renderLoop();
   </script>
 </body>
