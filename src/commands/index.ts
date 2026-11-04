@@ -17,6 +17,7 @@ import { humoCommand } from "./humo.js";
 import { dolarCommand, climaCommand, hoyCommand, cumpleCommand } from "./info.js";
 import { letraCommand } from "./letra.js";
 import { tweetCommand } from "./tweet.js";
+import { cronicaCommand } from "./cronica.js";
 import { dniCommand } from "./dni.js";
 import { roastCommand } from "./roast.js";
 import { peliCommand } from "./peli.js";
@@ -190,6 +191,7 @@ const staticCommands: Command[] = [
   cumpleCommand,
   letraCommand,
   tweetCommand,
+  cronicaCommand,
   dniCommand,
   roastCommand,
   peliCommand,
