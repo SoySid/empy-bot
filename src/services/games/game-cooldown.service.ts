@@ -4,7 +4,7 @@
  */
 
 const groupGameCooldowns = new Map<string, number>();
-const DEFAULT_GROUP_COOLDOWN_MS = 60 * 1000; // 60 segundos de cooldown entre partidas
+const DEFAULT_GROUP_COOLDOWN_MS = Number(process.env.GAME_COOLDOWN_MS) || 120 * 1000; // 120 segundos de cooldown entre partidas (configurable)
 
 export function checkGameCooldown(remoteJid: string): { canStart: boolean; remainingSeconds: number } {
   const now = Date.now();

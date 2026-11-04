@@ -1,5 +1,6 @@
 import { getTriggerSticker, getAvailableTriggerPrefixes } from "../services/sticker.service.js";
 import { MessageContext } from "./types.js";
+import { isUserCommandBanned } from "../services/command-ban.service.js";
 
 // Reglas fijas especiales para palabras compuestas o variaciones fonéticas
 export const TRIGGER_RULES: { pattern: RegExp; prefix: string }[] = [
@@ -26,8 +27,14 @@ export async function handleTriggerStickers(ctx: MessageContext): Promise<boolea
     return false;
   }
 
+  const senderJid = ctx.senderProfile?.jid || ctx.msg.key?.participant || ctx.msg.key?.remoteJid || "";
+  if (isUserCommandBanned(senderJid, "triggers", "stickertriggers", "stickers", "sticker")) {
+    return false;
+  }
+
   // 1. Reglas fijas especiales
   for (const rule of TRIGGER_RULES) {
+    if (isUserCommandBanned(senderJid, rule.prefix)) continue;
     if (rule.pattern.test(ctx.cleanBody)) {
       const stickerData = await getTriggerSticker(rule.prefix);
       if (stickerData) {
@@ -54,6 +61,7 @@ export async function handleTriggerStickers(ctx: MessageContext): Promise<boolea
   const dynamicPrefixes = await getAvailableTriggerPrefixes();
 
   for (const prefix of dynamicPrefixes) {
+    if (isUserCommandBanned(senderJid, prefix)) continue;
     const cleanPrefix = prefix
       .toLowerCase()
       .normalize("NFD")
