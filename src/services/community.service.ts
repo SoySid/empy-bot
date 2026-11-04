@@ -4,6 +4,7 @@ import { resolveOrRegisterUser, formatUserName } from "./db/user.service.js";
 import { modifyBalance, getUserProfession, getUserProfessionBuffs } from "./economy.service.js";
 import { ProfessionType, PROFESSIONS } from "../config/economy.config.js";
 import { isUserEconomyFrozen } from "./admin-economy.service.js";
+import { generateEmergencyAlertCard } from "./community-card.service.js";
 
 export interface EmergencyTemplate {
   profession: ProfessionType;
@@ -279,9 +280,24 @@ export async function triggerSmartEmergency(
       `👉 _Si sos *${template.professionTitle}*, escribí *!asistir* (o !auxilio, !curar, !reparar) para intervenir ya._\n` +
       `⏳ _Tenés 5 minutos antes de que la situación pase a mayores._`;
 
-    await sock.sendMessage(remoteJid, {
-      text: announcement,
-    });
+    try {
+      const cardBuffer = await generateEmergencyAlertCard({
+        professionTitle: template.professionTitle,
+        emoji: template.emoji,
+        situation: formattedSituation,
+        rewardFichas: baseRewardHelper,
+      });
+
+      await sock.sendMessage(remoteJid, {
+        image: cardBuffer,
+        caption: announcement,
+      });
+    } catch (cardErr) {
+      console.error("[Community Alert Card Error]:", cardErr);
+      await sock.sendMessage(remoteJid, {
+        text: announcement,
+      });
+    }
 
     return true;
   } catch (err) {

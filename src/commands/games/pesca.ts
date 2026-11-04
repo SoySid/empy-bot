@@ -5,6 +5,7 @@ import {
   buyFishingShopItem,
 } from "../../services/games/pesca.service.js";
 import { FISH_CATALOG, FISHING_SHOP } from "../../config/fish.config.js";
+import { generateFishCard } from "../../services/games/fish-card.service.js";
 
 export const pescarCommand: Command = {
   name: "pescar",
@@ -58,6 +59,32 @@ export const pescarCommand: Command = {
       `🪱 *Carnadas restantes:* ${res.chargesRemaining}/${res.maxCharges}\n` +
       `💳 *Tu saldo actual:* *$${res.newBalance?.toLocaleString("es-AR")}* fichas\n` +
       `📖 *Álbum del Acuario:* ${res.totalSpeciesDiscovered}/30 especies (\`!acuario\`)`;
+
+    // Si es un pez de rareza alta o hito especial, generar Trading Card visual
+    if (fish.tier >= 3 || res.isNewSpecies || res.isNewRecord) {
+      try {
+        const cardBuffer = await generateFishCard({
+          fish,
+          weightKg: res.weightKg ?? 1.0,
+          price: res.price || fish.basePrice,
+          equippedRodName: res.equippedRodName || "Caña Básica",
+          isNewSpecies: res.isNewSpecies,
+          isNewRecord: res.isNewRecord,
+        });
+
+        await sock.sendMessage(
+          remoteJid,
+          {
+            image: cardBuffer,
+            caption: text,
+          },
+          { quoted: msg as any }
+        );
+        return;
+      } catch (err) {
+        console.error("[Pesca Card Error]:", err);
+      }
+    }
 
     await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
   },
