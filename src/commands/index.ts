@@ -1,5 +1,6 @@
 import { Command } from "./types.js";
 import { bugCommand, ideaCommand } from "./feedback.js";
+import { shutdownCommand } from "./shutdown.js";
 import { sCommand } from "./s.js";
 import { stickerCommand } from "./sticker.js";
 import { audioCommand } from "./audio.js";
@@ -13,7 +14,7 @@ import { rankingCommand } from "./ranking.js";
 import { arbitroCommand } from "./arbitro.js";
 import { fiscalCommand } from "./fiscal.js";
 import { humoCommand } from "./humo.js";
-import { dolarCommand, climaCommand, hoyCommand } from "./info.js";
+import { dolarCommand, climaCommand, hoyCommand, cumpleCommand } from "./info.js";
 import { letraCommand } from "./letra.js";
 import { tweetCommand } from "./tweet.js";
 import { dniCommand } from "./dni.js";
@@ -94,6 +95,7 @@ import {
   mlbbdexCommand,
   ahorcadoCommand,
   arriesgarCommand,
+  ruletarusaCommand,
 } from "./games/index.js";
 
 // Comandos estáticos
@@ -183,7 +185,9 @@ const staticCommands: Command[] = [
   mlbbdexCommand,
   ahorcadoCommand,
   arriesgarCommand,
+  ruletarusaCommand,
   hoyCommand,
+  cumpleCommand,
   letraCommand,
   tweetCommand,
   dniCommand,
@@ -196,6 +200,7 @@ const staticCommands: Command[] = [
   bansListCommand,
   bugCommand,
   ideaCommand,
+  shutdownCommand,
 ];
 
 // Comandos dinámicos: un comando por cada FISH_VOICE_* en el .env

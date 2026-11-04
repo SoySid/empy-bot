@@ -76,12 +76,42 @@ export const stickerCommand: Command = {
 
       if (targetSticker) {
         isAnimated = Boolean(targetSticker.isAnimated);
-        const stream = await (downloadContentFromMessage as any)(targetSticker, "sticker");
-        stickerBuffer = await streamToBuffer(stream);
+        try {
+          const stream = await (downloadContentFromMessage as any)(targetSticker, "sticker");
+          stickerBuffer = await streamToBuffer(stream);
+        } catch (downloadErr) {
+          console.warn("[Sticker Save] Falló descarga directa del sticker:", downloadErr);
+          if (msg.key) {
+            await sock.sendMessage(remoteJid, { react: { text: "⚠️", key: msg.key } });
+          }
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text: "⚠️ WhatsApp no pudo entregar el archivo del sticker citado (probablemente expiraron sus claves temporales en los servidores).\n\n💡 *Solución:* Reenviá el sticker recién al chat y volvé a responderle.",
+            },
+            { quoted: msg as any }
+          );
+          return;
+        }
       } else {
-        const stream = await (downloadContentFromMessage as any)(imageMsg, "image");
-        const rawImg = await streamToBuffer(stream);
-        stickerBuffer = await createSticker(rawImg);
+        try {
+          const stream = await (downloadContentFromMessage as any)(imageMsg, "image");
+          const rawImg = await streamToBuffer(stream);
+          stickerBuffer = await createSticker(rawImg);
+        } catch (imgErr) {
+          console.warn("[Sticker Save] Falló descarga de imagen:", imgErr);
+          if (msg.key) {
+            await sock.sendMessage(remoteJid, { react: { text: "⚠️", key: msg.key } });
+          }
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text: "⚠️ No se pudo procesar la imagen citada. Reenviá la foto recién y volvé a citarla.",
+            },
+            { quoted: msg as any }
+          );
+          return;
+        }
       }
 
       const customName = args.length > 1 ? args.slice(1).join("_") : undefined;

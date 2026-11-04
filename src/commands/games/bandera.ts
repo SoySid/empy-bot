@@ -3,13 +3,25 @@ import {
   startCountryGame,
   ActiveCountryGame,
 } from "../../services/games/geoguessr.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const banderaCommand: Command = {
   name: "bandera",
   aliases: ["pais", "geoguessr", "paises"],
   description: "Adiviná a qué país pertenece la bandera para ganar fichas (!bandera).",
   execute: async ({ sock, remoteJid, msg }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActiveCountryGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN BANDERAS!*\n\n` +
         `Nadie logró adivinar el país a tiempo.\n` +

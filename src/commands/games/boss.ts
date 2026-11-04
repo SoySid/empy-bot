@@ -5,13 +5,25 @@ import {
   renderHpBar,
   ActiveBossRaid,
 } from "../../services/games/boss.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const bossCommand: Command = {
   name: "boss",
   aliases: ["raid", "jefe", "monstruo"],
   description: "Invoca un jefe de raid grupal para derrotar cooperativamente (!boss).",
   execute: async ({ sock, remoteJid, msg }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (raid: ActiveBossRaid) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡EL JEFE HA ESCAPADO!*\n\n` +
         `Se agotaron los 5 minutos y nadie logró rematar a *${raid.boss.name}*.\n` +
@@ -58,6 +70,7 @@ export const atacarCommand: Command = {
 
     // Si el jefe fue derrotado
     if (res.bossDefeated && res.payouts) {
+      setGameCooldown(remoteJid);
       const mentionJids = res.payouts.map((p) => p.jid);
       const rankingText = res.payouts
         .map((p, i) => {

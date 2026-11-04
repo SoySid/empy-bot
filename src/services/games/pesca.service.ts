@@ -242,12 +242,12 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
     }
   }
 
-  // 4. Probabilidades por Tier
-  let t1Prob = 45;
+  // 4. Probabilidades por Tier (Míticos triplicados a 3%)
+  let t1Prob = 43;
   let t2Prob = 30;
   let t3Prob = 18;
   let t4Prob = 6;
-  let t5Prob = 1;
+  let t5Prob = 3;
 
   if (state.activeBuffs.tier2Uses && state.activeBuffs.tier2Uses > 0) {
     t2Prob += 15;

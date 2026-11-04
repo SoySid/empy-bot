@@ -4,13 +4,25 @@ import {
   getUserPokedex,
   ActivePokemonGame,
 } from "../../services/games/pokemon.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const pokemonCommand: Command = {
   name: "pokemon",
   aliases: ["poke", "wtp"],
   description: "Inicia el juego de ¿Quién es este Pokémon? con silueta y premio en fichas (!pokemon).",
   execute: async ({ sock, remoteJid, msg, args }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActivePokemonGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO!* (60s sin acertar)\n\n` +
         `El Pokémon salvaje escapó entre los pastos.\n` +

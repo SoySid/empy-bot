@@ -14,6 +14,7 @@ import { runLiveChatPipeline } from "../services/pipeline/index.js";
 import { interceptGameGuess } from "../services/games/game-interceptor.js";
 import { detectPromiseIntent, createSocialPromise } from "../services/promise.service.js";
 import { isBotOwner } from "../services/admin-economy.service.js";
+import { isUserIgnoredByRoulette } from "../services/games/ruletarusa.service.js";
 
 
 const TARGET_GROUP_JID: string = (process.env.GROUP_JID || "").replace(/['"]/g, "").trim();
@@ -280,6 +281,9 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
   // 11. Pipeline de ejecución secuencial:
   // Paso A: Comandos con prefijo a costo $0 (!s, !laburar, !casino, !resumen, etc.)
   if (await handlePrefixCommand(ctx)) return;
+
+  // Si el usuario está muerto por Ruleta Rusa, el bot lo ignora olímpicamente (cero interacción de juegos, stickers o IA)
+  if (isUserIgnoredByRoulette(senderProfile.jid)) return;
 
   // Paso A2: Interceptor de respuestas a minijuegos activos (Pokémon, Banderas, Wordle)
   if (await interceptGameGuess(ctx)) return;

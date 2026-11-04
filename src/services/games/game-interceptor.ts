@@ -9,6 +9,7 @@ import {
   submitHangmanSolve,
   isHangmanGameActive,
 } from "./ahorcado.service.js";
+import { setGameCooldown } from "./game-cooldown.service.js";
 
 function formatMention(senderProfile: any): string {
   const digits = senderProfile?.phone || (senderProfile?.jid ? senderProfile.jid.split("@")[0].split(":")[0] : null);
@@ -39,6 +40,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         `• *Colección:* ${newTag} (${pokeRes.totalCaptured} descubiertos)\n` +
         `• *Tu saldo actual:* *$${pokeRes.newBalance?.toLocaleString("es-AR")}* fichas`;
 
+      setGameCooldown(remoteJid);
       await sock.sendMessage(
         remoteJid,
         {
@@ -63,6 +65,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         `• *Premio cobrado:* +*$${geoRes.reward?.toLocaleString("es-AR")}* fichas\n` +
         `• *Tu saldo actual:* *$${geoRes.newBalance?.toLocaleString("es-AR")}* fichas`;
 
+      setGameCooldown(remoteJid);
       await sock.sendMessage(
         remoteJid,
         { text, mentions: [senderProfile.jid] },
@@ -93,6 +96,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
 
       if (wordleRes.valid) {
         if (wordleRes.gameWon) {
+          setGameCooldown(remoteJid);
           const winText =
             `🎉 *¡PALABRA DESCUBIERTA EN WORDLE!* 🎉\n\n` +
             `${wordleRes.gridDisplay}\n\n` +
@@ -106,6 +110,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
             { quoted: msg as any }
           );
         } else if (wordleRes.gameOver) {
+          setGameCooldown(remoteJid);
           const loseText =
             `💀 *FIN DEL JUEGO: INTENTOS AGOTADOS* (6/6)\n\n` +
             `${wordleRes.gridDisplay}\n\n` +
@@ -141,6 +146,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         `• *Colección:* ${newTag} (${heroRes.totalCaptured} personajes descubiertos)\n` +
         `• *Tu saldo actual:* *$${heroRes.newBalance?.toLocaleString("es-AR")}* fichas`;
 
+      setGameCooldown(remoteJid);
       await sock.sendMessage(
         remoteJid,
         {
@@ -167,6 +173,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         `• *Colección:* ${newTag} (${mlbbRes.totalCaptured} héroes dominados)\n` +
         `• *Tu saldo actual:* *$${mlbbRes.newBalance?.toLocaleString("es-AR")}* fichas`;
 
+      setGameCooldown(remoteJid);
       await sock.sendMessage(
         remoteJid,
         {
@@ -191,6 +198,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
       if (res.valid) {
         const senderPhone = senderProfile.phone || senderProfile.primaryName || "Jugador";
         if (res.gameWon) {
+          setGameCooldown(remoteJid);
           const winText =
             `🎉 *¡AHORCADO RESUELTO!* 🏆\n\n` +
             `${res.boardDisplay}\n\n` +
@@ -204,6 +212,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
             { quoted: msg as any }
           );
         } else if (res.gameOver) {
+          setGameCooldown(remoteJid);
           const loseText =
             `💀 *FIN DEL JUEGO: EL AHORCADO FUE COMPLETADO* 💀\n\n` +
             `${res.boardDisplay}\n\n` +
@@ -239,6 +248,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
       if (res.valid) {
         const senderPhone = senderProfile.phone || senderProfile.primaryName || "Jugador";
         if (res.gameWon) {
+          setGameCooldown(remoteJid);
           const winText =
             `🏆 *¡ACIERTO TOTAL EN EL AHORCADO!* 🏆\n\n` +
             `${res.boardDisplay}\n\n` +
@@ -252,6 +262,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
             { quoted: msg as any }
           );
         } else if (res.gameOver) {
+          setGameCooldown(remoteJid);
           const loseText =
             `💀 *FIN DEL JUEGO: EL AHORCADO FUE COMPLETADO* 💀\n\n` +
             `${res.boardDisplay}\n\n` +

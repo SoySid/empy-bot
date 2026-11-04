@@ -5,6 +5,7 @@ import {
   isWordleGameActive,
   ActiveWordleGame,
 } from "../../services/games/wordle.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const wordleCommand: Command = {
   name: "wordle",
@@ -17,7 +18,18 @@ export const wordleCommand: Command = {
       return;
     }
 
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActiveWordleGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN WORDLE!*\n\n` +
         `Se terminaron los 5 minutos y no lograron descubrir la palabra secreta.\n` +

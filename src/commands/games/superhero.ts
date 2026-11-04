@@ -4,13 +4,25 @@ import {
   getUserSuperheroes,
   ActiveSuperheroGame,
 } from "../../services/games/superhero.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const superheroeCommand: Command = {
   name: "superheroe",
   aliases: ["comic", "superheroes", "personaje"],
   description: "Adiviná el personaje o superhéroe de cómics y películas para ganar fichas (!superheroe).",
   execute: async ({ sock, remoteJid, msg }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActiveSuperheroGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN SUPERHÉROES!*\n\n` +
         `Nadie logró descubrir al personaje a tiempo.\n` +

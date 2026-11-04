@@ -1,6 +1,7 @@
 import { commandMap } from "../commands/index.js";
 import { MessageContext } from "./types.js";
 import { isUserCommandBanned } from "../services/command-ban.service.js";
+import { isUserIgnoredByRoulette } from "../services/games/ruletarusa.service.js";
 
 const PREFIX: string = process.env.BOT_PREFIX || "!";
 
@@ -37,6 +38,11 @@ export async function handlePrefixCommand(ctx: MessageContext): Promise<boolean>
       ctx.msg.key?.participant ||
       ctx.msg.key?.remoteJid ||
       "";
+
+    if (isUserIgnoredByRoulette(userJid) && command.name !== "ruletarusa") {
+      console.log(`[Command] 💀 Ignorando comando !${command.name} de usuario en muerte por ruleta rusa: ${userJid}`);
+      return true;
+    }
 
     if (isUserCommandBanned(userJid, normalizedCommandName, command.name)) {
       const userName = ctx.senderProfile?.primaryName || "usuario";

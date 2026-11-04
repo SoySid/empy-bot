@@ -7,6 +7,7 @@ import {
   renderHangmanBoard,
   ActiveHangmanGame,
 } from "../../services/games/ahorcado.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const ahorcadoCommand: Command = {
   name: "ahorcado",
@@ -24,7 +25,18 @@ export const ahorcadoCommand: Command = {
       return;
     }
 
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActiveHangmanGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN EL AHORCADO!*\n\n` +
         `Se terminaron los 5 minutos y el muñeco no sobrevivió.\n` +

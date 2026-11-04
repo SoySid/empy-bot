@@ -4,13 +4,25 @@ import {
   getUserMlbbHeroes,
   ActiveMlbbGame,
 } from "../../services/games/mlbb.service.js";
+import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const mlbbCommand: Command = {
   name: "mlbb",
   aliases: ["heroe", "heroemlbb", "mobilelegends"],
   description: "Adiviná el héroe de Mobile Legends: Bang Bang por su avatar pixelado (!mlbb).",
   execute: async ({ sock, remoteJid, msg }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid);
+    if (!cd.canStart) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     const onTimeout = async (game: ActiveMlbbGame) => {
+      setGameCooldown(remoteJid);
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN MOBILE LEGENDS!*\n\n` +
         `Nadie logró reconocer al héroe a tiempo.\n` +

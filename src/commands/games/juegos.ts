@@ -40,6 +40,9 @@ export const juegosCommand: Command = {
       `• Adiviná el héroe de MLBB por su avatar misterioso y pistas de rol/línea.\n` +
       `• Dominá el roster en tu \`!mlbbdex\`.\n` +
       `• *Premio:* *$10.000 a $20.000* fichas.\n\n` +
+      `🔫 *9. Ruleta Rusa* (\`!ruletarusa\` o \`!disparar\`)\n` +
+      `• Tambor de 6 recámaras y 1 bala. ¿Te animás a apretar el gatillo?\n` +
+      `• *Castigo:* Si sale la bala, ¡muerte! El bot te ignora totalmente durante 5 minutos.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

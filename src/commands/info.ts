@@ -193,3 +193,20 @@ export const hoyCommand: Command = {
     }
   },
 };
+
+export const cumpleCommand: Command = {
+  name: "cumple",
+  aliases: ["cumpleanos", "cumpleaños", "aniversario", "bday"],
+  description: "Muestra la fecha oficial de cumpleaños y aniversario de Empy-Bot.",
+  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
+    const text =
+      `🎂 *CUMPLEAÑOS OFICIAL DE EMPY-BOT* 🎉\n\n` +
+      `• *Fecha de Nacimiento:* 22 de Agosto\n` +
+      `• *Signo Zodiacal:* Leo en cúspide con Virgo ♌♍\n` +
+      `• *Creador:* Alfredo (Sid)\n\n` +
+      `_¡Anoten la fecha para los festejos y las empanadas!_ 🥟🍾`;
+
+    await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
+  },
+};
+
