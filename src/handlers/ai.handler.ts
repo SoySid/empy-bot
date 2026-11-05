@@ -330,15 +330,15 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
       registerBotResponse(sentMsg.key.id);
     }
 
-    // Probabilidad del 65% de enviar sticker temático tras remates o reacciones
+    // Probabilidad del 65% de enviar sticker temático o aleatorio tras remates o respuestas
     const STICKER_MOODS = ["bardo", "risa", "burla", "triste", "festejo", "afecto", "duda", "wtf"];
-    if (
-      aiResult.mood &&
-      STICKER_MOODS.includes(aiResult.mood) &&
-      Math.random() < 0.65
-    ) {
+    if (Math.random() < 0.65) {
       await new Promise((r) => setTimeout(r, 600));
-      const stickerData = await getRandomLocalSticker(aiResult.mood);
+      let targetMood = aiResult.mood;
+      if (!targetMood || !STICKER_MOODS.includes(targetMood) || ((targetMood === "burla" || targetMood === "wtf") && Math.random() < 0.55)) {
+        targetMood = "random";
+      }
+      const stickerData = await getRandomLocalSticker(targetMood);
       if (stickerData) {
         await sock.sendMessage(remoteJid, {
           sticker: stickerData.buffer,

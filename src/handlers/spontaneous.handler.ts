@@ -61,40 +61,32 @@ export async function handleSpontaneousReaction(ctx: MessageContext): Promise<bo
   interventionInProgress = true;
 
   try {
-    // Trigger A: Roast ante tilteos, mancos o burradas de gaming
-    const roastCheck = await evaluateBurrada(body);
-    if (roastCheck?.shouldRoast && canSendStickerCat(roastCheck.mood)) {
-      const stickerData = await getRandomLocalSticker(roastCheck.mood);
-      if (stickerData) {
-        await sock.sendMessage(
-          remoteJid,
-          { sticker: stickerData.buffer, isAnimated: stickerData.isAnimated },
-          { quoted: msg as any }
-        );
-        markStickerCat(roastCheck.mood);
-        lastSpontaneousTime = now;
-        return true;
-      }
-    }
-
-    // Trigger B: Detección de ráfagas/escalada (3+ mensajes del mismo usuario en <90s)
-    const senderKey = senderProfile.jid;
-    const userTimestamps = (userRecentMessages.get(senderKey) || []).filter(
-      (t) => now - t < 90 * 1000
-    );
-    userTimestamps.push(now);
-    userRecentMessages.set(senderKey, userTimestamps);
-
-    // Rotar dinámicamente entre categorías disponibles con cooldown respetado
+    // Categorías elegibles con stickers reales y con cooldown respetado
     const counts = getStickerCategoryCounts();
     const SPONTANEOUS_CATS = VALID_CATEGORIES.filter((c) => c !== "triggers");
-    const eligibleCats = SPONTANEOUS_CATS.filter(
+    let eligibleCats = SPONTANEOUS_CATS.filter(
       (cat) => (counts[cat] ?? 0) > 0 && canSendStickerCat(cat)
     );
 
-    if (userTimestamps.length >= 3 && Math.random() < 0.6 && eligibleCats.length > 0) {
+    // Si todas las categorías entraron en cooldown, liberar cooldowns de categorías para seguir rotando
+    if (eligibleCats.length === 0) {
+      eligibleCats = SPONTANEOUS_CATS.filter((c) => (counts[c] ?? 0) > 0);
+      lastStickerByCat.clear();
+    }
+
+    if (eligibleCats.length === 0) {
+      return false;
+    }
+
+    // Evaluación: mayor probabilidad si detecta tilteo/burrada (70%), o probabilidad natural (25%) en chat activo
+    const roastCheck = await evaluateBurrada(body);
+    const triggerChance = roastCheck?.shouldRoast ? 0.7 : 0.25;
+
+    if (Math.random() < triggerChance) {
+      // Selección equilibrada y puramente aleatoria entre todas las categorías disponibles
       const chosenCat = eligibleCats[Math.floor(Math.random() * eligibleCats.length)];
       const stickerData = await getRandomLocalSticker(chosenCat);
+
       if (stickerData) {
         await sock.sendMessage(
           remoteJid,
@@ -102,7 +94,6 @@ export async function handleSpontaneousReaction(ctx: MessageContext): Promise<bo
           { quoted: msg as any }
         );
         markStickerCat(chosenCat);
-        userRecentMessages.set(senderKey, []); // Limpiar ráfaga
         lastSpontaneousTime = now;
         return true;
       }

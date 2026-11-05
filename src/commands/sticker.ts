@@ -22,10 +22,12 @@ export const stickerCommand: Command = {
 
     // 1. Si se usa sin marcar (sin responder a un sticker ni adjuntar imagen):
     if (!targetSticker && !imageMsg) {
-      // Si especificó una categoría válida (ej: !sticker festejo, !sticker triste, !sticker afecto)
-      // Manda directamente un sticker de esa categoría al chat
-      if (categoryArg && VALID_CATEGORIES.includes(categoryArg) && categoryArg !== "triggers") {
-        const stickerData = await getRandomLocalSticker(categoryArg);
+      // Si especificó una categoría válida o pidió "random" / "azar"
+      // Manda directamente un sticker de esa categoría (o aleatorio) al chat
+      const isRandomRequest = categoryArg === "random" || categoryArg === "azar";
+      if (categoryArg && ((VALID_CATEGORIES.includes(categoryArg) && categoryArg !== "triggers") || isRandomRequest)) {
+        const targetCategory = isRandomRequest ? "random" : categoryArg;
+        const stickerData = await getRandomLocalSticker(targetCategory);
         if (stickerData) {
           await sock.sendMessage(
             remoteJid,
@@ -59,6 +61,7 @@ export const stickerCommand: Command = {
             `${catLines}\n\n` +
             `💡 *Uso de stickers:*\n` +
             `• Pedir un sticker: \`!sticker <categoría>\` (ej: \`!sticker festejo\`, \`!sticker afecto\`)\n` +
+            `• Sticker aleatorio: \`!sticker random\` o \`!sticker azar\`\n` +
             `• Guardar sticker: respondé a un sticker o foto con \`!sticker <categoría> [nombre]\` _(Solo Creador)_`,
         },
         { quoted: msg as any }

@@ -602,14 +602,7 @@ export async function evaluateBurrada(messageText: string): Promise<{ shouldRoas
     /\b(perdi|perdimos|manco|mancos|manco de mierda|soy malisimo|juego de mierda|juego del orto|la culpa es de|malardo|fui yo|pechito|pecho frio|tilt|tilteado|tilteadisimo|0 da[nñ]o|no pego una|fedee|feeder|me trollearon|troll|trolls|que asco de team|desinstalo|fedear|lo perdio)\b/i;
 
   if (cryTriggers.test(clean)) {
-    const rand = Math.random();
-    let selectedMood = "burla";
-    if (rand < 0.35) selectedMood = "bardo";
-    else if (rand < 0.60) selectedMood = "burla";
-    else if (rand < 0.80) selectedMood = "risa";
-    else selectedMood = "triste";
-
-    return { shouldRoast: true, mood: selectedMood };
+    return { shouldRoast: true, mood: "random" };
   }
 
   return null;

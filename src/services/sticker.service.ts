@@ -304,32 +304,63 @@ export async function ensureValidStickerBuffer(rawBuffer: Buffer): Promise<Buffe
 const recentStickerHistory = new Map<string, string[]>();
 const MAX_RECENT_HISTORY = 4;
 
-export async function getRandomLocalSticker(category: string): Promise<{ buffer: Buffer; isAnimated: boolean } | null> {
+// Historial de categorías recientes para rotar equitativamente entre todas
+let recentCategoryHistory: string[] = [];
+const MAX_RECENT_CAT_HISTORY = 4;
+
+/**
+ * Retorna una categoría aleatoria de las disponibles (con stickers > 0, excluyendo triggers)
+ * rotando equitativamente para no repetir la misma categoría de forma consecutiva.
+ */
+export function getRandomStickerCategory(): string {
+  const counts = getStickerCategoryCounts();
+  const availableCats = VALID_CATEGORIES.filter(
+    (c) => c !== "triggers" && (counts[c] ?? 0) > 0
+  );
+
+  if (availableCats.length === 0) return "burla";
+
+  // Intentar elegir una categoría no usada en las últimas rotaciones
+  let pool = availableCats.filter((c) => !recentCategoryHistory.includes(c));
+  if (pool.length === 0) {
+    pool = availableCats;
+    recentCategoryHistory = [];
+  }
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  recentCategoryHistory = [...recentCategoryHistory, chosen].slice(-MAX_RECENT_CAT_HISTORY);
+  return chosen;
+}
+
+export async function getRandomLocalSticker(category?: string): Promise<{ buffer: Buffer; isAnimated: boolean } | null> {
   try {
     await ensureStickersPopulated();
-    const cleanCat = category.trim().toLowerCase();
-    const targetCat = VALID_CATEGORIES.includes(cleanCat) ? cleanCat : "burla";
-    const dir = path.join(STICKERS_ROOT, targetCat);
+    const cleanCat = category?.trim().toLowerCase();
+    
+    // Si no se especificó categoría o es "random"/"azar" o no está en la lista: selección aleatoria
+    let targetCat: string;
+    if (!cleanCat || cleanCat === "random" || cleanCat === "azar" || !VALID_CATEGORIES.includes(cleanCat) || cleanCat === "triggers") {
+      targetCat = getRandomStickerCategory();
+    } else {
+      targetCat = cleanCat;
+    }
 
+    let dir = path.join(STICKERS_ROOT, targetCat);
     let files: string[] = [];
     if (fs.existsSync(dir)) {
       files = (await fs.promises.readdir(dir)).filter((f) => /\.(webp|png|jpg|jpeg)$/i.test(f));
     }
 
+    // Si la categoría pedida no tiene stickers cargados, recurrir a otra categoría disponible al azar
     if (files.length === 0) {
-      for (const alt of VALID_CATEGORIES.filter((c) => c !== "triggers")) {
-        const altDir = path.join(STICKERS_ROOT, alt);
-        if (fs.existsSync(altDir)) {
-          const altFiles = (await fs.promises.readdir(altDir)).filter((f) => /\.(webp|png|jpg|jpeg)$/i.test(f));
-          if (altFiles.length > 0) {
-            const randomFile = altFiles[Math.floor(Math.random() * altFiles.length)];
-            const raw = await fs.promises.readFile(path.join(altDir, randomFile));
-            const isAnimated = await isAnimatedWebp(raw);
-            const buffer = randomFile.toLowerCase().endsWith(".webp") ? raw : await ensureValidStickerBuffer(raw);
-            return { buffer, isAnimated };
-          }
-        }
+      targetCat = getRandomStickerCategory();
+      dir = path.join(STICKERS_ROOT, targetCat);
+      if (fs.existsSync(dir)) {
+        files = (await fs.promises.readdir(dir)).filter((f) => /\.(webp|png|jpg|jpeg)$/i.test(f));
       }
+    }
+
+    if (files.length === 0) {
       return null;
     }
 
