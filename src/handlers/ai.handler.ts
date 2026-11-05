@@ -330,9 +330,11 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
       registerBotResponse(sentMsg.key.id);
     }
 
-    // Probabilidad del 65% de enviar sticker tras remates de humor o bardo
+    // Probabilidad del 65% de enviar sticker temático tras remates o reacciones
+    const STICKER_MOODS = ["bardo", "risa", "burla", "triste", "festejo", "afecto", "duda", "wtf"];
     if (
-      (aiResult.mood === "bardo" || aiResult.mood === "risa" || aiResult.mood === "burla") &&
+      aiResult.mood &&
+      STICKER_MOODS.includes(aiResult.mood) &&
       Math.random() < 0.65
     ) {
       await new Promise((r) => setTimeout(r, 600));

@@ -357,7 +357,7 @@ Respondé ÚNICAMENTE un objeto JSON con esta estructura exacta:
 {
   "task_result": ${isTask ? "\"Resolución concreta de la tarea o cálculo, o mención @Nombre con el mensaje a transmitir (OBLIGATORIO)\"" : "null"},
   "reply": "Tu mensaje completo para WhatsApp (si hay tarea, DEBE contener la resolución de task_result primero, seguida opcionalmente por el remate o comentario porteño. Negrita con *un solo asterisco*)",
-  "mood": "servicial" | "bardo" | "risa" | "tranqui" | "pensativo"
+  "mood": "servicial" | "bardo" | "risa" | "tranqui" | "pensativo" | "triste" | "festejo" | "afecto" | "duda" | "wtf"
 }
 </output_instructions>`;
 
@@ -604,9 +604,10 @@ export async function evaluateBurrada(messageText: string): Promise<{ shouldRoas
   if (cryTriggers.test(clean)) {
     const rand = Math.random();
     let selectedMood = "burla";
-    if (rand < 0.45) selectedMood = "bardo";
-    else if (rand < 0.75) selectedMood = "burla";
-    else selectedMood = "risa";
+    if (rand < 0.35) selectedMood = "bardo";
+    else if (rand < 0.60) selectedMood = "burla";
+    else if (rand < 0.80) selectedMood = "risa";
+    else selectedMood = "triste";
 
     return { shouldRoast: true, mood: selectedMood };
   }

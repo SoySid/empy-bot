@@ -5,6 +5,7 @@ import {
   VALID_CATEGORIES,
   CATEGORY_METADATA,
   getStickerCategoryCounts,
+  getRandomLocalSticker,
   createSticker,
 } from "../services/sticker.service.js";
 import { isBotOwner } from "../services/admin-economy.service.js";
@@ -17,10 +18,32 @@ export const stickerCommand: Command = {
   execute: async ({ sock, msg, remoteJid, quotedMsg, args, senderProfile }: CommandContext) => {
     const targetSticker = (quotedMsg as any)?.stickerMessage || msg.message?.stickerMessage;
     const imageMsg = (quotedMsg as any)?.imageMessage || msg.message?.imageMessage;
+    const categoryArg = args[0]?.trim().toLowerCase();
 
-    // 1. Si se usa sin marcar (sin responder/citar un sticker ni adjuntar imagen):
-    // Informar siempre el listado de categorías activas, descripciones y conteos actuales
+    // 1. Si se usa sin marcar (sin responder a un sticker ni adjuntar imagen):
     if (!targetSticker && !imageMsg) {
+      // Si especificó una categoría válida (ej: !sticker festejo, !sticker triste, !sticker afecto)
+      // Manda directamente un sticker de esa categoría al chat
+      if (categoryArg && VALID_CATEGORIES.includes(categoryArg) && categoryArg !== "triggers") {
+        const stickerData = await getRandomLocalSticker(categoryArg);
+        if (stickerData) {
+          await sock.sendMessage(
+            remoteJid,
+            { sticker: stickerData.buffer, isAnimated: stickerData.isAnimated },
+            { quoted: msg as any }
+          );
+          return;
+        } else {
+          await sock.sendMessage(
+            remoteJid,
+            { text: `⚠️ La categoría *\`${categoryArg}\`* todavía no tiene stickers cargados en la rotación.` },
+            { quoted: msg as any }
+          );
+          return;
+        }
+      }
+
+      // Si no especificó categoría o puso !sticker solo: informar el listado con conteos
       const counts = getStickerCategoryCounts();
       const catLines = VALID_CATEGORIES.map((cat) => {
         const meta = CATEGORY_METADATA[cat] || { icon: "📁", desc: "Categoría de stickers" };
@@ -34,14 +57,9 @@ export const stickerCommand: Command = {
           text:
             `📂 *Categorías de Stickers de Empy-Bot*\n\n` +
             `${catLines}\n\n` +
-            `💡 *Cómo guardar un sticker en la rotación:*\n` +
-            `Respondé a un sticker o foto con:\n` +
-            `\`!sticker <categoría> [nombre_opcional]\`\n\n` +
-            `_Ejemplos:_\n` +
-            `• \`!sticker bardo\`\n` +
-            `• \`!sticker festejo copa\`\n` +
-            `• \`!sticker triggers saludo2\`\n\n` +
-            `_Nota: La incorporación de stickers a la rotación permanente está reservada al Creador del bot._`,
+            `💡 *Uso de stickers:*\n` +
+            `• Pedir un sticker: \`!sticker <categoría>\` (ej: \`!sticker festejo\`, \`!sticker afecto\`)\n` +
+            `• Guardar sticker: respondé a un sticker o foto con \`!sticker <categoría> [nombre]\` _(Solo Creador)_`,
         },
         { quoted: msg as any }
       );
@@ -49,7 +67,6 @@ export const stickerCommand: Command = {
     }
 
     // 2. Si marcó un sticker pero no indicó categoría:
-    const categoryArg = args[0]?.trim().toLowerCase();
     if (!categoryArg) {
       const catList = VALID_CATEGORIES.map((c) => `\`${c}\``).join(", ");
       await sock.sendMessage(

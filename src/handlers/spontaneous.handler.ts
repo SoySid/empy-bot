@@ -1,6 +1,6 @@
 import { evaluateBurrada, isSpamOrLowValue } from "../services/ai.service.js";
 import { getTextMessageRate, isChatActive } from "../services/db/message.service.js";
-import { getRandomLocalSticker } from "../services/sticker.service.js";
+import { getRandomLocalSticker, VALID_CATEGORIES, getStickerCategoryCounts } from "../services/sticker.service.js";
 import { MessageContext } from "./types.js";
 
 const PREFIX: string = process.env.BOT_PREFIX || "!";
@@ -86,8 +86,11 @@ export async function handleSpontaneousReaction(ctx: MessageContext): Promise<bo
     userRecentMessages.set(senderKey, userTimestamps);
 
     // Rotar dinámicamente entre categorías disponibles con cooldown respetado
-    const SPONTANEOUS_CATS = ["wtf", "burla", "bardo", "risa"];
-    const eligibleCats = SPONTANEOUS_CATS.filter((cat) => canSendStickerCat(cat));
+    const counts = getStickerCategoryCounts();
+    const SPONTANEOUS_CATS = VALID_CATEGORIES.filter((c) => c !== "triggers");
+    const eligibleCats = SPONTANEOUS_CATS.filter(
+      (cat) => (counts[cat] ?? 0) > 0 && canSendStickerCat(cat)
+    );
 
     if (userTimestamps.length >= 3 && Math.random() < 0.6 && eligibleCats.length > 0) {
       const chosenCat = eligibleCats[Math.floor(Math.random() * eligibleCats.length)];
