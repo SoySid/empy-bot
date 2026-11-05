@@ -1,45 +1,71 @@
 import { Command, CommandContext } from "./types.js";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
-import { saveCustomSticker, VALID_CATEGORIES, createSticker } from "../services/sticker.service.js";
+import {
+  saveCustomSticker,
+  VALID_CATEGORIES,
+  CATEGORY_METADATA,
+  getStickerCategoryCounts,
+  createSticker,
+} from "../services/sticker.service.js";
 import { isBotOwner } from "../services/admin-economy.service.js";
 import { streamToBuffer } from "../services/media.service.js";
 
 export const stickerCommand: Command = {
   name: "sticker",
   aliases: ["guardarsticker", "savesticker", "addsticker"],
-  description: "Guarda un sticker citado en la rotación del bot según categoría (bardo, burla, risa, triste, wtf, triggers).",
+  description: "Muestra las categorías de stickers o guarda un sticker citado en la rotación (solo Creador).",
   execute: async ({ sock, msg, remoteJid, quotedMsg, args, senderProfile }: CommandContext) => {
-    const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
-    if (!isBotOwner(senderProfile, senderJid)) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: "🚫 Solo el Creador puede agregar o modificar stickers en la rotación del bot." },
-        { quoted: msg as any }
-      );
-      return;
-    }
+    const targetSticker = (quotedMsg as any)?.stickerMessage || msg.message?.stickerMessage;
+    const imageMsg = (quotedMsg as any)?.imageMessage || msg.message?.imageMessage;
 
-    const categoryArg = args[0]?.trim().toLowerCase();
+    // 1. Si se usa sin marcar (sin responder/citar un sticker ni adjuntar imagen):
+    // Informar siempre el listado de categorías activas, descripciones y conteos actuales
+    if (!targetSticker && !imageMsg) {
+      const counts = getStickerCategoryCounts();
+      const catLines = VALID_CATEGORIES.map((cat) => {
+        const meta = CATEGORY_METADATA[cat] || { icon: "📁", desc: "Categoría de stickers" };
+        const count = counts[cat] ?? 0;
+        return `${meta.icon} *\`${cat}\`* (${count}): ${meta.desc}`;
+      }).join("\n");
 
-    if (!categoryArg) {
-      const catList = VALID_CATEGORIES.map((c) => `\`${c}\``).join(", ");
       await sock.sendMessage(
         remoteJid,
         {
-          text: `ℹ️ *Guardar stickers en el bot*\n\n` +
-            `Respondé a un sticker con:\n` +
+          text:
+            `📂 *Categorías de Stickers de Empy-Bot*\n\n` +
+            `${catLines}\n\n` +
+            `💡 *Cómo guardar un sticker en la rotación:*\n` +
+            `Respondé a un sticker o foto con:\n` +
             `\`!sticker <categoría> [nombre_opcional]\`\n\n` +
-            `📂 *Categorías disponibles:* ${catList}\n\n` +
-            `💡 *Ejemplos:*\n` +
+            `_Ejemplos:_\n` +
             `• \`!sticker bardo\`\n` +
-            `• \`!sticker risa jaja\`\n` +
-            `• \`!sticker triggers saludo2\``,
+            `• \`!sticker festejo copa\`\n` +
+            `• \`!sticker triggers saludo2\`\n\n` +
+            `_Nota: La incorporación de stickers a la rotación permanente está reservada al Creador del bot._`,
         },
         { quoted: msg as any }
       );
       return;
     }
 
+    // 2. Si marcó un sticker pero no indicó categoría:
+    const categoryArg = args[0]?.trim().toLowerCase();
+    if (!categoryArg) {
+      const catList = VALID_CATEGORIES.map((c) => `\`${c}\``).join(", ");
+      await sock.sendMessage(
+        remoteJid,
+        {
+          text:
+            `⚠️ *Indicá la categoría donde querés guardar el sticker.*\n\n` +
+            `_Uso:_ respondé al sticker con \`!sticker <categoría> [nombre]\`\n\n` +
+            `📂 *Categorías disponibles:* ${catList}`,
+        },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
+    // 3. Si la categoría indicada no existe:
     if (!VALID_CATEGORIES.includes(categoryArg)) {
       const catList = VALID_CATEGORIES.map((c) => `\`${c}\``).join(", ");
       await sock.sendMessage(
@@ -52,15 +78,12 @@ export const stickerCommand: Command = {
       return;
     }
 
-    const targetSticker = (quotedMsg as any)?.stickerMessage || msg.message?.stickerMessage;
-    const imageMsg = (quotedMsg as any)?.imageMessage || msg.message?.imageMessage;
-
-    if (!targetSticker && !imageMsg) {
+    // 4. Verificación de permisos de administración para guardar
+    const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
+    if (!isBotOwner(senderProfile, senderJid)) {
       await sock.sendMessage(
         remoteJid,
-        {
-          text: `⚠️ Respondé a un sticker (o imagen) con \`!sticker ${categoryArg}\` para guardarlo en la rotación.`,
-        },
+        { text: "🚫 Solo el Creador puede agregar o modificar stickers en la rotación del bot." },
         { quoted: msg as any }
       );
       return;

@@ -15,7 +15,47 @@ sharp.cache(false);
 sharp.concurrency(1);
 
 const STICKERS_ROOT = path.resolve(process.cwd(), "stickers");
-export const VALID_CATEGORIES = ["bardo", "burla", "risa", "triste", "wtf", "triggers"];
+export const VALID_CATEGORIES = [
+  "bardo",
+  "burla",
+  "risa",
+  "triste",
+  "wtf",
+  "festejo",
+  "afecto",
+  "duda",
+  "triggers",
+];
+
+export const CATEGORY_METADATA: Record<string, { icon: string; desc: string }> = {
+  bardo: { icon: "🥊", desc: "Conflictos, discusiones y chicanas picantes" },
+  burla: { icon: "🤡", desc: "Descansos, señalar errores y sobradas" },
+  risa: { icon: "😂", desc: "Carcajadas, tentadas y remates de humor" },
+  triste: { icon: "😭", desc: "Quejas, bajones, mala suerte y desahogo" },
+  wtf: { icon: "🤨", desc: "Incredulidad, cosas turbias y desconcierto" },
+  festejo: { icon: "🍻", desc: "Celebración, victorias, buenas noticias y hype" },
+  afecto: { icon: "❤️", desc: "Abrazos, besos, cariño y ternura" },
+  duda: { icon: "🧐", desc: "Sospecha, desconfianza y caras de juicio" },
+  triggers: { icon: "⚡", desc: "Respuestas automáticas a palabras clave específicas" },
+};
+
+export function getStickerCategoryCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const cat of VALID_CATEGORIES) {
+    const catDir = path.join(STICKERS_ROOT, cat);
+    if (fs.existsSync(catDir)) {
+      try {
+        const files = fs.readdirSync(catDir).filter((f) => /\.(webp|png|jpg|jpeg)$/i.test(f));
+        counts[cat] = files.length;
+      } catch {
+        counts[cat] = 0;
+      }
+    } else {
+      counts[cat] = 0;
+    }
+  }
+  return counts;
+}
 
 export function initStickersDirectory(): void {
   for (const f of VALID_CATEGORIES) {
@@ -277,7 +317,7 @@ export async function getRandomLocalSticker(category: string): Promise<{ buffer:
     }
 
     if (files.length === 0) {
-      for (const alt of ["burla", "risa", "wtf", "bardo", "triste"]) {
+      for (const alt of VALID_CATEGORIES.filter((c) => c !== "triggers")) {
         const altDir = path.join(STICKERS_ROOT, alt);
         if (fs.existsSync(altDir)) {
           const altFiles = (await fs.promises.readdir(altDir)).filter((f) => /\.(webp|png|jpg|jpeg)$/i.test(f));
