@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Empy-Bot Squad HQ • Centro de Operaciones & Sala de Debate</title>
+  <title>Empy-Bot Squad HQ • Telemetría en Vivo (11 Especialistas)</title>
   <style>
     :root {
       --bg-outer: #06080d;
@@ -15,15 +15,18 @@
       --text: #f1f5f9;
       --text-muted: #94a3b8;
       --text-dim: #64748b;
-      
-      /* Agent Identity Colors */
+
+      /* 11 Agent Identity Colors */
       --color-sid: #f59e0b;
       --color-kevin: #3b82f6;
-      --color-bruno: #06b6d4;
-      --color-verito: #ec4899;
-      --color-sofi: #a855f7;
-      --color-nico: #10b981;
       --color-mateo: #ef4444;
+      --color-nahum: #8b5cf6;
+      --color-leo: #f97316;
+      --color-flecha: #14b8a6;
+      --color-sofi: #a855f7;
+      --color-bruno: #06b6d4;
+      --color-nico: #10b981;
+      --color-verito: #ec4899;
       --color-luna: #eab308;
     }
 
@@ -42,12 +45,12 @@
       width: 100vw;
       overflow: hidden;
       display: grid;
-      grid-template-rows: 56px 1fr 64px;
+      grid-template-rows: 56px 1fr 54px;
     }
 
     /* ==================== HEADER ==================== */
     header {
-      padding: 0 20px;
+      padding: 0 18px;
       background: var(--panel-bg);
       border-bottom: 1px solid var(--panel-border);
       display: flex;
@@ -59,25 +62,25 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .brand-badge {
       background: linear-gradient(135deg, #f59e0b, #ea580c);
       color: #fff;
       font-weight: 800;
-      font-size: 11.5px;
+      font-size: 11px;
       padding: 5px 10px;
       border-radius: 6px;
-      letter-spacing: 0.8px;
-      box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+      letter-spacing: 0.7px;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
       display: flex;
       align-items: center;
       gap: 5px;
     }
 
     .brand h1 {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       color: #f8fafc;
       letter-spacing: -0.2px;
@@ -86,15 +89,15 @@
     .header-metrics {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .metric-chip {
-      background: rgba(17, 24, 38, 0.9);
+      background: rgba(17, 24, 38, 0.92);
       border: 1px solid var(--panel-border);
       padding: 4px 10px;
       border-radius: 6px;
-      font-size: 11.5px;
+      font-size: 11px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -117,21 +120,20 @@
       background: #141d2d;
       border: 1px solid var(--panel-border);
       color: #94a3b8;
-      padding: 6px 12px;
+      padding: 5px 11px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       transition: all 0.15s ease;
     }
 
     .btn-toggle:hover {
       background: #1e293b;
       color: #fff;
-      border-color: var(--panel-border-accent);
     }
 
     .btn-toggle.active {
@@ -144,20 +146,19 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #cbd5e1;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      padding: 5px 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #d1fae5;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.38);
+      padding: 5px 12px;
       border-radius: 999px;
-      transition: all 0.2s ease;
     }
 
     .status-pill.debating {
       background: rgba(245, 158, 11, 0.16);
       border-color: rgba(245, 158, 11, 0.45);
-      color: #fcd34d;
+      color: #fef3c7;
     }
 
     .status-dot {
@@ -165,129 +166,124 @@
       height: 8px;
       border-radius: 50%;
       background: #10b981;
-      box-shadow: 0 0 10px #10b981;
-      animation: pulse 1.8s infinite;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseDot 1.6s infinite;
     }
 
-    .status-pill.debating .status-dot {
-      background: #f59e0b;
-      box-shadow: 0 0 10px #f59e0b;
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0.65; }
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    /* ==================== MAIN GRID ==================== */
+    /* ==================== MAIN LAYOUT ==================== */
     main {
       display: grid;
-      grid-template-columns: 1fr 400px;
+      grid-template-columns: 1fr 410px;
       min-height: 0;
       overflow: hidden;
     }
 
     .stage-wrapper {
       position: relative;
-      width: 100%;
-      height: 100%;
-      background: #05070c;
+      background: radial-gradient(circle at 50% 45%, #111a2b 0%, #060911 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
 
-    #officeCanvas {
-      display: block;
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.85);
-      border-radius: 10px;
+    canvas {
+      border-radius: 12px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(51, 65, 85, 0.4);
       cursor: pointer;
     }
 
-    /* Quick Scenarios Floating Ribbon */
-    .quick-scenarios {
+    /* Real-time Mission & Plan HUD over Canvas */
+    .hud-overlay {
       position: absolute;
-      top: 14px;
-      left: 16px;
-      right: 16px;
+      top: 12px;
+      left: 14px;
+      right: 14px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      z-index: 10;
+      justify-content: space-between;
+      gap: 12px;
       pointer-events: none;
+      z-index: 10;
     }
 
-    .scenario-btn {
+    .hud-card {
       pointer-events: auto;
-      background: rgba(12, 17, 26, 0.92);
+      background: rgba(10, 15, 25, 0.88);
       backdrop-filter: blur(10px);
-      border: 1px solid #233045;
-      color: #e2e8f0;
-      padding: 6px 12px;
-      border-radius: 7px;
-      font-size: 11.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 10px;
+      padding: 8px 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+      max-width: 62%;
+    }
+
+    .hud-title-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-    }
-
-    .scenario-btn:hover {
-      background: #1a2334;
-      border-color: var(--accent);
-      color: #38bdf8;
-      transform: translateY(-1px);
-    }
-
-    .scenario-btn.debate-btn {
-      background: rgba(245, 158, 11, 0.14);
-      border-color: rgba(245, 158, 11, 0.4);
-      color: #fde68a;
-    }
-    .scenario-btn.debate-btn:hover {
-      background: rgba(245, 158, 11, 0.25);
-      border-color: #f59e0b;
-      color: #fff;
-    }
-
-    /* Speed indicator overlay */
-    .speed-badge {
-      position: absolute;
-      bottom: 14px;
-      left: 16px;
-      background: rgba(12, 17, 26, 0.88);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 6px 10px;
-      display: flex;
-      gap: 6px;
-      align-items: center;
+      gap: 8px;
       font-size: 11px;
       font-weight: 700;
-      color: var(--text-muted);
-      z-index: 10;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
     }
 
-    .speed-btn {
-      background: #141c2b;
-      border: 1px solid #233147;
-      color: #94a3b8;
-      padding: 2px 7px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 10.5px;
+    .hud-mission {
+      font-size: 12.5px;
       font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
     }
 
-    .speed-btn.active {
-      background: var(--accent);
-      color: #07090e;
-      border-color: var(--accent);
+    .plan-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .plan-pill {
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #111a29;
+      border: 1px solid #233248;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .plan-pill.done {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #a7f3d0;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .plan-pill.doing {
+      border-color: rgba(245, 158, 11, 0.55);
+      color: #fde68a;
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    .notion-hud {
+      max-width: 36%;
+      border-color: rgba(234, 179, 8, 0.35);
+    }
+
+    .notion-item {
+      font-size: 11px;
+      color: #fef08a;
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.25);
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
     }
 
     /* ==================== SIDEBAR ==================== */
@@ -297,208 +293,179 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-      overflow: hidden;
     }
 
     .roster-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      padding: 8px 10px;
-      background: #080c14;
+      gap: 5px;
+      padding: 10px 12px;
+      background: #090d15;
       border-bottom: 1px solid var(--panel-border);
     }
 
     .roster-tab {
-      background: #0f1522;
-      border: 1px solid #1c2638;
-      color: #94a3b8;
-      padding: 6px 4px;
+      background: #121a28;
+      border: 1px solid #1e293b;
       border-radius: 6px;
+      padding: 5px 4px;
       font-size: 10.5px;
       font-weight: 700;
+      color: #94a3b8;
       text-align: center;
       cursor: pointer;
-      transition: all 0.12s ease;
+      transition: all 0.14s ease;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
     }
 
     .roster-tab:hover {
-      background: #151e2e;
-      color: #fff;
+      background: #1a2538;
+      color: #f8fafc;
     }
 
     .roster-tab.active {
-      color: #fff;
+      background: rgba(56, 189, 248, 0.16);
       border-color: var(--accent);
-      background: #192336;
+      color: #fff;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
     }
 
-    /* Agent Focused Detail Card */
     .agent-focus-view {
-      padding: 14px 16px;
-      background: #0e1420;
+      padding: 12px 14px;
       border-bottom: 1px solid var(--panel-border);
+      background: linear-gradient(180deg, #0e1522 0%, #0b1019 100%);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .agent-header-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
     }
 
     .agent-avatar-lg {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-size: 22px;
-      background: #141c2c;
-      border: 2px solid var(--accent);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      background: #131c2b;
+      border: 2px solid var(--color-sid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 21px;
       position: relative;
+      flex-shrink: 0;
     }
 
     .avatar-live-indicator {
       position: absolute;
-      bottom: -2px;
-      right: -2px;
-      width: 12px;
-      height: 12px;
+      bottom: -3px;
+      right: -3px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: #10b981;
-      border: 2px solid #0e1420;
-      box-shadow: 0 0 8px #10b981;
-    }
-
-    .agent-meta-info {
-      flex: 1;
-      min-width: 0;
+      border: 2px solid #0b1019;
     }
 
     .agent-meta-info h3 {
-      font-size: 15px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #f8fafc;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 7px;
     }
 
     .agent-state-chip {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
+      font-size: 9.5px;
+      padding: 2px 6px;
       border-radius: 4px;
-      background: rgba(16, 185, 129, 0.18);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      letter-spacing: 0.3px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #f59e0b;
     }
 
     .agent-meta-info p {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
       margin-top: 2px;
     }
 
     .agent-task-box {
-      background: #090e16;
-      border: 1px solid #1c2738;
+      background: #080c14;
+      border: 1px solid #1a2436;
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 8px 10px;
     }
 
     .task-label-row {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
-      font-weight: 600;
-      color: #94a3b8;
-      margin-bottom: 6px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
     }
 
     .task-title {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       color: #e2e8f0;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
       display: flex;
       align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      gap: 5px;
     }
 
     .progress-track {
-      width: 100%;
-      height: 6px;
-      background: #172131;
+      height: 5px;
+      background: #141d2b;
       border-radius: 999px;
       overflow: hidden;
-      position: relative;
     }
 
     .progress-bar-fill {
       height: 100%;
       background: linear-gradient(90deg, #38bdf8, #10b981);
-      width: 65%;
+      width: 90%;
       border-radius: 999px;
       transition: width 0.3s ease;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
     }
 
     .live-stream-box {
       background: #06090f;
       border: 1px solid #192436;
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 7px 10px;
       font-family: "Cascadia Code", Consolas, monospace;
-      font-size: 11px;
+      font-size: 10.5px;
       color: #7dd3fc;
-      line-height: 1.5;
-      height: 68px;
+      line-height: 1.45;
+      height: 60px;
       overflow: hidden;
-      position: relative;
-    }
-
-    .live-stream-box::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 20px;
-      background: linear-gradient(to bottom, transparent, #06090f);
-      pointer-events: none;
     }
 
     .skills-tags {
       display: flex;
-      gap: 5px;
+      gap: 4px;
       flex-wrap: wrap;
     }
 
     .skill-tag {
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 600;
-      padding: 3px 7px;
+      padding: 2px 6px;
       background: #121a28;
-      border-radius: 5px;
+      border-radius: 4px;
       color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.25);
     }
 
     /* Terminal Logs */
@@ -507,14 +474,14 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-      background: #080c14;
+      background: #070a10;
     }
 
     .terminal-toolbar {
-      padding: 7px 14px;
+      padding: 6px 12px;
       background: #0b101a;
       border-bottom: 1px solid #182333;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       letter-spacing: 0.5px;
       color: #64748b;
@@ -526,107 +493,58 @@
 
     .terminal {
       flex: 1;
-      padding: 12px 14px;
+      padding: 10px 12px;
       overflow-y: auto;
       font-family: "Cascadia Code", Consolas, monospace;
-      font-size: 11.5px;
-      line-height: 1.55;
-      background: #070a10;
+      font-size: 11px;
+      line-height: 1.5;
     }
-
-    .terminal::-webkit-scrollbar { width: 5px; }
-    .terminal::-webkit-scrollbar-thumb { background: #1c2638; border-radius: 4px; }
 
     .log-entry {
-      margin-bottom: 8px;
-      padding-bottom: 7px;
+      margin-bottom: 7px;
+      padding-bottom: 6px;
       border-bottom: 1px dashed rgba(35, 48, 68, 0.5);
       word-break: break-word;
-      animation: fadeIn 0.2s ease;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(3px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .log-time {
-      color: #475569;
-      margin-right: 5px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .log-author {
-      font-weight: 700;
-      margin-right: 6px;
-    }
-
+    .log-time { color: #475569; margin-right: 4px; font-variant-numeric: tabular-nums; }
+    .log-author { font-weight: 700; margin-right: 5px; }
     .log-author.sid { color: var(--color-sid); }
     .log-author.kevin { color: var(--color-kevin); }
-    .log-author.bruno { color: var(--color-bruno); }
-    .log-author.verito { color: var(--color-verito); }
-    .log-author.sofi { color: var(--color-sofi); }
-    .log-author.nico { color: var(--color-nico); }
     .log-author.mateo { color: var(--color-mateo); }
+    .log-author.nahum { color: var(--color-nahum); }
+    .log-author.leo { color: var(--color-leo); }
+    .log-author.flecha { color: var(--color-flecha); }
+    .log-author.sofi { color: var(--color-sofi); }
+    .log-author.bruno { color: var(--color-bruno); }
+    .log-author.nico { color: var(--color-nico); }
+    .log-author.verito { color: var(--color-verito); }
     .log-author.luna { color: var(--color-luna); }
-    .log-author.sys { color: #a855f7; }
-
     .log-text { color: #cbd5e1; }
 
     /* ==================== FOOTER ==================== */
     footer {
-      padding: 0 20px;
+      padding: 0 18px;
       background: var(--panel-bg);
       border-top: 1px solid var(--panel-border);
       display: flex;
-      gap: 12px;
+      justify-content: space-between;
       align-items: center;
+      font-size: 11.5px;
+      color: var(--text-muted);
       z-index: 20;
     }
 
-    .input-wrapper { flex: 1; }
-
-    .task-input {
-      width: 100%;
-      background: #080c14;
-      border: 1px solid #233147;
-      padding: 10px 16px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 13px;
-      outline: none;
-      transition: all 0.15s;
-    }
-
-    .task-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
-    }
-
-    .send-btn {
-      background: linear-gradient(135deg, #2563eb, #0284c7);
-      color: #fff;
-      border: none;
-      padding: 10px 22px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    .sync-indicator {
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      font-family: "Cascadia Code", Consolas, monospace;
     }
 
-    .send-btn:hover:not(:disabled) {
-      filter: brightness(1.12);
-      transform: translateY(-1px);
-    }
-
-    .send-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .footer-actions {
+      display: flex;
+      gap: 8px;
     }
   </style>
 </head>
@@ -637,27 +555,23 @@
     <div class="brand">
       <div class="brand-badge">
         <span>⚡</span>
-        <span>EMPY SQUAD HQ</span>
+        <span>EMPY SQUAD v2.0</span>
       </div>
-      <h1>Comando de Agentes Especialistas • Mesa Central de Debate</h1>
+      <h1>Centro de Telemetría en Vivo • Sincronizado con el Chat de Antigravity</h1>
     </div>
 
     <div class="header-metrics">
       <div class="metric-chip">
         <span>👥 Escuadrón:</span>
-        <b id="activeAgentsCount">8 Especialistas</b>
+        <b>11 Especialistas Activos</b>
       </div>
       <div class="metric-chip">
-        <span>🏛️ Sala:</span>
-        <b id="tableStateVal" style="color: #38bdf8;">Conferencia Lista</b>
+        <span>🏛️ Estado Sala:</span>
+        <b id="tableStateVal" style="color: #38bdf8;">Ejecución en Puestos</b>
       </div>
       <div class="metric-chip">
-        <span>⚡ Carga CPU:</span>
-        <b id="cpuUsageVal">42%</b>
-      </div>
-      <div class="metric-chip">
-        <span>🛡️ OWASP:</span>
-        <b style="color: #34d399;">100% Blindado</b>
+        <span>🔒 Compuerta Git:</span>
+        <b id="commitGateVal" style="color: #14b8a6;">✅ Sello Verde Flecha (0 commits basura)</b>
       </div>
     </div>
 
@@ -669,7 +583,7 @@
 
       <div class="status-pill" id="globalStatusPill">
         <div class="status-dot"></div>
-        <span id="globalState">Escuadrón trabajando a ritmo constante</span>
+        <span id="globalState">LIVE SYNC ACTIVO CON ANTIGRAVITY</span>
       </div>
     </div>
   </header>
@@ -677,39 +591,45 @@
   <!-- MAIN -->
   <main>
     <div class="stage-wrapper" id="stageWrapper">
-      <!-- Quick scenario and debate buttons -->
-      <div class="quick-scenarios">
-        <button class="scenario-btn debate-btn" onclick="triggerDebate('Persistencia: Supabase Postgres vs SQLite local para alta concurrencia')">⚖️ Debate: Supabase vs SQLite</button>
-        <button class="scenario-btn debate-btn" onclick="triggerDebate('Seguridad: Puntos ciegos de inyección y rate-limits en comandos Baileys')">🛡️ Auditoría: Puntos Ciegos SecOps</button>
-        <button class="scenario-btn debate-btn" onclick="triggerDebate('Lluvia de Ideas: 3 comandos top para monetización y comunidad')">💡 Lluvia de Ideas: 3 Comandos</button>
-        <button class="scenario-btn" onclick="triggerTask('TP Consorcios: Optimizar vistas analíticas SQL y redactar informe')">🎓 TP Consorcios SQL</button>
-        <button class="scenario-btn" onclick="triggerTask('Multimedia: Transcodificar buffer de audio y generar sticker WebP circular')">🎬 Pipeline Multimedia</button>
-        <button class="scenario-btn" onclick="triggerTask('Notion MCP: Sincronizar reporte de bugs pendientes en base de datos')">⚡ Sync Notion Ops</button>
+      <!-- Real-Time Mission + Plan + Notion HUD -->
+      <div class="hud-overlay">
+        <div class="hud-card">
+          <div class="hud-title-row">
+            <span>📋 Misión & Plan Activo en Antigravity</span>
+            <span id="livePhaseBadge" style="background:#1e293b;padding:1px 6px;border-radius:4px;color:#fde68a;">WORKING</span>
+          </div>
+          <div class="hud-mission" id="liveMissionTitle">Potenciación de /agentes-empy v2.0 + Telemetría en Vivo</div>
+          <div class="plan-pills" id="livePlanSteps"></div>
+        </div>
+
+        <div class="hud-card notion-hud">
+          <div class="hud-title-row" style="color:#eab308;">
+            <span>⚡ Backlog Real de Notion (Luna)</span>
+          </div>
+          <div id="liveNotionList">
+            <div class="notion-item">Cargando tickets desde temp/squad-live.js...</div>
+          </div>
+        </div>
       </div>
 
       <canvas id="officeCanvas"></canvas>
-
-      <!-- Simulation speed switcher -->
-      <div class="speed-badge">
-        <span>Simulación:</span>
-        <button class="speed-btn active" id="speed1x" onclick="setSpeed(1)">1x</button>
-        <button class="speed-btn" id="speed2x" onclick="setSpeed(2)">2x</button>
-        <button class="speed-btn" id="speed4x" onclick="setSpeed(4)">4x</button>
-      </div>
     </div>
 
     <!-- SIDEBAR -->
     <aside>
-      <!-- All 8 Agents Fast Switcher Bar -->
+      <!-- 11 Agents Fast Switcher Bar -->
       <div class="roster-grid" id="rosterGrid">
-        <div class="roster-tab active" onclick="selectAgentById('sid')">👑 Sid</div>
-        <div class="roster-tab" onclick="selectAgentById('kevin')">💻 Kevin</div>
-        <div class="roster-tab" onclick="selectAgentById('bruno')">🎨 Bruno</div>
-        <div class="roster-tab" onclick="selectAgentById('verito')">📚 Verito</div>
-        <div class="roster-tab" onclick="selectAgentById('sofi')">🎬 Sofi</div>
-        <div class="roster-tab" onclick="selectAgentById('nico')">🔍 Nico</div>
-        <div class="roster-tab" onclick="selectAgentById('mateo')">🛡️ Mateo</div>
-        <div class="roster-tab" onclick="selectAgentById('luna')">⚡ Luna</div>
+        <div class="roster-tab active" data-id="sid" onclick="selectAgentById('sid')">👑 Sid</div>
+        <div class="roster-tab" data-id="kevin" onclick="selectAgentById('kevin')">💻 Kevin</div>
+        <div class="roster-tab" data-id="mateo" onclick="selectAgentById('mateo')">🛡️ Mateo</div>
+        <div class="roster-tab" data-id="nahum" onclick="selectAgentById('nahum')">🧠 Nahum</div>
+        <div class="roster-tab" data-id="leo" onclick="selectAgentById('leo')">🎲 Leo</div>
+        <div class="roster-tab" data-id="flecha" onclick="selectAgentById('flecha')">🎯 Flecha</div>
+        <div class="roster-tab" data-id="sofi" onclick="selectAgentById('sofi')">🎬 Sofi</div>
+        <div class="roster-tab" data-id="bruno" onclick="selectAgentById('bruno')">🎨 Bruno</div>
+        <div class="roster-tab" data-id="nico" onclick="selectAgentById('nico')">🔍 Nico</div>
+        <div class="roster-tab" data-id="verito" onclick="selectAgentById('verito')">📚 Verito</div>
+        <div class="roster-tab" data-id="luna" onclick="selectAgentById('luna')">⚡ Luna</div>
       </div>
 
       <!-- Agent Focused Detail Card -->
@@ -722,31 +642,30 @@
           <div class="agent-meta-info">
             <h3>
               <span id="inspectorName">El Jefe Sid</span>
-              <span class="agent-state-chip" id="inspectorState">LABURANDO</span>
+              <span class="agent-state-chip" id="inspectorState">WORKING</span>
             </h3>
-            <p id="inspectorRole">Director General & Estratega en Jefe</p>
+            <p id="inspectorRole">Director General, Orquestador & Guardián Git</p>
           </div>
         </div>
 
         <div class="agent-task-box">
           <div class="task-label-row">
-            <span>Tarea Actual en Progreso</span>
-            <span id="inspectorProgressPct" style="color: #38bdf8; font-weight: 700;">72%</span>
+            <span>Actividad Real Asignada por Sid</span>
+            <span id="inspectorProgressPct" style="color: #38bdf8; font-weight: 700;">90%</span>
           </div>
-          <div class="task-title" id="inspectorTaskTitle">
+          <div class="task-title">
             <span>⚡</span>
-            <span id="inspectorTaskText">Supervisando arquitectura general y delegando misiones</span>
+            <span id="inspectorTaskText">Coordinando los 11 especialistas</span>
           </div>
           <div class="progress-track">
-            <div class="progress-bar-fill" id="inspectorProgressBar" style="width: 72%;"></div>
+            <div class="progress-bar-fill" id="inspectorProgressBar" style="width: 90%;"></div>
           </div>
         </div>
 
-        <!-- Live simulated code / data typing box -->
-        <div class="live-stream-box" id="inspectorStream">
-          <span style="color: #64748b;">// Flujo activo</span><br>
-          <span id="streamLine1">await orchestrateTeam({ priority: 'CRITICAL' });</span><br>
-          <span id="streamLine2" style="color: #94a3b8;">> Verificando estado de agentes... [OK]</span>
+        <div class="live-stream-box">
+          <span style="color: #64748b;">// Telemetría en tiempo real</span><br>
+          <span id="streamLine1">officeSync.broadcast({ agents: 11 });</span><br>
+          <span id="streamLine2" style="color: #94a3b8;">// Single-Commit Gate: ACTIVO</span>
         </div>
 
         <div class="skills-tags" id="inspectorSkills"></div>
@@ -755,8 +674,8 @@
       <!-- Terminal Logs -->
       <div class="terminal-container">
         <div class="terminal-toolbar">
-          <span>Registro en Vivo del Escuadrón</span>
-          <span style="color:#38bdf8;cursor:pointer;font-weight:600;" onclick="clearLogs()">Limpiar</span>
+          <span>Bitácora Real de la Sesión</span>
+          <span id="syncSeqBadge" style="color:#38bdf8;">SEQ #1</span>
         </div>
         <div class="terminal" id="terminalLogs"></div>
       </div>
@@ -765,17 +684,18 @@
 
   <!-- FOOTER -->
   <footer>
-    <div class="input-wrapper">
-      <input type="text" id="taskInput" class="task-input" placeholder="Escribí una orden o consulta (ej: 'Debatir si conviene SQLite', 'Investigar API de Spotify', 'Hacer TP SQL')..." />
+    <div class="sync-indicator">
+      <span style="color:#10b981;">●</span>
+      <span>Fuente en vivo: <b>temp/squad-live.js</b> (actualizado automáticamente cuando hablás en Antigravity)</span>
+      <span id="lastSyncTime" style="color:#64748b;"></span>
     </div>
-    <button class="send-btn" id="sendBtn" onclick="submitCustomTask()">
-      <span>Despachar Orden / Debate</span>
-      <span>🚀</span>
-    </button>
+    <div class="footer-actions">
+      <button class="btn-toggle" onclick="forceAssembleTable()">🏛️ Ver en Mesa Central</button>
+      <button class="btn-toggle" onclick="forceReturnDesks()">💻 Ver en sus 11 Puestos</button>
+    </div>
   </footer>
 
   <script>
-    // ==================== ENGINE & CANVAS SETUP ====================
     const canvas = document.getElementById('officeCanvas');
     const ctx = canvas.getContext('2d');
     const stageWrapper = document.getElementById('stageWrapper');
@@ -784,14 +704,12 @@
     const WORLD_W = 1240;
     const WORLD_H = 760;
     let scaleRatio = 1;
-    let simSpeed = 1;
     let audioEnabled = true;
 
     function fitCanvas() {
-      const availW = stageWrapper.clientWidth - 28;
-      const availH = stageWrapper.clientHeight - 28;
+      const availW = stageWrapper.clientWidth - 24;
+      const availH = stageWrapper.clientHeight - 24;
       scaleRatio = Math.min(availW / WORLD_W, availH / WORLD_H);
-      
       const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.floor(WORLD_W * scaleRatio * dpr);
       canvas.height = Math.floor(WORLD_H * scaleRatio * dpr);
@@ -802,20 +720,29 @@
     window.addEventListener('resize', fitCanvas);
     fitCanvas();
 
-    function setSpeed(s) {
-      simSpeed = s;
-      ['1x', '2x', '4x'].forEach(lbl => {
-        document.getElementById(`speed${lbl}`).classList.toggle('active', lbl === `${s}x`);
-      });
-      playSound(620, 'sine', 0.05);
+    let audioCtx = null;
+    function playSound(freq = 480, type = 'sine', duration = 0.05) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
     }
 
     function toggleAudio() {
       audioEnabled = !audioEnabled;
-      const btn = document.getElementById('audioToggle');
-      btn.classList.toggle('active', audioEnabled);
+      document.getElementById('audioToggle').classList.toggle('active', audioEnabled);
       document.getElementById('audioIcon').innerText = audioEnabled ? '🔊' : '🔇';
-      if (audioEnabled) playSound(520, 'triangle', 0.08);
     }
 
     function drawRoundRect(x, y, w, h, r, fill, stroke, lineWidth = 1.5) {
@@ -825,658 +752,460 @@
       if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
     }
 
-    let audioCtx = null;
-    function playSound(freq = 440, type = 'sine', duration = 0.06) {
-      if (!audioEnabled) return;
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
-
-    // ==================== ROSTER DE 8 AGENTES ESPECIALISTAS ====================
+    // ==================== ROSTER OFICIAL DE 11 ESPECIALISTAS ====================
     const agents = {
       sid: {
-        id: 'sid',
-        name: 'El Jefe Sid',
-        short: 'Jefe Sid',
-        role: 'Director General & Estratega Principal',
-        badge: '👑',
-        color: '#f59e0b',
-        hairColor: '#1e293b',
-        shirtColor: '#d97706',
-        skinColor: '#f1c27d',
-        crown: true,
-        glasses: true,
-        skills: ['orquestación-general', 'revisión-final', 'síntesis-ganadora'],
-        desk: { x: 1060, y: 220 },
-        lounge: { x: 1060, y: 220 },
-        x: 1060, y: 220,
-        targetX: 1060, targetY: 220,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 85,
-        progressSpeed: 0.15,
-        currentTask: 'Supervisando arquitectura general del bot y coordinando equipo',
-        streamCode: [
-          'const mission = orchestrator.dispatch(goals);',
-          'if (code.quality === "EXCELLENT") approve();'
-        ],
-        backlog: [
-          'Supervisando arquitectura general y delegando misiones',
-          'Evaluando propuestas de nuevos comandos para el bot',
-          'Revisando rendimiento y consumo de tokens del equipo',
-          'Alineando entregas de trabajos para la facultad'
-        ]
-      },
-      kevin: {
-        id: 'kevin',
-        name: 'Kevin',
-        short: 'Kevin (Backend)',
-        role: 'Arquitecto Backend & Socket Baileys',
-        badge: '💻',
-        color: '#3b82f6',
-        hairColor: '#0f172a',
-        shirtColor: '#2563eb',
-        skinColor: '#ffdbac',
-        headphones: true,
-        skills: ['baileys-esm', 'supabase-postgres', 'clean-code-yagni'],
-        desk: { x: 380, y: 380 },
-        lounge: { x: 140, y: 170 },
-        x: 380, y: 380,
-        targetX: 380, targetY: 380,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 60,
-        progressSpeed: 0.28,
-        currentTask: 'Optimizando pool de conexiones en Supabase & Baileys socket',
-        streamCode: [
-          'import { makeWASocket } from "@whiskeysockets/baileys";',
-          'const sock = makeWASocket({ auth: state });'
-        ],
-        backlog: [
-          'Optimizando pool de conexiones en Supabase & Baileys socket',
-          'Migrando handlers a TypeScript estricto con imports .js',
-          'Implementando caché en memoria para comandos de alto tráfico',
-          'Refactorizando economía y cooldowns de comandos en Postgres'
-        ]
-      },
-      bruno: {
-        id: 'bruno',
-        name: 'Bruno',
-        short: 'Bruno (Frontend)',
-        role: 'Frontend Engineer & UI/UX Craft',
-        badge: '🎨',
-        color: '#06b6d4',
-        hairColor: '#334155',
-        shirtColor: '#0891b2',
-        skinColor: '#e0ac69',
-        beret: true,
-        skills: ['taste-skill', 'ui-skills-ibelick', 'microinteracciones'],
-        desk: { x: 180, y: 630 },
-        lounge: { x: 220, y: 170 },
-        x: 180, y: 630,
-        targetX: 180, targetY: 630,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 42,
-        progressSpeed: 0.22,
-        currentTask: 'Puliendo contrastes, microinteracciones 200ms y tokens de color',
-        streamCode: [
-          'transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);',
-          'font-variant-numeric: tabular-nums; text-wrap: balance;'
-        ],
-        backlog: [
-          'Puliendo contrastes, microinteracciones 200ms y tokens de color',
-          'Construyendo componentes estilo @ibelick con alto craft',
-          'Optimizando layout responsivo y previniendo el bug de 100vh',
-          'Eliminando clichés genéricos de IA en interfaces web'
-        ]
-      },
-      verito: {
-        id: 'verito',
-        name: 'Verito',
-        short: 'Verito (Académica)',
-        role: 'Fact-Checker & Redacción Universitaria',
-        badge: '📚',
-        color: '#ec4899',
-        hairColor: '#831843',
-        shirtColor: '#db2777',
-        skinColor: '#ffdbac',
-        glasses: true,
-        skills: ['humanizer-pro', 'redacción-académica', 'síntesis-papers'],
-        desk: { x: 420, y: 630 },
-        lounge: { x: 300, y: 170 },
-        x: 420, y: 630,
-        targetX: 420, targetY: 630,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 78,
-        progressSpeed: 0.18,
-        currentTask: 'Revisando informe de consorcios y eliminando clichés de IA',
-        streamCode: [
-          'const cleanText = humanizer.filter(draft, { tone: "academic" });',
-          'assert(!cleanText.includes("en un mundo donde"));'
-        ],
-        backlog: [
-          'Revisando informe de consorcios y eliminando clichés de IA',
-          'Estructurando marco teórico para trabajo de la facultad',
-          'Verificando consistencia en citas bibliográficas y normas APA',
-          'Pulido de ortografía, tono sobrio y síntesis concisa'
-        ]
-      },
-      sofi: {
-        id: 'sofi',
-        name: 'Sofi',
-        short: 'Sofi (Multimedia)',
-        role: 'Especialista en Audio, Video & Edición',
-        badge: '🎬',
-        color: '#a855f7',
-        hairColor: '#581c87',
-        shirtColor: '#9333ea',
-        skinColor: '#fcd34d',
-        headphones: true,
-        skills: ['sharp-optimizer', 'ffmpeg-transcoder', 'edge-tts-audio'],
-        desk: { x: 800, y: 630 },
-        lounge: { x: 180, y: 220 },
-        x: 800, y: 630,
-        targetX: 800, targetY: 630,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 35,
-        progressSpeed: 0.32,
-        currentTask: 'Comprimiendo buffer de video con ffmpeg sin perder nitidez',
-        streamCode: [
-          'ffmpeg(stream).outputOptions(["-c:v libx264", "-crf 24"])',
-          '.format("mp4").pipe(dest);'
-        ],
-        backlog: [
-          'Comprimiendo buffer de video con ffmpeg sin perder nitidez',
-          'Generando stickers WebP circulares con metadatos EXIF',
-          'Sintetizando notas de voz ultra-claras con Edge-TTS',
-          'Ajustando niveles de audio y normalización R128'
-        ]
-      },
-      nico: {
-        id: 'nico',
-        name: 'Nico',
-        short: 'Nico (Research)',
-        role: 'Deep Researcher & Web Scraping',
-        badge: '🔍',
-        color: '#10b981',
-        hairColor: '#1c1917',
-        shirtColor: '#059669',
-        skinColor: '#d6d3d1',
-        glasses: true,
-        skills: ['duckdb-analytics', 'astronomy-math', 'web-intel'],
-        desk: { x: 780, y: 380 },
-        lounge: { x: 260, y: 220 },
-        x: 780, y: 380,
-        targetX: 780, targetY: 380,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 92,
-        progressSpeed: 0.24,
-        currentTask: 'Extrayendo tablas de PDF y ejecutando consultas en DuckDB',
-        streamCode: [
-          'SELECT consorcio_id, COUNT(*) FROM lotes.parquet',
-          'GROUP BY 1 HAVING sum(monto) > 0 ORDER BY 2 DESC;'
-        ],
-        backlog: [
-          'Extrayendo tablas de PDF y ejecutando consultas en DuckDB',
-          'Calculando efemérides planetarias con astronomy-engine',
-          'Mapeando estructura de endpoints y schemas externos',
-          'Indexando apuntes de base de datos para búsqueda instantánea'
-        ]
+        id: 'sid', name: 'El Jefe Sid', short: 'Jefe Sid', deskLabel: '👑 JEFE SID (ORQUESTADOR)',
+        role: 'Director General, Plan-First & Single-Commit Gate', badge: '👑',
+        color: '#f59e0b', hairColor: '#1e293b', shirtColor: '#d97706', skinColor: '#f1c27d',
+        crown: true, glasses: true,
+        skills: ['define_subagent', 'invoke_subagent', 'plan.md', 'single-commit-gate'],
+        desk: { x: 1055, y: 215 }, x: 1055, y: 215, targetX: 1055, targetY: 215,
+        state: 'WORKING', bubble: '📡 Telemetría en vivo', bubbleTimer: 180, progress: 95,
+        currentTask: 'Coordinando los 11 especialistas y compuerta de Commit Único',
+        streamCode: ['officeSync.broadcast({ agents: 11 });', '// 0 commits basura hasta el final']
       },
       mateo: {
-        id: 'mateo',
-        name: 'Mateo',
-        short: 'Mateo (SecOps)',
-        role: 'Auditor de Ciberseguridad & OWASP',
-        badge: '🛡️',
-        color: '#ef4444',
-        hairColor: '#450a0a',
-        shirtColor: '#dc2626',
-        skinColor: '#fca5a5',
+        id: 'mateo', name: 'Mateo', short: 'Mateo (SecOps)', deskLabel: '🛡️ SECOPS (MATEO)',
+        role: 'Auditor OWASP, Schemas Zod & Blindaje Git', badge: '🛡️',
+        color: '#ef4444', hairColor: '#450a0a', shirtColor: '#dc2626', skinColor: '#fca5a5',
         visor: true,
-        skills: ['owasp-top-10', 'zod-sanitizer', 'anti-credential-leak'],
-        desk: { x: 180, y: 380 },
-        lounge: { x: 340, y: 220 },
-        x: 180, y: 380,
-        targetX: 180, targetY: 380,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 55,
-        progressSpeed: 0.2,
-        currentTask: 'Auditando inputs y validando esquemas Zod contra inyecciones',
-        streamCode: [
-          'const safeInput = UserCommandSchema.parse(payload);',
-          'if (detectPromptInjection(safeInput)) sanitize();'
-        ],
-        backlog: [
-          'Auditando inputs y validando esquemas Zod contra inyecciones',
-          'Blindando rate limits en token.service contra flooding',
-          'Verificando .gitignore preventivo para impedir fugas de .env',
-          'Escaneando dependencias npm con security-check automatizado'
-        ]
+        skills: ['security-guard', 'zod-schemas', 'security:check', 'anti-leak'],
+        desk: { x: 135, y: 390 }, x: 135, y: 390, targetX: 135, targetY: 390,
+        state: 'WORKING', bubble: '🛡️ 0 secretos expuestos', bubbleTimer: 150, progress: 100,
+        currentTask: 'Escudo OWASP y .gitignore verificados sin fugas',
+        streamCode: ['npm run security:check -> OK', 'Zod.safeParse(payload)']
+      },
+      kevin: {
+        id: 'kevin', name: 'Kevin', short: 'Kevin (Backend)', deskLabel: '💻 BACKEND (KEVIN)',
+        role: 'Arquitecto Backend, Socket Baileys & Concurrencia ESM', badge: '💻',
+        color: '#3b82f6', hairColor: '#0f172a', shirtColor: '#2563eb', skinColor: '#ffdbac',
+        headphones: true,
+        skills: ['baileys-rc14', 'context7-mcp', 'graphify', 'typescript-esm'],
+        desk: { x: 315, y: 390 }, x: 315, y: 390, targetX: 315, targetY: 390,
+        state: 'WORKING', bubble: '💻 Backend ESM listo', bubbleTimer: 140, progress: 100,
+        currentTask: 'Socket Baileys ESM y servicios listos',
+        streamCode: ['import { getFeedbackItems } from "./notion.service.js";', '// Separación estricta en capas']
+      },
+      nahum: {
+        id: 'nahum', name: 'Nahum', short: 'Nahum (AI/RAG)', deskLabel: '🧠 AI & RAG (NAHUM)',
+        role: 'Ingeniero AI Pipeline (4 Capas), Groq Triage & pgvector', badge: '🧠',
+        color: '#8b5cf6', hairColor: '#2e1065', shirtColor: '#7c3aed', skinColor: '#f3e8ff',
+        glasses: true, headphones: true,
+        skills: ['gemini-api-docs', 'pgvector-rag', 'groq-qwen-triage', 'user-cache'],
+        desk: { x: 875, y: 390 }, x: 875, y: 390, targetX: 875, targetY: 390,
+        state: 'WORKING', bubble: '🧠 RAG 4 Capas activo', bubbleTimer: 170, progress: 100,
+        currentTask: 'Monitoreando Pipeline Conversacional de 4 Capas y pgvector',
+        streamCode: ['// Capa 1 ($0) -> Groq -> RAG pgvector -> Gemma/Gemini', 'await hydrateRagContext(groupJid);']
+      },
+      flecha: {
+        id: 'flecha', name: 'Flecha', short: 'Flecha (QA Gate)', deskLabel: '🎯 QA & TESTS (FLECHA)',
+        role: 'Ingeniero QA, Typecheck, Tests & Sello Verde Pre-Commit', badge: '🎯',
+        color: '#14b8a6', hairColor: '#042f2e', shirtColor: '#0d9488', skinColor: '#ccfbf1',
+        visor: true,
+        skills: ['tsc --noEmit', 'security:check', 'scripts/test-*', 'sello-verde-qa'],
+        desk: { x: 1065, y: 390 }, x: 1065, y: 390, targetX: 1065, targetY: 390,
+        state: 'WORKING', bubble: '✅ SELLO VERDE FLECHA', bubbleTimer: 220, progress: 100,
+        currentTask: 'Sello Verde otorgado: tsc --noEmit (0 errores) + security:check OK',
+        streamCode: ['npm run typecheck -> 0 errors', '✅ SELLO VERDE FLECHA emitido']
+      },
+      bruno: {
+        id: 'bruno', name: 'Bruno', short: 'Bruno (Frontend)', deskLabel: '🎨 FRONTEND (BRUNO)',
+        role: 'Frontend Engineer, UI Craft & Generación Gráfica (!dni, !tweet)', badge: '🎨',
+        color: '#06b6d4', hairColor: '#334155', shirtColor: '#0891b2', skinColor: '#e0ac69',
+        beret: true,
+        skills: ['taste-skill', 'ui-skills', 'impeccable', 'chrome-devtools'],
+        desk: { x: 125, y: 645 }, x: 125, y: 645, targetX: 125, targetY: 645,
+        state: 'WORKING', bubble: '🎨 Telemetría HTML lista', bubbleTimer: 200, progress: 95,
+        currentTask: 'Conectando empy-office.html a temp/squad-live.js en vivo',
+        streamCode: ['script.src = "./temp/squad-live.js?t=" + Date.now();', 'syncRealChatState(window.__EMPY_SQUAD_STATE__);']
+      },
+      leo: {
+        id: 'leo', name: 'Leo', short: 'Leo (Economía/DB)', deskLabel: '🎲 ECONOMÍA & DB (LEO)',
+        role: 'Economía Urbana, Minijuegos, Prisma PostgreSQL & Render', badge: '🎲',
+        color: '#f97316', hairColor: '#431407', shirtColor: '#ea580c', skinColor: '#ffedd5',
+        headband: true,
+        skills: ['supabase-mcp', 'render-mcp', 'prisma-$transaction', 'minijuegos'],
+        desk: { x: 315, y: 645 }, x: 315, y: 645, targetX: 315, targetY: 645,
+        state: 'WORKING', bubble: '🎲 Prisma & Render OK', bubbleTimer: 160, progress: 100,
+        currentTask: 'Supervisando transacciones atómicas Prisma y minijuegos',
+        streamCode: ['await prisma.$transaction([updateBalance]);', '// Render & Supabase sincronizados']
+      },
+      verito: {
+        id: 'verito', name: 'Verito', short: 'Verito (Docs)', deskLabel: '📚 DOCS & COPY (VERITO)',
+        role: 'Redacción Académica, Documentación Viva & Humanizer', badge: '📚',
+        color: '#ec4899', hairColor: '#831843', shirtColor: '#db2777', skinColor: '#ffdbac',
+        glasses: true,
+        skills: ['readme-design', 'humanizer', 'document-craft', 'gdocs'],
+        desk: { x: 505, y: 645 }, x: 505, y: 645, targetX: 505, targetY: 645,
+        state: 'WORKING', bubble: '📚 SKILL.md v2.0 listo', bubbleTimer: 150, progress: 100,
+        currentTask: 'Documentación de SKILL.md y GEMINI.md depurada',
+        streamCode: ['// Cero relleno de IA', 'humanizer.verify(docs);']
+      },
+      nico: {
+        id: 'nico', name: 'Nico', short: 'Nico (Research)', deskLabel: '🔍 RESEARCH (NICO)',
+        role: 'Deep Researcher (/investigar), DuckDB & APIs Externas', badge: '🔍',
+        color: '#10b981', hairColor: '#1c1917', shirtColor: '#059669', skinColor: '#d6d3d1',
+        glasses: true,
+        skills: ['investigar', 'duckdb-mcp', 'astronomy-engine', 'search_web'],
+        desk: { x: 695, y: 645 }, x: 695, y: 645, targetX: 695, targetY: 645,
+        state: 'STANDBY', bubble: '', bubbleTimer: 0, progress: 100,
+        currentTask: 'Protocolo /investigar y DuckDB listos para consultas',
+        streamCode: ['SELECT * FROM read_json_auto("temp/squad-state.json");', '// Listo para análisis']
+      },
+      sofi: {
+        id: 'sofi', name: 'Sofi', short: 'Sofi (Multimedia)', deskLabel: '🎬 MULTIMEDIA (SOFI)',
+        role: 'Clonación de Voz (Fish/Edge-TTS), FFmpeg Opus & Stickers Sharp', badge: '🎬',
+        color: '#a855f7', hairColor: '#581c87', shirtColor: '#9333ea', skinColor: '#fcd34d',
+        headphones: true,
+        skills: ['fish-audio-tts', 'fluent-ffmpeg', 'sharp-webp', 'yt-dlp'],
+        desk: { x: 885, y: 645 }, x: 885, y: 645, targetX: 885, targetY: 645,
+        state: 'STANDBY', bubble: '', bubbleTimer: 0, progress: 100,
+        currentTask: 'Lista para síntesis Fish Audio / Edge-TTS y FFmpeg Opus',
+        streamCode: ['ffmpeg(stream).audioCodec("libopus").format("ogg");', '// Lista para comando !milei']
       },
       luna: {
-        id: 'luna',
-        name: 'Luna',
-        short: 'Luna (Notion Ops)',
-        role: 'Notion Sync & Cron Task Orchestrator',
-        badge: '⚡',
-        color: '#eab308',
-        hairColor: '#422006',
-        shirtColor: '#ca8a04',
-        skinColor: '#fde047',
+        id: 'luna', name: 'Luna', short: 'Luna (Notion)', deskLabel: '⚡ NOTION OPS (LUNA)',
+        role: 'Notion Sync (notion-ops.ts), Backlog Triage & Crons', badge: '⚡',
+        color: '#eab308', hairColor: '#422006', shirtColor: '#ca8a04', skinColor: '#fde047',
         headband: true,
-        skills: ['notion-mcp', 'scheduled-crons', 'database-sync'],
-        desk: { x: 1040, y: 630 },
-        lounge: { x: 140, y: 220 },
-        x: 1040, y: 630,
-        targetX: 1040, targetY: 630,
-        state: 'WORKING',
-        bubble: '',
-        bubbleTimer: 0,
-        progress: 48,
-        progressSpeed: 0.25,
-        currentTask: 'Sincronizando reportes de !bug e !idea en base de datos Notion',
-        streamCode: [
-          'await notion.pages.create({ parent: { database_id } });',
-          'console.log("Ticket Notion sincronizado con éxito");'
-        ],
-        backlog: [
-          'Sincronizando reportes de !bug e !idea en base de datos Notion',
-          'Monitoreando crons programados de limpieza de archivos temp/',
-          'Organizando backlog de mejoras y feedback de usuarios',
-          'Registrando métricas de uptime y latencia de respuestas'
-        ]
+        skills: ['notion-ops.ts', 'notion-mcp', 'schedule-crons', 'backlog-triage'],
+        desk: { x: 1075, y: 645 }, x: 1075, y: 645, targetX: 1075, targetY: 645,
+        state: 'WORKING', bubble: '⚡ Notion conectado', bubbleTimer: 190, progress: 100,
+        currentTask: 'Backlog de Notion sincronizado en vivo',
+        streamCode: ['npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts list', '1 ticket activo en cola']
       }
     };
 
     let selectedAgent = agents.sid;
-
-    // Steam particles
-    const steamParticles = [
-      { x: 105, y: 110, alpha: 0.8, vy: -0.4 },
-      { x: 112, y: 102, alpha: 0.5, vy: -0.5 },
-      { x: 108, y: 94, alpha: 0.2, vy: -0.45 }
-    ];
-
-    // Flying packets
     const activePackets = [];
-
-    // ==================== SALA CENTRAL DE DEBATE HOLOGRÁFICA ====================
-    const CONF_CENTER = { x: 580, y: 490 };
-    const CONF_SEATS = [
-      { x: 580, y: 430, label: 'Head (Sid)' },        // Seat 0: Sid (Head)
-      { x: 655, y: 460, label: 'Seat A' },           // Seat 1
-      { x: 655, y: 530, label: 'Seat B' },           // Seat 2
-      { x: 580, y: 560, label: 'Seat C' },           // Seat 3
-      { x: 505, y: 530, label: 'Seat D' },           // Seat 4
-      { x: 505, y: 460, label: 'Seat E' }            // Seat 5
-    ];
-
     let isDebateActive = false;
-    let hologramText = '⚡ SALA DE JUNTAS';
-    let hologramAlpha = 0.3;
+    let hologramText = '⚡ TELEMETRÍA REAL';
+
+    const CONF_CENTER = { x: 595, y: 455 };
+    const CONF_SEATS = [
+      { x: 595, y: 390 },
+      { x: 675, y: 420 },
+      { x: 675, y: 490 },
+      { x: 595, y: 520 },
+      { x: 515, y: 490 },
+      { x: 515, y: 420 }
+    ];
 
     function selectAgentById(id) {
       const agent = agents[id];
       if (!agent) return;
       selectedAgent = agent;
-      
+
       const avatarEl = document.getElementById('inspectorAvatar');
-      avatarEl.innerHTML = `${agent.badge}<div class="avatar-live-indicator" style="background:${agent.color};box-shadow:0 0 10px ${agent.color};"></div>`;
+      avatarEl.innerHTML = `${agent.badge}<div class="avatar-live-indicator" style="background:${agent.color};box-shadow:0 0 8px ${agent.color};"></div>`;
       avatarEl.style.borderColor = agent.color;
-      
+
       document.getElementById('inspectorName').innerText = agent.name;
       document.getElementById('inspectorRole').innerText = agent.role;
-      
+
       const stateEl = document.getElementById('inspectorState');
-      stateEl.innerText = agent.state === 'WORKING' ? 'LABURANDO' : (agent.state === 'DEBATING' ? 'DEBATIENDO' : (agent.state === 'WALKING' ? 'EN MOVIMIENTO' : 'STANDBY'));
+      stateEl.innerText = agent.state;
       stateEl.style.color = agent.color;
       stateEl.style.borderColor = `${agent.color}55`;
-      stateEl.style.backgroundColor = `${agent.color}15`;
 
       document.getElementById('inspectorTaskText').innerText = agent.currentTask;
       document.getElementById('inspectorProgressPct').innerText = `${Math.floor(agent.progress)}%`;
-      document.getElementById('inspectorProgressPct').style.color = agent.color;
       document.getElementById('inspectorProgressBar').style.width = `${Math.floor(agent.progress)}%`;
       document.getElementById('inspectorProgressBar').style.background = `linear-gradient(90deg, ${agent.color}, #38bdf8)`;
 
-      document.getElementById('streamLine1').innerText = agent.streamCode[0] || '// Procesando datos...';
-      document.getElementById('streamLine2').innerText = agent.streamCode[1] || '> Esperando siguiente instrucción.';
+      document.getElementById('streamLine1').innerText = agent.streamCode[0] || '// Activo';
+      document.getElementById('streamLine2').innerText = agent.streamCode[1] || '';
 
       document.getElementById('inspectorSkills').innerHTML = agent.skills
         .map(s => `<span class="skill-tag" style="border-color:${agent.color}44; color:${agent.color};">${s}</span>`).join('');
 
       document.querySelectorAll('.roster-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.innerText.toLowerCase().includes(agent.name.toLowerCase().split(' ')[0]));
+        tab.classList.toggle('active', tab.dataset.id === id);
       });
-
-      playSound(540, 'sine', 0.04);
     }
     selectAgentById('sid');
 
-    function clearLogs() { terminal.innerHTML = ''; }
-
-    function addLog(authorId, text) {
-      const now = new Date();
-      const t = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
-      const div = document.createElement('div');
-      div.className = 'log-entry';
-      const agent = agents[authorId];
-      const label = agent ? agent.short : 'SISTEMA';
-      div.innerHTML = `
-        <span class="log-time">${t}</span>
-        <span class="log-author ${authorId}">[${label}]</span>
-        <span class="log-text">${text}</span>
-      `;
-      terminal.appendChild(div);
-      terminal.scrollTop = terminal.scrollHeight;
-    }
-
-    function moveAgent(agent, tx, ty, cb) {
+    function moveAgent(agent, tx, ty, nextState = 'WORKING') {
       agent.targetX = tx;
       agent.targetY = ty;
-      agent.state = 'WALKING';
-      agent.onArrival = cb || null;
+      if (Math.hypot(tx - agent.x, ty - agent.y) > 6) {
+        agent.state = 'WALKING';
+        agent.onArrival = () => { agent.state = nextState; };
+      } else {
+        agent.state = nextState;
+      }
     }
 
-    function say(agent, text, sec = 3) {
-      agent.bubble = text;
-      agent.bubbleTimer = Math.floor(sec * 60);
-    }
-
-    function sendPacket(fromAgent, toAgent, label = '📄') {
+    function sendPacket(fromAgent, toAgent, label = '⚡') {
+      if (!fromAgent || !toAgent) return;
       activePackets.push({
         x: fromAgent.x,
-        y: fromAgent.y - 20,
+        y: fromAgent.y - 18,
         tx: toAgent.x,
-        ty: toAgent.y - 20,
+        ty: toAgent.y - 18,
         color: fromAgent.color,
-        label: label,
-        speed: 8
+        label,
+        speed: 7.5
       });
-      playSound(780, 'sine', 0.04);
     }
+
+    function forceAssembleTable() {
+      isDebateActive = true;
+      hologramText = '🏛️ MESA ABIERTA';
+      const coreSquad = ['sid', 'kevin', 'mateo', 'nahum', 'leo', 'flecha'];
+      coreSquad.forEach((id, idx) => {
+        moveAgent(agents[id], CONF_SEATS[idx].x, CONF_SEATS[idx].y, 'DEBATING');
+      });
+      playSound(620, 'triangle', 0.08);
+    }
+
+    function forceReturnDesks() {
+      isDebateActive = false;
+      hologramText = '⚡ TELEMETRÍA REAL';
+      Object.values(agents).forEach(ag => {
+        moveAgent(ag, ag.desk.x, ag.desk.y, 'WORKING');
+      });
+      playSound(520, 'sine', 0.06);
+    }
+
+    // ==================== POLLING EN VIVO DESDE temp/squad-live.js ====================
+    let lastAppliedSeq = -1;
+    let renderedLogIds = new Set();
+
+    function applyLiveTelemetry(state) {
+      if (!state || state.seq === lastAppliedSeq) return;
+      lastAppliedSeq = state.seq;
+
+      document.getElementById('syncSeqBadge').innerText = `SEQ #${state.seq}`;
+      document.getElementById('lastSyncTime').innerText = `Último sync: ${new Date(state.updatedAt).toLocaleTimeString()}`;
+      document.getElementById('liveMissionTitle').innerText = state.mission || 'Escuadrón listo';
+      document.getElementById('livePhaseBadge').innerText = state.phase || 'WORKING';
+
+      if (state.commitGate) {
+        const cgEl = document.getElementById('commitGateVal');
+        cgEl.innerText = state.commitGate.label;
+        cgEl.style.color = state.commitGate.status === 'FLECHA_GREEN' ? '#14b8a6' : '#f59e0b';
+      }
+
+      if (state.hologramText) hologramText = state.hologramText;
+
+      // Plan steps
+      if (Array.isArray(state.planSteps)) {
+        document.getElementById('livePlanSteps').innerHTML = state.planSteps.map(p => {
+          const icon = p.status === 'done' ? '✓' : (p.status === 'doing' ? '⚡' : '○');
+          const ag = agents[p.agent] ? agents[p.agent].badge : '';
+          return `<span class="plan-pill ${p.status}">${icon} ${ag} ${p.title}</span>`;
+        }).join('');
+      }
+
+      // Notion tickets
+      if (Array.isArray(state.notionTickets)) {
+        const nList = document.getElementById('liveNotionList');
+        if (state.notionTickets.length === 0) {
+          nList.innerHTML = `<div class="notion-item">0 tickets pendientes en Notion</div>`;
+        } else {
+          nList.innerHTML = state.notionTickets.slice(0, 2).map(t =>
+            `<div class="notion-item"><b>[${t.type} • ${t.priority}]</b> ${t.title} <i>(${t.status})</i></div>`
+          ).join('');
+        }
+      }
+
+      // Debate table vs Desk positions
+      isDebateActive = state.phase === 'DEBATING' && Array.isArray(state.debatingAgents) && state.debatingAgents.length > 0;
+      document.getElementById('tableStateVal').innerText = isDebateActive ? 'Debate Táctico Activo' : 'Ejecución en 11 Puestos';
+      document.getElementById('tableStateVal').style.color = isDebateActive ? '#f59e0b' : '#38bdf8';
+
+      // Update each agent
+      if (state.agents) {
+        Object.entries(state.agents).forEach(([id, aState]) => {
+          const ag = agents[id];
+          if (!ag || !aState) return;
+          ag.currentTask = aState.task || ag.currentTask;
+          ag.progress = typeof aState.progress === 'number' ? aState.progress : ag.progress;
+          if (aState.code) ag.streamCode = aState.code;
+          if (aState.bubble) {
+            ag.bubble = aState.bubble;
+            ag.bubbleTimer = 260;
+          }
+
+          const debateIdx = isDebateActive ? state.debatingAgents.indexOf(id) : -1;
+          if (debateIdx >= 0 && debateIdx < CONF_SEATS.length) {
+            moveAgent(ag, CONF_SEATS[debateIdx].x, CONF_SEATS[debateIdx].y, 'DEBATING');
+          } else {
+            moveAgent(ag, ag.desk.x, ag.desk.y, aState.state || 'WORKING');
+          }
+        });
+      }
+
+      // Packets
+      if (Array.isArray(state.packets)) {
+        state.packets.forEach(pkt => {
+          sendPacket(agents[pkt.from], agents[pkt.to], pkt.label || '⚡');
+        });
+      }
+
+      // Logs
+      if (Array.isArray(state.logs)) {
+        state.logs.forEach(entry => {
+          if (renderedLogIds.has(entry.id)) return;
+          renderedLogIds.add(entry.id);
+          const div = document.createElement('div');
+          div.className = 'log-entry';
+          const ag = agents[entry.authorId];
+          const label = ag ? ag.short : 'SISTEMA';
+          div.innerHTML = `
+            <span class="log-time">${entry.time}</span>
+            <span class="log-author ${entry.authorId}">[${label}]</span>
+            <span class="log-text">${entry.text}</span>
+          `;
+          terminal.appendChild(div);
+          terminal.scrollTop = terminal.scrollHeight;
+        });
+      }
+
+      if (selectedAgent) selectAgentById(selectedAgent.id);
+      playSound(580, 'sine', 0.04);
+    }
+
+    function pollLiveFile() {
+      const oldScript = document.getElementById('liveTelemetryScript');
+      if (oldScript) oldScript.remove();
+
+      const s = document.createElement('script');
+      s.id = 'liveTelemetryScript';
+      s.src = `./temp/squad-live.js?t=${Date.now()}`;
+      s.onload = () => {
+        if (window.__EMPY_SQUAD_STATE__) {
+          applyLiveTelemetry(window.__EMPY_SQUAD_STATE__);
+        }
+      };
+      document.body.appendChild(s);
+    }
+
+    pollLiveFile();
+    setInterval(pollLiveFile, 900);
 
     // ==================== RENDERING ====================
     function drawOfficeEnvironment() {
-      // 1. Dark Oak Floor with Planks Texture
-      ctx.fillStyle = '#10151f';
-      ctx.fillRect(0, 96, WORLD_W, WORLD_H - 96);
+      ctx.fillStyle = '#0f141e';
+      ctx.fillRect(0, 90, WORLD_W, WORLD_H - 90);
 
       const plankW = 72;
       const plankH = 26;
-      for (let y = 96; y < WORLD_H; y += plankH) {
+      for (let y = 90; y < WORLD_H; y += plankH) {
         const rowOffset = ((y / plankH) % 2) * (plankW / 2);
         for (let x = -plankW; x < WORLD_W; x += plankW) {
-          const shade = ((x + y) % 3 === 0) ? '#151e2c' : ((x + y) % 2 === 0 ? '#131b28' : '#101622');
-          ctx.fillStyle = shade;
+          ctx.fillStyle = ((x + y) % 3 === 0) ? '#141d2b' : '#111824';
           ctx.fillRect(x + rowOffset, y, plankW - 1, plankH - 1);
         }
       }
 
-      // 2. High-Tech Back Wall
+      // Top Wall
       ctx.fillStyle = '#0a0e17';
-      ctx.fillRect(0, 0, WORLD_W, 96);
-      ctx.fillStyle = '#141c2c';
-      for (let x = 0; x < WORLD_W; x += 36) { ctx.fillRect(x, 0, 18, 88); }
+      ctx.fillRect(0, 0, WORLD_W, 90);
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(0, 88, WORLD_W, 8);
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 96, WORLD_W, 4);
-
-      // Panoramic Skyline Windows
-      const winPositions = [260, 560, 840];
-      winPositions.forEach(wx => {
-        drawRoundRect(wx, 12, 110, 64, 4, '#060a12', '#334155', 2);
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(wx + 15, 22, 2, 2);
-        ctx.fillRect(wx + 70, 26, 2, 2);
-        ctx.fillRect(wx + 92, 18, 2, 2);
-        ctx.fillStyle = '#131b28';
-        ctx.fillRect(wx + 8, 44, 24, 28);
-        ctx.fillRect(wx + 34, 34, 26, 38);
-        ctx.fillRect(wx + 62, 48, 38, 24);
-        ctx.fillStyle = '#263346';
-        ctx.fillRect(wx + 54, 12, 2, 64);
-        ctx.fillRect(wx, 42, 110, 2);
-      });
-
-      // Neon HQ Banner
-      drawRoundRect(20, 16, 200, 48, 8, '#0b101a', '#f59e0b', 2);
-      ctx.font = 'bold 13px monospace';
-      ctx.fillStyle = '#fbbf24';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚡ SID HQ • WAR ROOM', 120, 44);
+      ctx.fillRect(0, 84, WORLD_W, 6);
 
       // ZONE 1: CAFETERÍA (Top-Left)
-      drawRoundRect(16, 104, 350, 155, 10, '#0f1624', '#1f2b3e', 2);
-      drawRoundRect(28, 114, 150, 40, 6, '#1e293b', '#334155', 1.5);
-      drawRoundRect(32, 118, 142, 32, 4, '#38475e', null);
-      drawRoundRect(80, 116, 38, 30, 4, '#b91c1c', '#7f1d1d', 1.5);
-      ctx.fillStyle = '#cbd5e1'; ctx.fillRect(88, 132, 20, 10);
-      
-      steamParticles.forEach(p => {
-        p.y += p.vy * simSpeed;
-        p.alpha -= 0.006 * simSpeed;
-        if (p.alpha <= 0) { p.y = 118; p.alpha = 0.8; }
-        ctx.fillStyle = `rgba(226, 232, 240, ${p.alpha})`;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill();
-      });
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(50, 134, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(64, 134, 5, 0, Math.PI * 2); ctx.fill();
-      drawRoundRect(134, 122, 36, 24, 3, '#ca8a04', '#854d0e', 1);
-
-      drawRoundRect(195, 114, 26, 36, 4, '#e2e8f0', '#94a3b8', 1.5);
-      drawRoundRect(198, 106, 20, 18, 6, '#38bdf8', null);
-
-      drawRoundRect(85, 175, 230, 70, 8, '#132135', '#2563eb', 1);
-      drawRoundRect(105, 168, 190, 24, 6, '#1e2d42', '#334155', 1.5);
-      drawPlant(330, 125);
-      drawPlant(40, 235);
-
+      drawRoundRect(16, 102, 340, 150, 10, '#0f1624', '#1f2b3e', 2);
       ctx.font = 'bold 9.5px sans-serif';
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'left';
-      ctx.fillText('☕ CAFETERÍA & RELAX', 28, 248);
+      ctx.fillText('☕ ZONA RELAX & CAFÉ', 28, 242);
 
-      // ZONE 2: SERVERS (Top-Center)
-      drawRoundRect(385, 104, 395, 155, 10, '#0b101a', '#1e2a3c', 2);
+      // ZONE 2: SERVERS & MCP INFRASTRUCTURE (Top-Center)
+      drawRoundRect(375, 102, 415, 150, 10, '#0b101a', '#1e2a3c', 2);
       const racks = [
-        { x: 405, label: 'WA-SOCKET' },
-        { x: 495, label: 'SUPABASE' },
-        { x: 585, label: 'DUCKDB' },
-        { x: 675, label: 'NOTION-SYNC' }
+        { x: 392, label: 'BAILEYS-ESM' },
+        { x: 472, label: 'PGVECTOR-RAG' },
+        { x: 552, label: 'PRISMA-DB' },
+        { x: 632, label: 'NOTION-MCP' },
+        { x: 712, label: 'QA-FLECHA' }
       ];
-
-      const blink = Math.floor(Date.now() / (280 / simSpeed)) % 2 === 0;
-
+      const blink = Math.floor(Date.now() / 320) % 2 === 0;
       racks.forEach((rk, idx) => {
-        drawRoundRect(rk.x, 114, 75, 105, 4, '#060910', '#334155', 2);
+        drawRoundRect(rk.x, 114, 68, 102, 4, '#060910', '#334155', 1.8);
         for (let s = 0; s < 4; s++) {
-          const sy = 124 + s * 21;
+          const sy = 124 + s * 20;
           ctx.fillStyle = '#141c2b';
-          ctx.fillRect(rk.x + 6, sy, 63, 13);
-          const ledColor = (idx + s) % 3 === 0 ? (blink ? '#10b981' : '#059669') : ((idx + s) % 2 === 0 ? '#38bdf8' : '#f59e0b');
-          ctx.fillStyle = ledColor;
-          ctx.fillRect(rk.x + 10, sy + 4, 4, 4);
-          ctx.fillRect(rk.x + 18, sy + 4, 4, 4);
-          ctx.fillRect(rk.x + 26, sy + 4, 4, 4);
+          ctx.fillRect(rk.x + 5, sy, 58, 12);
+          ctx.fillStyle = (idx + s) % 2 === 0 ? (blink ? '#10b981' : '#059669') : '#38bdf8';
+          ctx.fillRect(rk.x + 9, sy + 4, 4, 4);
+          ctx.fillRect(rk.x + 17, sy + 4, 4, 4);
         }
-        ctx.font = 'bold 8.5px monospace';
+        ctx.font = 'bold 7.5px monospace';
         ctx.fillStyle = '#94a3b8';
         ctx.textAlign = 'center';
-        ctx.fillText(rk.label, rk.x + 37, 210);
+        ctx.fillText(rk.label, rk.x + 34, 208);
       });
-
       ctx.font = 'bold 9.5px sans-serif';
       ctx.fillStyle = '#64748b';
-      ctx.textAlign = 'center';
-      ctx.fillText('🗄️ INFRAESTRUCTURA DE SERVIDORES & CLOUD', 582, 248);
+      ctx.fillText('🗄️ SERVIDORES MCP, RAG & BASE DE DATOS', 582, 242);
 
       // ZONE 3: DESPACHO DEL JEFE SID (Top-Right)
-      drawRoundRect(800, 104, 420, 155, 10, '#241019', '#d97706', 2.5);
-      drawRoundRect(810, 114, 400, 135, 8, '#351322', '#f59e0b', 1);
-      drawEstateDesk(1060, 220, agents.sid, '👑 DESPACHO DEL JEFE SID', true);
-      drawPlant(830, 130);
-      drawPlant(1190, 130);
+      drawRoundRect(810, 102, 414, 150, 10, '#241019', '#d97706', 2.2);
+      drawEstateDesk(agents.sid.desk.x, agents.sid.desk.y, agents.sid, true);
 
-      // ==================== SALA CENTRAL DE DEBATE HOLOGRÁFICA ====================
-      // Acoustic carpet under the conference area
-      drawRoundRect(CONF_CENTER.x - 170, CONF_CENTER.y - 105, 340, 210, 16, '#0b1424', isDebateActive ? '#f59e0b' : '#1e3048', isDebateActive ? 2.5 : 1.5);
-
-      // Conference Chairs
-      CONF_SEATS.forEach((st, idx) => {
-        const chairColor = isDebateActive ? '#38bdf8' : '#334155';
-        drawRoundRect(st.x - 14, st.y - 12, 28, 24, 6, '#111827', chairColor, 1.2);
+      // SALA CENTRAL DE DEBATE HOLOGRÁFICA
+      drawRoundRect(CONF_CENTER.x - 160, CONF_CENTER.y - 95, 320, 190, 16, '#0b1424', isDebateActive ? '#f59e0b' : '#1e3048', isDebateActive ? 2.5 : 1.5);
+      CONF_SEATS.forEach(st => {
+        drawRoundRect(st.x - 13, st.y - 11, 26, 22, 6, '#111827', isDebateActive ? '#f59e0b' : '#334155', 1.2);
       });
+      drawRoundRect(CONF_CENTER.x - 102, CONF_CENTER.y - 44, 204, 88, 24, '#070c14', isDebateActive ? '#f59e0b' : '#22d3ee', 2.2);
 
-      // Conference Table (Dark Tinted Glass with Neon Rim)
-      drawRoundRect(CONF_CENTER.x - 110, CONF_CENTER.y - 50, 220, 100, 28, '#070c14', isDebateActive ? '#f59e0b' : '#22d3ee', isDebateActive ? 3 : 2);
-      drawRoundRect(CONF_CENTER.x - 95, CONF_CENTER.y - 38, 190, 76, 20, '#0e1726', null);
-
-      // Holographic Emitter Core in Table Center
-      const holoPulse = Math.sin(Date.now() / (180 / simSpeed)) * 0.2 + 0.8;
-      ctx.fillStyle = isDebateActive ? `rgba(245, 158, 11, ${0.2 * holoPulse})` : `rgba(56, 189, 248, ${0.15 * holoPulse})`;
+      const holoPulse = Math.sin(Date.now() / 220) * 0.18 + 0.82;
+      ctx.fillStyle = isDebateActive ? `rgba(245, 158, 11, ${0.22 * holoPulse})` : `rgba(56, 189, 248, ${0.15 * holoPulse})`;
       ctx.beginPath();
-      ctx.arc(CONF_CENTER.x, CONF_CENTER.y, 44 * holoPulse, 0, Math.PI * 2);
+      ctx.arc(CONF_CENTER.x, CONF_CENTER.y, 40 * holoPulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hologram Projection Beams
-      ctx.strokeStyle = isDebateActive ? '#f59e0b' : '#38bdf8';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(CONF_CENTER.x, CONF_CENTER.y, 16, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Holographic Title Badge
-      ctx.font = 'bold 11px monospace';
+      ctx.font = 'bold 10.5px monospace';
       ctx.fillStyle = isDebateActive ? '#fef08a' : '#7dd3fc';
       ctx.textAlign = 'center';
       ctx.fillText(hologramText, CONF_CENTER.x, CONF_CENTER.y + 4);
 
-      // Cable Ducts from Servers to Conference & Desks
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(580, 259);
-      ctx.lineTo(580, CONF_CENTER.y - 105);
-      ctx.moveTo(180, 320);
-      ctx.lineTo(780, 320);
-      ctx.stroke();
-
-      // WORKSTATIONS
-      drawEstateDesk(180, 380, agents.mateo, '🛡️ SECOPS (MATEO)', false);
-      drawEstateDesk(380, 380, agents.kevin, '💻 BACKEND (KEVIN)', false);
-      drawEstateDesk(780, 380, agents.nico, '🔍 RESEARCH (NICO)', false);
-
-      drawEstateDesk(180, 630, agents.bruno, '🎨 FRONTEND (BRUNO)', false);
-      drawEstateDesk(420, 630, agents.verito, '📚 ACADÉMICA (VERITO)', false);
-      drawEstateDesk(800, 630, agents.sofi, '🎬 MULTIMEDIA (SOFI)', false);
-      drawEstateDesk(1040, 630, agents.luna, '⚡ NOTION OPS (LUNA)', false);
-
-      // Floor plants
-      drawPlant(30, 480);
-      drawPlant(30, 700);
-      drawPlant(1210, 480);
-      drawPlant(1210, 700);
+      // 10 SPECIALIST WORKSTATIONS (Middle Row: 4, Bottom Row: 6)
+      ['mateo', 'kevin', 'nahum', 'flecha', 'bruno', 'leo', 'verito', 'nico', 'sofi', 'luna'].forEach(id => {
+        const ag = agents[id];
+        drawEstateDesk(ag.desk.x, ag.desk.y, ag, false);
+      });
     }
 
-    function drawPlant(x, y) {
-      drawRoundRect(x - 12, y - 4, 24, 20, 4, '#78350f', '#451a03', 1.5);
-      ctx.fillStyle = '#166534';
-      ctx.beginPath(); ctx.arc(x - 8, y - 10, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + 8, y - 10, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#22c55e';
-      ctx.beginPath(); ctx.arc(x, y - 15, 10, 0, Math.PI * 2); ctx.fill();
-    }
-
-    function drawEstateDesk(dx, dy, agent, label, isBoss) {
+    function drawEstateDesk(dx, dy, agent, isBoss) {
       const isFocused = selectedAgent === agent;
-      const grad = ctx.createRadialGradient(dx, dy - 8, 4, dx, dy - 8, isBoss ? 110 : 85);
-      grad.addColorStop(0, agent.state === 'WORKING' ? `${agent.color}40` : 'rgba(255,255,255,0.05)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(dx, dy - 8, isBoss ? 110 : 85, 0, Math.PI * 2);
-      ctx.fill();
+      const deskW = isBoss ? 170 : 144;
+      const deskH = isBoss ? 62 : 54;
 
-      // Ergonomic Chair behind desk
-      drawRoundRect(dx - 22, dy - 18, 44, 38, 9, '#111827', agent.color, 1.5);
-
-      // Desk Tabletop
-      const deskW = isBoss ? 175 : 154;
-      const deskH = isBoss ? 66 : 58;
-      const woodFill = isBoss ? '#451d11' : '#1e293b';
-      const woodStroke = isFocused ? '#38bdf8' : (isBoss ? '#f59e0b' : agent.color);
-      drawRoundRect(dx - deskW / 2, dy - 50, deskW, deskH, 8, woodFill, woodStroke, isFocused ? 3 : 1.6);
+      drawRoundRect(dx - 20, dy - 16, 40, 34, 8, '#111827', agent.color, 1.4);
+      drawRoundRect(dx - deskW / 2, dy - 46, deskW, deskH, 8, isBoss ? '#451d11' : '#1e293b', isFocused ? '#38bdf8' : agent.color, isFocused ? 2.8 : 1.5);
 
       // Dual Monitors
-      drawRoundRect(dx - 45, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
-      drawRoundRect(dx + 3, dy - 46, 42, 24, 3, '#080c14', '#475569', 1.5);
+      drawRoundRect(dx - 40, dy - 42, 37, 21, 3, '#080c14', '#475569', 1.3);
+      drawRoundRect(dx + 3, dy - 42, 37, 21, 3, '#080c14', '#475569', 1.3);
 
       if (agent.state === 'WORKING') {
         ctx.fillStyle = agent.color;
-        const offset = Math.floor(Date.now() / (100 / simSpeed)) % 6;
-        ctx.fillRect(dx - 40, dy - 42 + offset, 28, 2.5);
-        ctx.fillRect(dx - 40, dy - 34, 20, 2.5);
-        ctx.fillRect(dx + 8, dy - 42, 26, 2.5);
-        ctx.fillRect(dx + 8, dy - 34 + (offset % 4), 22, 2.5);
-      } else {
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(dx - 40, dy - 40, 24, 2.5);
-        ctx.fillRect(dx + 8, dy - 40, 24, 2.5);
+        const offset = Math.floor(Date.now() / 120) % 5;
+        ctx.fillRect(dx - 36, dy - 38 + offset, 24, 2.2);
+        ctx.fillRect(dx + 7, dy - 38, 22, 2.2);
       }
 
-      drawRoundRect(dx - 22, dy - 18, 36, 12, 2, '#0f172a', '#334155', 1);
-      drawRoundRect(dx + 22, dy - 16, 7, 10, 3, '#334155', null);
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#78350f';
-      ctx.beginPath(); ctx.arc(dx - 54, dy - 26, 3, 0, Math.PI * 2); ctx.fill();
-
-      drawRoundRect(dx - 75, dy + 24, 150, 20, 5, '#090e17', agent.color, 1);
-      ctx.font = 'bold 9.5px sans-serif';
+      drawRoundRect(dx - 68, dy + 22, 136, 18, 5, '#090e17', agent.color, 1);
+      ctx.font = 'bold 8.8px sans-serif';
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'center';
-      ctx.fillText(label, dx, dy + 37);
+      ctx.fillText(agent.deskLabel, dx, dy + 34);
     }
 
-    // ==================== CHARACTER RENDERER ====================
     function drawCharacter(agent) {
       const dx = agent.targetX - agent.x;
       const dy = agent.targetY - agent.y;
       const dist = Math.hypot(dx, dy);
 
       if (dist > 3) {
-        agent.x += (dx / dist) * 4.4 * simSpeed;
-        agent.y += (dy / dist) * 4.4 * simSpeed;
+        agent.x += (dx / dist) * 4.5;
+        agent.y += (dy / dist) * 4.5;
       } else if (agent.state === 'WALKING') {
         agent.x = agent.targetX;
         agent.y = agent.targetY;
@@ -1490,85 +1219,62 @@
       ctx.save();
       ctx.translate(agent.x, agent.y);
 
-      const isWalking = agent.state === 'WALKING';
       const isWorking = agent.state === 'WORKING' || agent.state === 'DEBATING';
-      const walkCycle = isWalking ? Math.sin(Date.now() / (70 / simSpeed)) * 5 : 0;
-      const bounceY = isWalking ? Math.abs(Math.sin(Date.now() / (70 / simSpeed))) * -4 : (isWorking ? Math.sin(Date.now() / (80 / simSpeed)) * 1.5 : 0);
+      const bounceY = isWorking ? Math.sin(Date.now() / 90) * 1.4 : 0;
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-      ctx.beginPath(); ctx.ellipse(0, 20, 16, 7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 18, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+      drawRoundRect(-13, -9 + bounceY, 26, 18, 6, agent.shirtColor, '#0f172a', 1.4);
+      drawRoundRect(-12, -27 + bounceY, 24, 19, 7, agent.skinColor, '#0f172a', 1.4);
+      drawRoundRect(-13, -31 + bounceY, 26, 8, 5, agent.hairColor, null);
 
       ctx.fillStyle = '#0f172a';
-      drawRoundRect(-9, 7 + walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
-      drawRoundRect(2, 7 - walkCycle * 0.5, 7, 13, 3, '#1e293b', null);
-
-      drawRoundRect(-14, -10 + bounceY, 28, 20, 6, agent.shirtColor, '#0f172a', 1.5);
-
-      if (agent.crown) {
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillRect(-2, -6 + bounceY, 4, 11);
-      }
-
-      const armOffset = isWorking ? Math.sin(Date.now() / (40 / simSpeed)) * 3 : walkCycle * 0.4;
-      drawRoundRect(-18, -7 + bounceY + armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
-      drawRoundRect(12, -7 + bounceY - armOffset, 6, 14, 3, agent.shirtColor, '#0f172a', 1);
-
-      drawRoundRect(-13, -29 + bounceY, 26, 21, 8, agent.skinColor, '#0f172a', 1.5);
-      drawRoundRect(-14, -33 + bounceY, 28, 9, 5, agent.hairColor, null);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-6, -20 + bounceY, 3, 4);
-      ctx.fillRect(3, -20 + bounceY, 3, 4);
+      ctx.fillRect(-5, -19 + bounceY, 3, 3.5);
+      ctx.fillRect(3, -19 + bounceY, 3, 3.5);
 
       if (agent.glasses) {
-        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
-        ctx.strokeRect(-9, -22 + bounceY, 8, 6);
-        ctx.strokeRect(1, -22 + bounceY, 8, 6);
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.4;
+        ctx.strokeRect(-8, -21 + bounceY, 7, 5);
+        ctx.strokeRect(1, -21 + bounceY, 7, 5);
       }
       if (agent.visor) {
-        drawRoundRect(-10, -22 + bounceY, 20, 5, 2, '#ef4444', '#b91c1c', 1);
+        drawRoundRect(-9, -21 + bounceY, 18, 4.5, 2, agent.color, '#0f172a', 1);
       }
       if (agent.headphones) {
-        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, -23 + bounceY, 15, Math.PI, 0); ctx.stroke();
+        ctx.strokeStyle = agent.color; ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(0, -21 + bounceY, 14, Math.PI, 0); ctx.stroke();
       }
       if (agent.beret) {
-        drawRoundRect(-14, -36 + bounceY, 28, 7, 4, '#0891b2', '#164e63', 1);
+        drawRoundRect(-13, -34 + bounceY, 26, 6, 3, '#0891b2', '#164e63', 1);
       }
       if (agent.headband) {
-        ctx.fillStyle = '#eab308';
-        ctx.fillRect(-13, -31 + bounceY, 26, 4);
+        ctx.fillStyle = agent.color;
+        ctx.fillRect(-12, -29 + bounceY, 24, 3.5);
       }
       if (agent.crown) {
         ctx.fillStyle = '#fbbf24';
         ctx.beginPath();
-        ctx.moveTo(-10, -32 + bounceY);
-        ctx.lineTo(-10, -42 + bounceY);
-        ctx.lineTo(-4, -36 + bounceY);
-        ctx.lineTo(0, -44 + bounceY);
-        ctx.lineTo(4, -36 + bounceY);
-        ctx.lineTo(10, -42 + bounceY);
-        ctx.lineTo(10, -32 + bounceY);
+        ctx.moveTo(-9, -30 + bounceY);
+        ctx.lineTo(-9, -39 + bounceY);
+        ctx.lineTo(-3, -34 + bounceY);
+        ctx.lineTo(0, -41 + bounceY);
+        ctx.lineTo(3, -34 + bounceY);
+        ctx.lineTo(9, -39 + bounceY);
+        ctx.lineTo(9, -30 + bounceY);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1; ctx.stroke();
       }
 
-      drawRoundRect(-34, 21, 68, 15, 4, 'rgba(11, 16, 26, 0.92)', agent.color, 1);
-      ctx.font = 'bold 9px sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.fillText(agent.short, 0, 32);
-
-      if (agent.bubbleTimer > 0) {
-        agent.bubbleTimer -= simSpeed;
-        ctx.font = 'bold 11px sans-serif';
+      if (agent.bubbleTimer > 0 && agent.bubble) {
+        agent.bubbleTimer -= 0.5;
+        ctx.font = 'bold 10.5px sans-serif';
         const tw = ctx.measureText(agent.bubble).width;
-        const bw = tw + 18;
-        const bh = 24;
-        drawRoundRect(-bw / 2, -64 + bounceY, bw, bh, 6, '#090e17', agent.color, 1.8);
+        const bw = tw + 16;
+        drawRoundRect(-bw / 2, -60 + bounceY, bw, 22, 6, '#090e17', agent.color, 1.6);
         ctx.fillStyle = '#f8fafc';
-        ctx.fillText(agent.bubble, 0, -48 + bounceY);
+        ctx.textAlign = 'center';
+        ctx.fillText(agent.bubble, 0, -45 + bounceY);
       }
 
       ctx.restore();
@@ -1580,13 +1286,11 @@
         const dx = p.tx - p.x;
         const dy = p.ty - p.y;
         const dist = Math.hypot(dx, dy);
-
         if (dist > 8) {
-          p.x += (dx / dist) * p.speed * simSpeed;
-          p.y += (dy / dist) * p.speed * simSpeed;
-          
-          drawRoundRect(p.x - 14, p.y - 14, 28, 28, 6, '#0f172a', p.color, 2);
-          ctx.font = '14px sans-serif';
+          p.x += (dx / dist) * p.speed;
+          p.y += (dy / dist) * p.speed;
+          drawRoundRect(p.x - 13, p.y - 13, 26, 26, 6, '#0f172a', p.color, 1.8);
+          ctx.font = '13px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(p.label, p.x, p.y + 5);
         } else {
@@ -1595,251 +1299,28 @@
       }
     }
 
-    // Continuous autonomous progression
-    setInterval(() => {
-      Object.values(agents).forEach(agent => {
-        if (agent.state === 'WORKING') {
-          agent.progress += (agent.progressSpeed * simSpeed);
-          if (agent.progress >= 100) {
-            agent.progress = 0;
-            const completedTask = agent.currentTask;
-            const nextTask = agent.backlog[Math.floor(Math.random() * agent.backlog.length)];
-            agent.currentTask = nextTask;
-            
-            if (Math.random() > 0.4 && !isDebateActive) {
-              addLog(agent.id, `✓ Completado: "${completedTask.substring(0, 48)}...". Siguiente: ${nextTask.substring(0, 42)}.`);
-            }
-
-            const icons = ['💡', '⚡', '☕', '✓', '🚀', '📊', '🛡️', '📝'];
-            say(agent, icons[Math.floor(Math.random() * icons.length)], 1.8);
-          }
-        }
-      });
-
-      if (selectedAgent) {
-        document.getElementById('inspectorProgressPct').innerText = `${Math.floor(selectedAgent.progress)}%`;
-        document.getElementById('inspectorProgressBar').style.width = `${Math.floor(selectedAgent.progress)}%`;
-        document.getElementById('inspectorTaskText').innerText = selectedAgent.currentTask;
-      }
-
-      const cpu = 38 + Math.floor(Math.sin(Date.now() / 2000) * 15) + (simSpeed * 8);
-      document.getElementById('cpuUsageVal').innerText = `${cpu}%`;
-    }, 150);
-
-    // Click detector
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const wx = (e.clientX - rect.left) / scaleRatio;
       const wy = (e.clientY - rect.top) / scaleRatio;
-
       for (const agent of Object.values(agents)) {
-        const dChar = Math.hypot(agent.x - wx, agent.y - wy);
-        const dDesk = Math.hypot(agent.desk.x - wx, (agent.desk.y - 20) - wy);
-        if (dChar < 40 || dDesk < 60) {
+        if (Math.hypot(agent.x - wx, agent.y - wy) < 42 || Math.hypot(agent.desk.x - wx, agent.desk.y - wy) < 62) {
           selectAgentById(agent.id);
           return;
         }
       }
     });
 
-    // ==================== PROTOCOLO DE DEBATE TÁCTICO ====================
-    let isPipelineBusy = false;
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms / simSpeed));
-
-    async function runSquadDebate(topic) {
-      if (isPipelineBusy) return;
-      isPipelineBusy = true;
-      isDebateActive = true;
-
-      document.getElementById('sendBtn').disabled = true;
-      document.getElementById('globalStatusPill').classList.add('debating');
-      document.getElementById('globalState').innerText = "🏛️ MESA CENTRAL: Debate y deliberación técnica en curso";
-      document.getElementById('tableStateVal').innerText = "Debate Activo";
-      document.getElementById('tableStateVal').style.color = "#f59e0b";
-
-      hologramText = "⚡ DELIBERACIÓN";
-      playSound(520, 'square', 0.15);
-
-      addLog('sid', `📢 CONVOCATORIA A MESA DE DEBATE: "${topic}". Convocando especialistas a la sala central.`);
-
-      // Auto-select debating squad based on topic
-      let debaters = [];
-      const lower = topic.toLowerCase();
-      if (/sql|postgres|supabase|sqlite|bd|persistencia|db/i.test(lower)) {
-        debaters = [agents.kevin, agents.mateo, agents.nico];
-      } else if (/seguridad|owasp|inyeccion|rate|privacidad|token/i.test(lower)) {
-        debaters = [agents.mateo, agents.kevin, agents.bruno];
-      } else if (/idea|comando|feature|funcionalidad|nuevo/i.test(lower)) {
-        debaters = [agents.bruno, agents.sofi, agents.luna];
-      } else if (/facu|tp|informe|consorcio|escrito|paper/i.test(lower)) {
-        debaters = [agents.verito, agents.nico, agents.kevin];
-      } else {
-        debaters = [agents.kevin, agents.mateo, agents.verito];
-      }
-
-      // 1. Move debaters and Sid to Conference Table
-      moveAgent(agents.sid, CONF_SEATS[0].x, CONF_SEATS[0].y, () => { agents.sid.state = 'DEBATING'; });
-      debaters.forEach((ag, idx) => {
-        const seat = CONF_SEATS[idx + 1];
-        moveAgent(ag, seat.x, seat.y, () => { ag.state = 'DEBATING'; });
-      });
-
-      await sleep(1800);
-      selectAgentById('sid');
-      say(agents.sid, "Mesa abierta. Escucho posturas.", 3);
-      playSound(660, 'sine', 0.08);
-      await sleep(1400);
-
-      // 2. Ronda 1: Tesis Inicial (Debater 1)
-      const d1 = debaters[0];
-      selectAgentById(d1.id);
-      say(d1, "Tesis: Máxima velocidad y simplicidad", 3);
-      if (d1.id === 'kevin') {
-        addLog(d1.id, `Postura: Conviene priorizar rendimiento nativo sin dependencias pesadas ni latencia innecesaria.`);
-      } else if (d1.id === 'bruno') {
-        addLog(d1.id, `Postura: La clave es la retención visual y feedback interactivo inmediato en menos de 200ms.`);
-      } else {
-        addLog(d1.id, `Postura: El enfoque estructurado y datos validados empíricamente evitan retrabajo posterior.`);
-      }
-      sendPacket(d1, agents.sid, '💡');
-      await sleep(2200);
-
-      // 3. Ronda 2: Antítesis y Crítica a Puntos Ciegos (Debater 2)
-      const d2 = debaters[1];
-      selectAgentById(d2.id);
-      say(d2, "¡Objeción! Hay riesgos y puntos ciegos", 3);
-      if (d2.id === 'mateo') {
-        addLog(d2.id, `Objeción: Cuidado con desestimar la seguridad; si no hay rate limiting o sanitización Zod, exponemos el bot.`);
-      } else if (d2.id === 'nico') {
-        addLog(d2.id, `Objeción: Los benchmarks locales demuestran que bajo concurrencia esa opción degrada tiempos de respuesta.`);
-      } else {
-        addLog(d2.id, `Objeción: Esa alternativa genera textos con olor a IA y sobreingeniería que confunde al usuario.`);
-      }
-      sendPacket(d2, d1, '⚠️');
-      await sleep(2400);
-
-      // 4. Ronda 3: Conciliación Técnica (Debater 3)
-      const d3 = debaters[2];
-      selectAgentById(d3.id);
-      say(d3, "Propongo solución híbrida equilibrada", 3);
-      addLog(d3.id, `Propuesta de Consenso: Integramos la velocidad de ${d1.short} con el escudo de validación de ${d2.short}.`);
-      sendPacket(d3, agents.sid, '🛡️');
-      await sleep(2200);
-
-      // 5. Veredicto Final del Jefe Sid
-      selectAgentById('sid');
-      hologramText = "🏆 CONSENSO ALCANZADO";
-      say(agents.sid, "¡Decisión tomada! Solución blindada.", 3.5);
-      playSound(880, 'triangle', 0.18);
-      addLog('sid', `🏆 VEREDICTO DE LA MESA: Se aprueba la solución técnica con consenso total en el primer intento.`);
-      await sleep(2000);
-
-      // 6. Regresan a sus puestos de trabajo
-      moveAgent(agents.sid, agents.sid.desk.x, agents.sid.desk.y, () => { agents.sid.state = 'WORKING'; });
-      debaters.forEach(ag => {
-        moveAgent(ag, ag.desk.x, ag.desk.y, () => { ag.state = 'WORKING'; });
-      });
-
-      setTimeout(() => {
-        isDebateActive = false;
-        hologramText = "⚡ SALA DE JUNTAS";
-        document.getElementById('globalStatusPill').classList.remove('debating');
-        document.getElementById('globalState').innerText = "Escuadrón trabajando a ritmo constante";
-        document.getElementById('tableStateVal').innerText = "Conferencia Lista";
-        document.getElementById('tableStateVal').style.color = "#38bdf8";
-        document.getElementById('sendBtn').disabled = false;
-        isPipelineBusy = false;
-      }, 1800);
-    }
-
-    // Pipeline estándar de tareas directas
-    async function runSquadPipeline(taskText) {
-      if (isPipelineBusy) return;
-      isPipelineBusy = true;
-      document.getElementById('sendBtn').disabled = true;
-      document.getElementById('globalState').innerText = "Misión prioritaria en curso...";
-      playSound(660, 'square', 0.12);
-
-      selectAgentById('sid');
-      say(agents.sid, "¡Equipo, orden prioritaria!", 3);
-      addLog('sid', `⚡ ORDEN RECIBIDA: "${taskText}". Desglosando requerimientos técnicos.`);
-      await sleep(1500);
-
-      sendPacket(agents.sid, agents.kevin, '💻');
-      selectAgentById('kevin');
-      say(agents.kevin, "Escribiendo código limpio...", 2.5);
-      addLog('kevin', 'Aplicando ponytail (YAGNI) y surgical-tweak: TypeScript estricto sin dependencias redundantes.');
-      await sleep(2200);
-
-      sendPacket(agents.kevin, agents.mateo, '🛡️');
-      selectAgentById('mateo');
-      say(agents.mateo, "Blindando con Zod...", 2.5);
-      addLog('mateo', 'Validación Zod superada: sanitización OWASP y cero credenciales expuestas.');
-      await sleep(2200);
-
-      sendPacket(agents.mateo, agents.verito, '📚');
-      selectAgentById('verito');
-      say(agents.verito, "Revisión final de calidad...", 2.5);
-      addLog('verito', 'Filtro Humanizer aplicado: textos claros, directos y concisos.');
-      await sleep(2200);
-
-      sendPacket(agents.verito, agents.sid, '🏆');
-      selectAgentById('sid');
-      say(agents.sid, "¡Misión aprobada con honores!", 3.5);
-      addLog('sid', `🏆 ÉXITO: Entrega terminada satisfactoriamente en el primer intento.`);
-      playSound(880, 'triangle', 0.16);
-
-      setTimeout(() => {
-        document.getElementById('globalState').innerText = "Escuadrón trabajando a ritmo constante";
-        document.getElementById('sendBtn').disabled = false;
-        isPipelineBusy = false;
-      }, 1500);
-    }
-
-    function triggerDebate(topic) {
-      document.getElementById('taskInput').value = topic;
-      runSquadDebate(topic);
-    }
-
-    function triggerTask(text) {
-      document.getElementById('taskInput').value = text;
-      runSquadPipeline(text);
-    }
-
-    function submitCustomTask() {
-      const input = document.getElementById('taskInput');
-      const val = input.value.trim();
-      if (!val) return;
-      input.value = '';
-
-      if (/debat|discut|investig|opin|conviene|compar|evalu/i.test(val)) {
-        runSquadDebate(val);
-      } else {
-        runSquadPipeline(val);
-      }
-    }
-
-    document.getElementById('taskInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitCustomTask();
-    });
-
     function renderLoop() {
       ctx.save();
       ctx.setTransform(scaleRatio, 0, 0, scaleRatio, 0, 0);
       ctx.clearRect(0, 0, WORLD_W, WORLD_H);
-
       drawOfficeEnvironment();
-
-      const sortedAgents = Object.values(agents).sort((a, b) => a.y - b.y);
-      sortedAgents.forEach(agent => drawCharacter(agent));
-
+      Object.values(agents).sort((a, b) => a.y - b.y).forEach(ag => drawCharacter(ag));
       updateAndDrawPackets();
-
       ctx.restore();
       requestAnimationFrame(renderLoop);
     }
-
-    addLog('sid', 'Oficina central y Sala de Debate Táctico operativas. El escuadrón completo de 8 especialistas está activo.');
     renderLoop();
   </script>
 </body>
