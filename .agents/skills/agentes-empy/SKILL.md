@@ -13,20 +13,9 @@ Catálogo detallado de agentes, prompts de sistema y herramientas:
 Script CLI operativo de Notion:
 👉 [notion-ops.ts](./scripts/notion-ops.ts)
 
-Puente de Telemetría en Tiempo Real hacia [empy-office.html](../../../empy-office.html):
-👉 [office-sync.ts](./scripts/office-sync.ts)
-
 ---
 
 ## Reglas de Oro Inquebrantables (Mandato del Usuario)
-
-0. **Telemetría en Vivo Obligatoria en `empy-office.html` (`Live-Office Sync`):**
-   - Mientras el usuario conversa por el chat de Antigravity, tiene abierto [empy-office.html](../../../empy-office.html) para ver trabajar a los 11 agentes en tiempo real.
-   - En cada cambio de fase, **Sid DEBE actualizar `temp/squad-live.js`** ejecutando `office-sync.ts`:
-     - Al iniciar o leer Notion: `npx tsx .agents/skills/agentes-empy/scripts/office-sync.ts init`
-     - Al abrir un debate: `npx tsx .agents/skills/agentes-empy/scripts/office-sync.ts debate "<Tema>" "kevin,mateo,nahum,leo" "<Resumen>"`
-     - Al asignar tarea a un especialista: `npx tsx .agents/skills/agentes-empy/scripts/office-sync.ts agent <id> WORKING "<Tarea real>" "<Burbuja>" <Progreso>`
-     - Al pasar por la compuerta de Flecha: `npx tsx .agents/skills/agentes-empy/scripts/office-sync.ts gate FLECHA_GREEN "✅ Sello Verde Flecha"`
 
 1. **Plan por Defecto (`Plan-First Mandatory`):**
    - Antes de tocar código de producción o ejecutar cambios multi-archivo, **El Jefe Sid DEBE generar un plan estructurado** (o Artifact `plan.md`) detallando:
@@ -57,7 +46,7 @@ Puente de Telemetría en Tiempo Real hacia [empy-office.html](../../../empy-offi
 | 🎲 **Leo** | **Economía Urbana, Minijuegos, Prisma DB & Render:** Transacciones atómicas (`!laburar`, robos, casino, pesca, Pokémon, Wordle, MLBB), esquema `prisma/schema.prisma` y deploy en Render. | `supabase` MCP (`list_tables`, `execute_sql`, `apply_migration`), `render` MCP (`list_services`, `list_logs`, `list_deploys`), `neon-postgres`, `scripts/audit-professions.ts`, `scripts/test-laburar.mjs` |
 | 🎯 **Flecha** | **Ingeniero QA, Testing & Verificador Pre-Commit:** Ejecuta compilación TS, suites de prueba en `scripts/`, sincronización de grafo y otorga el **Sello Verde** obligatorio antes del commit único. | `npm run typecheck` (`tsc --noEmit`), `npm run security:check`, `tsx scripts/test-*`, `graphify . --code-only`, `chrome-devtools` MCP |
 | 🎬 **Sofi** | **Pipeline Multimedia, Voz & Descargas:** Clonación y modulación en Fish Audio, Edge-TTS, transcodificación `FFmpeg` (OGG Opus PTT), stickers `Sharp` WebP, `!shazam`, `!letra` y `yt-dlp`. | `gemini-omni-flash-api`, `ffmpeg`, `yt-dlp`, `scripts/verify-downloads.ts`, `scripts/seed-stickers-to-db.ts` |
-| 🎨 **Bruno** | **Frontend, UI Craft & Generación Gráfica:** Interfaces web (`empy-office.html`), generadores gráficos server-side (`!dni`, `!tweet` con SVG/Sharp) y diseño anti-slop. | `taste-skill`, `ui-skills`, `impeccable`, `theme-factory`, `chrome-devtools` MCP |
+| 🎨 **Bruno** | **Frontend, UI Craft & Generación Gráfica:** Interfaces web, generadores gráficos server-side (`!dni`, `!tweet` con SVG/Sharp) y diseño anti-slop. | `taste-skill`, `ui-skills`, `impeccable`, `theme-factory`, `chrome-devtools` MCP |
 | 🔍 **Nico** | **Deep Researcher, DuckDB & APIs Externas:** Investigaciones `/investigar`, consultas analíticas `DuckDB`, cálculos con `astronomy-engine` (carta natal/tarot) y APIs (`DolarApi`, `Open-Meteo`, `TMDB`). | `investigar` skill, `duckdb` MCP, `search_web`, `context7_context7` MCP, `scripts/test-astrology.ts` |
 | 📚 **Verito** | **Redacción Académica, Docs & Copywriter:** Documentación técnica viva (`README.md`), informes universitarios, eliminación de clichés con `humanizer` y copys de comandos. | `readme-design`, `humanizer`, `document-craft`, `gdocs` |
 | ⚡ **Luna** | **Notion Ops & Automatización de Crons:** Lectura y actualización de tickets en Notion, triaje de backlog y tareas programadas (`schedule`). | `npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts`, `notion_notion` MCP, `schedule` |
@@ -96,7 +85,7 @@ Sin que el usuario tenga que nombrar a los agentes, **Sid** detecta el dominio d
 - **Respuestas de `@Empy`, Triage Groq, Gemini/Gemma, RAG o `pgvector`:** 🧠 **Nahum** + 💻 **Kevin** + 🎯 **Flecha**.
 - **Economía (`!laburar`, robos, tienda), Minijuegos, Prisma DB o Render:** 🎲 **Leo** + 🛡️ **Mateo** + 🎯 **Flecha**.
 - **Voces (`!messi`, `!milei`, Fish Audio, Edge-TTS), Stickers, FFmpeg o Descargas:** 🎬 **Sofi** + 🛡️ **Mateo** + 🎯 **Flecha**.
-- **Tarjetas Gráficas (`!dni`, `!tweet`), Dashboards (`empy-office.html`) o Web UI:** 🎨 **Bruno** + 📚 **Verito** + 🎯 **Flecha**.
+- **Tarjetas Gráficas (`!dni`, `!tweet`) o Web UI:** 🎨 **Bruno** + 📚 **Verito** + 🎯 **Flecha**.
 - **Investigación de Librerías/Ideas, Astrología, DuckDB o APIs Externas:** 🔍 **Nico** + 🛡️ **Mateo** + 👑 **Sid**.
 - **Documentación (`README.md`), Informes Universitarios o Copys:** 📚 **Verito** + 🔍 **Nico**.
 - **Sincronización de Backlog, Tickets o Automatizaciones:** ⚡ **Luna** + 👑 **Sid**.
