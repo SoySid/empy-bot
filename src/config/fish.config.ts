@@ -402,14 +402,14 @@ export const FISH_CATALOG: Record<string, FishDefinition> = {
     lore: "Pez milagroso que bendice la billetera del pescador con abundancia infinita.",
   },
 
-  // Tier 6: Abisales & Criaturas de las Fosas Profundas (0.5% total | $50.000 fichas)
+  // Tier 6: Abisales & Criaturas de las Fosas Profundas (1% total | $50.000 fichas)
   calamar_abisal_primigenio: {
     id: "calamar_abisal_primigenio",
     name: "Calamar Abisal Primigenio",
     icon: "🦑",
     tier: 6,
     tierName: "Abisal",
-    probability: 0.5,
+    probability: 1.0,
     minWeightKg: 120.0,
     maxWeightKg: 350.0,
     basePrice: 50000,

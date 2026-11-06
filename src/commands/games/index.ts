@@ -13,3 +13,4 @@ export { superheroeCommand, superheroesColeccionCommand } from "./superhero.js";
 export { mlbbCommand, mlbbdexCommand } from "./mlbb.js";
 export { ahorcadoCommand, arriesgarCommand } from "./ahorcado.js";
 export { ruletarusaCommand } from "./ruletarusa.js";
+export { campominadoCommand, pisarCommand, cobrarCommand } from "./campominado.js";

@@ -21,6 +21,8 @@ export const pescarCommand: Command = {
       return;
     }
 
+    const totalCatalogFishes = Object.keys(FISH_CATALOG).length;
+
     // Caso de blooper / lance fallido
     if (res.blooper && !res.blooper.savedByRepelente) {
       const junkBonus = res.blooper.junkPrice ? `\n• *Cobro de consuelo:* +*$${res.blooper.junkPrice}* fichas` : "";
@@ -29,7 +31,7 @@ export const pescarCommand: Command = {
         `🎣 *¡PIQUE EN EL RÍO!*\n\n` +
         `${res.blooper.message}${junkBonus}\n\n` +
         `🪱 *Carnadas restantes:* ${res.chargesRemaining}/${res.maxCharges}${balanceLine}\n` +
-        `📖 *Álbum del Acuario:* ${res.totalSpeciesDiscovered}/30 especies (\`!acuario\`)`;
+        `📖 *Álbum del Acuario:* ${res.totalSpeciesDiscovered}/${totalCatalogFishes} especies (\`!acuario\`)`;
 
       await sock.sendMessage(remoteJid, { text: blooperText }, { quoted: msg as any });
       return;
@@ -37,6 +39,7 @@ export const pescarCommand: Command = {
 
     const fish = res.fish!;
     const tierStars =
+      fish.tier === 6 ? "🌌 ABISAL ⭐⭐⭐⭐⭐⭐" :
       fish.tier === 5 ? "🧪 MÍTICO ⭐⭐⭐⭐⭐" :
       fish.tier === 4 ? "👑 LEGENDARIO ⭐⭐⭐⭐" :
       fish.tier === 3 ? "🦈 ÉPICO ⭐⭐⭐" :
@@ -58,7 +61,7 @@ export const pescarCommand: Command = {
       `${repelenteTag}${newTag}${recordTag}\n\n` +
       `🪱 *Carnadas restantes:* ${res.chargesRemaining}/${res.maxCharges}\n` +
       `💳 *Tu saldo actual:* *$${res.newBalance?.toLocaleString("es-AR")}* fichas\n` +
-      `📖 *Álbum del Acuario:* ${res.totalSpeciesDiscovered}/30 especies (\`!acuario\`)`;
+      `📖 *Álbum del Acuario:* ${res.totalSpeciesDiscovered}/${totalCatalogFishes} especies (\`!acuario\`)`;
 
     // Si es un pez de rareza alta o hito especial, generar Trading Card visual
     if (fish.tier >= 3 || res.isNewSpecies || res.isNewRecord) {

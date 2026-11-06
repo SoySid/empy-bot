@@ -1,5 +1,5 @@
 import { Command, CommandContext } from "./types.js";
-import { createFeedbackItem } from "../services/notion.service.js";
+import { createFeedbackItem, getFeedbackItems } from "../services/notion.service.js";
 
 function extractQuotedText(quotedMsg?: any): string | null {
   if (!quotedMsg) return null;
@@ -126,6 +126,70 @@ export const ideaCommand: Command = {
         {
           text: `⚠️ *No se pudo registrar en Notion:* ${result.error}`,
         },
+        { quoted: msg as any }
+      );
+    }
+  },
+};
+
+export const listaCommand: Command = {
+  name: "lista",
+  aliases: ["backlog", "tickets", "ideas", "bugs"],
+  description: "Muestra la lista de ideas y bugs activos pendientes en el tablero de Notion.",
+  execute: async ({ sock, msg, remoteJid }: CommandContext) => {
+    try {
+      const res = await getFeedbackItems();
+      if (!res.success) {
+        await sock.sendMessage(
+          remoteJid,
+          { text: `⚠️ *No se pudo consultar Notion:* ${res.error || "Error de conexión."}` },
+          { quoted: msg as any }
+        );
+        return;
+      }
+
+      const activeItems = res.items.filter((i) => i.status === "Nuevo" || i.status === "En Progreso");
+
+      if (activeItems.length === 0) {
+        await sock.sendMessage(
+          remoteJid,
+          { text: "📋 *Tablero de Notion al día!*\n\nNo hay tickets pendientes ni bugs abiertos en este momento. Podés reportar uno con `!bug <texto>` o sugerir con `!idea <texto>`." },
+          { quoted: msg as any }
+        );
+        return;
+      }
+
+      const bugs = activeItems.filter((i) => i.type === "Bug");
+      const ideas = activeItems.filter((i) => i.type !== "Bug");
+
+      let text = `📋 *TABLERO DE CONTROL — NOTION* 🚀\n\n`;
+
+      if (bugs.length > 0) {
+        text += `🐛 *Bugs en Seguimiento (${bugs.length}):*\n`;
+        for (const b of bugs) {
+          const statusIcon = b.status === "En Progreso" ? "⚙️" : "🆕";
+          text += `• ${statusIcon} *${b.title}* _(${b.priority})_\n`;
+        }
+        text += `\n`;
+      }
+
+      if (ideas.length > 0) {
+        text += `💡 *Ideas & Sugerencias (${ideas.length}):*\n`;
+        for (const id of ideas) {
+          const statusIcon = id.status === "En Progreso" ? "⚙️" : "🆕";
+          text += `• ${statusIcon} *${id.title}* _(${id.priority})_\n`;
+        }
+        text += `\n`;
+      }
+
+      text += `_Sumá tu reporte con \`!bug <texto>\` o tu propuesta con \`!idea <texto>\`._`;
+
+      await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
+    } catch (err: any) {
+      console.error("[Lista Command Error]:", err);
+      await sock.sendMessage(
+        remoteJid,
+        { text: "❌ Ocurrió un error al obtener la lista de Notion." },
         { quoted: msg as any }
       );
     }

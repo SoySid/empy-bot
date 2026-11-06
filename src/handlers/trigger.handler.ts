@@ -27,6 +27,20 @@ export async function handleTriggerStickers(ctx: MessageContext): Promise<boolea
     return false;
   }
 
+  // Si el mensaje está dirigido directamente al bot (mención explícita o respuesta directa),
+  // no debe ser interceptado por triggers de stickers para permitir que el bot responda con IA.
+  const hasBotTextMention = /@?empy(-bot)?\b/i.test(ctx.cleanBody);
+  const isDirectlyAddressed = Boolean(
+    hasBotTextMention ||
+    (ctx.botDigits && ctx.quotedParticipant.includes(ctx.botDigits)) ||
+    (ctx.botLidDigits && ctx.quotedParticipant.includes(ctx.botLidDigits)) ||
+    ctx.mentionedJidList.some((j) => (ctx.botDigits && j.includes(ctx.botDigits)) || (ctx.botLidDigits && j.includes(ctx.botLidDigits)))
+  );
+
+  if (isDirectlyAddressed) {
+    return false;
+  }
+
   const senderJid = ctx.senderProfile?.jid || ctx.msg.key?.participant || ctx.msg.key?.remoteJid || "";
   if (isUserCommandBanned(senderJid, "triggers", "stickertriggers", "stickers", "sticker")) {
     return false;

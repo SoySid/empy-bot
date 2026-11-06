@@ -242,13 +242,13 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
     }
   }
 
-  // 4. Probabilidades por Tier (Épicos 24%, Legendarios 10%, Míticos 6%, Abisal 0.5%)
-  let t1Prob = 34.5;
+  // 4. Probabilidades por Tier (Épicos 24%, Legendarios 10%, Míticos 6%, Abisal 1%)
+  let t1Prob = 34.0;
   let t2Prob = 25;
   let t3Prob = 24;
   let t4Prob = 10;
   let t5Prob = 6;
-  let t6Prob = 0.5;
+  let t6Prob = 1.0;
 
   if (state.activeBuffs.tier2Uses && state.activeBuffs.tier2Uses > 0) {
     t2Prob += 15;
