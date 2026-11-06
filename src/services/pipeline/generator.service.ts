@@ -6,14 +6,15 @@ import { trackTokens, canUseModel, setModelCooldown } from "../token.service.js"
 
 dotenv.config();
 
-const configuredGemmaModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
-const backupGemmaModel = configuredGemmaModel === "gemma-4-31b-it" ? "gemma-4-26b-a4b-it" : "gemma-4-31b-it";
+const configuredFlashLiteModel = process.env.GEMINI_FLASH_LITE_MODEL || "gemini-2.5-flash-lite";
 
 const GEMINI_MODELS = [
-  { model: configuredGemmaModel, hasThinking: true },
-  { model: backupGemmaModel, hasThinking: true },
+  { model: configuredFlashLiteModel, hasThinking: true },
+  { model: "gemini-2.0-flash-lite", hasThinking: true },
   { model: "gemini-flash-lite-latest", hasThinking: false },
-  { model: "gemini-3.1-flash-lite", hasThinking: false },
+  { model: "gemini-2.5-flash", hasThinking: true },
+  { model: "gemini-2.0-flash", hasThinking: true },
+  { model: "gemma-4-26b-a4b-it", hasThinking: true },
   { model: "gemini-flash-latest", hasThinking: false },
 ];
 const GROQ_BACKUP_MODEL = "qwen/qwen3.8-27b";
@@ -115,7 +116,7 @@ ${callInstruction}`;
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       const isHighThinking = hasThinking && isDirect;
-      const targetThinkingLevel = isHighThinking ? (process.env.GEMMA_THINKING_LEVEL || "high") : "minimal";
+      const targetThinkingLevel = isHighThinking ? (process.env.GEMINI_THINKING_LEVEL || process.env.GEMMA_THINKING_LEVEL || "high") : "minimal";
       const maxTokens = isHighThinking ? 2048 : 800;
       const timeoutMs = isHighThinking ? 45000 : (hasThinking ? 12000 : 8000);
 

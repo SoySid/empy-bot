@@ -34,9 +34,10 @@ const GEMINI_SAFETY_SETTINGS = [
 ];
 
 const TEXT_MODEL_PIPELINE = [
+  { provider: "gemini", model: "gemini-2.5-flash-lite", maxRpm: 30 },
+  { provider: "gemini", model: "gemini-2.0-flash-lite", maxRpm: 30 },
+  { provider: "gemini", model: "gemini-flash-lite-latest", maxRpm: 30 },
   { provider: "gemini", model: "gemma-4-26b-a4b-it", maxRpm: 30 },
-  { provider: "gemini", model: "gemini-flash-lite-latest", maxRpm: 15 },
-  { provider: "gemini", model: "gemini-3.1-flash-lite", maxRpm: 15 },
   { provider: "gemini", model: "gemini-flash-latest", maxRpm: 15 },
   { provider: "groq", model: "qwen/qwen3.8-27b", maxRpm: 30 },
   { provider: "groq", model: "openai/gpt-oss-20b", maxRpm: 30 },
@@ -407,20 +408,24 @@ Generá el JSON con la respuesta para @${senderName}:`;
     }
 
     try {
-      if (candidate.model === "gemma-4-26b-a4b-it") {
+      if (candidate.model === "gemma-4-26b-a4b-it" || candidate.model.includes("flash-lite")) {
         if (hasActionIntent) continue; // Si requiere herramientas (alarmas, stickers, etc.), usar modelos Gemini con function calling
 
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
         if (!GEMINI_API_KEY) continue;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent`;
-        const payload = {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate.model}:generateContent`;
+        const thinkingLevel = candidate.model.includes("gemma")
+          ? (process.env.GEMMA_THINKING_LEVEL || "high")
+          : (process.env.GEMINI_THINKING_LEVEL || "minimal");
+
+        const payload: any = {
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: fullPromptWithHistory }] }],
           generationConfig: {
             temperature: isTask ? 0.35 : 0.7,
             maxOutputTokens: 2048,
-            thinkingConfig: { thinkingLevel: process.env.GEMMA_THINKING_LEVEL || "high" },
+            thinkingConfig: { thinkingLevel },
           },
         };
 
@@ -435,7 +440,7 @@ Generá el JSON con la respuesta para @${senderName}:`;
         });
 
         if (!res.ok) {
-          console.warn(`[AI Pipeline] HTTP ${res.status} con gemma-4-26b-a4b-it, probando siguiente...`);
+          console.warn(`[AI Pipeline] HTTP ${res.status} con ${candidate.model}, probando siguiente...`);
           continue;
         }
 
@@ -449,7 +454,7 @@ Generá el JSON con la respuesta para @${senderName}:`;
         if (data.usageMetadata) {
           trackTokens(
             "gemini",
-            "gemma-4-26b-a4b-it",
+            candidate.model,
             data.usageMetadata.promptTokenCount || 0,
             data.usageMetadata.candidatesTokenCount || 0
           );
@@ -674,63 +679,77 @@ export async function processVisionMessage(
   return "No llego a ver bien la foto che, ¿me la mandás de nuevo?";
 }
 
-export async function generateWithGemma(
+export async function generateWithFlashLite(
   prompt: string,
   maxTokens = 300,
   temperature = 0.4,
   feature = "summary"
 ): Promise<string | null> {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-  if (!GEMINI_API_KEY || !canUseModel("gemma-4-26b-a4b-it", 30)) return null;
+  if (!GEMINI_API_KEY) return null;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent`;
-    const payload = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
-        thinkingConfig: { thinkingLevel: "minimal" },
-      },
-    };
+  const models = [
+    process.env.GEMINI_FLASH_LITE_MODEL || "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemma-4-26b-a4b-it",
+  ];
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(12000),
-    });
+  for (const model of models) {
+    if (!canUseModel(model, 30)) continue;
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const text = parts
-      .filter((p: any) => !p.thought && typeof p.text === "string")
-      .map((p: any) => p.text.trim())
-      .filter(Boolean)
-      .join("\n")
-      .trim();
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const payload: any = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          thinkingConfig: { thinkingLevel: "minimal" },
+        },
+      };
 
-    if (text) {
-      if (data.usageMetadata) {
-        trackTokens(
-          "gemini",
-          "gemma-4-26b-a4b-it",
-          data.usageMetadata.promptTokenCount || 0,
-          data.usageMetadata.candidatesTokenCount || 0,
-          feature
-        );
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(12000),
+      });
+
+      if (!res.ok) continue;
+      const data = await res.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const text = parts
+        .filter((p: any) => !p.thought && typeof p.text === "string")
+        .map((p: any) => p.text.trim())
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+
+      if (text) {
+        if (data.usageMetadata) {
+          trackTokens(
+            "gemini",
+            model,
+            data.usageMetadata.promptTokenCount || 0,
+            data.usageMetadata.candidatesTokenCount || 0,
+            feature
+          );
+        }
+        return text;
       }
-      return text;
+    } catch (err: any) {
+      console.warn(`[Flash-Lite Helper] Error generando con ${model}:`, err?.message || err);
     }
-  } catch (err: any) {
-    console.warn("[Gemma Helper] Error generando con gemma-4-26b-a4b-it:", err?.message || err);
   }
+
   return null;
 }
+
+export const generateWithGemma = generateWithFlashLite;
 
 export async function generateWithGemini(
   prompt: string,
@@ -738,12 +757,17 @@ export async function generateWithGemini(
   temperature = 0.5,
   feature = "astrology"
 ): Promise<string | null> {
-  // 1. Prioridad: Gemma 4 (14.4k RPD, 30 RPM, gratis y rapidísimo)
-  const gemmaRes = await generateWithGemma(prompt, maxTokens, temperature, feature);
-  if (gemmaRes) return gemmaRes;
+  // 1. Prioridad: Gemini Flash Lite (Alta cuota, ultra rápido y mejor comprensión)
+  const flashLiteRes = await generateWithFlashLite(prompt, maxTokens, temperature, feature);
+  if (flashLiteRes) return flashLiteRes;
 
-  // 2. Familia Gemini Flash / Flash-Lite
-  const candidates = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+  // 2. Familia Gemini Flash / Flash-Lite adicionales
+  const candidates = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-flash-latest",
+  ];
   for (const cand of candidates) {
     if (!canUseModel(cand, 15, feature)) continue;
     try {

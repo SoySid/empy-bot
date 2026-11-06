@@ -242,12 +242,13 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
     }
   }
 
-  // 4. Probabilidades por Tier (Épicos 24%, Legendarios 10%, Míticos 6%)
-  let t1Prob = 35;
+  // 4. Probabilidades por Tier (Épicos 24%, Legendarios 10%, Míticos 6%, Abisal 0.5%)
+  let t1Prob = 34.5;
   let t2Prob = 25;
   let t3Prob = 24;
   let t4Prob = 10;
   let t5Prob = 6;
+  let t6Prob = 0.5;
 
   if (state.activeBuffs.tier2Uses && state.activeBuffs.tier2Uses > 0) {
     t2Prob += 15;
@@ -267,15 +268,17 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
   t1Prob = Math.max(5, t1Prob);
 
   const roll = Math.random() * 100;
-  let chosenTier: 1 | 2 | 3 | 4 | 5 = 1;
+  let chosenTier: 1 | 2 | 3 | 4 | 5 | 6 = 1;
 
-  if (roll < t5Prob) {
+  if (roll < t6Prob) {
+    chosenTier = 6;
+  } else if (roll < t6Prob + t5Prob) {
     chosenTier = 5;
-  } else if (roll < t5Prob + t4Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob) {
     chosenTier = 4;
-  } else if (roll < t5Prob + t4Prob + t3Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob + t3Prob) {
     chosenTier = 3;
-  } else if (roll < t5Prob + t4Prob + t3Prob + t2Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob + t3Prob + t2Prob) {
     chosenTier = 2;
   } else {
     chosenTier = 1;

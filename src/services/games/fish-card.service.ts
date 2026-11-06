@@ -56,7 +56,16 @@ export async function generateFishCard(options: FishCardOptions): Promise<Buffer
   let bgGradientEnd = "#000a12";
   let glowColor = "#37474F";
 
-  if (fish.tier === 5) {
+  if (fish.tier === 6) {
+    borderColor = "#00E5FF";
+    borderGradientStart = "#00FFFF";
+    borderGradientEnd = "#0052D4";
+    tierLabel = "ABISAL 🌌⭐⭐⭐⭐⭐⭐";
+    tierBadgeColor = "#005577";
+    bgGradientStart = "#001020";
+    bgGradientEnd = "#00050a";
+    glowColor = "#00E5FF";
+  } else if (fish.tier === 5) {
     borderColor = "#FF1493";
     borderGradientStart = "#FF007F";
     borderGradientEnd = "#7928CA";

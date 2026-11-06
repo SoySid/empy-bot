@@ -36,6 +36,65 @@ function wrapText(text: string, maxCharsPerLine = 22): string[] {
 }
 
 /**
+ * Determina si un sujeto o frase en castellano tiene concordancia plural ("SON" vs "ES").
+ */
+export function isPluralSubject(clean: string): boolean {
+  const trimmed = clean.trim();
+  if (!trimmed) return false;
+
+  // 1. Artículos o pronombres plurales al inicio
+  if (/^(las|los|unos|unas|esos|esas|estos|estas|aquellos|aquellas|mis|tus|sus|nuestros|nuestras)\b/i.test(trimmed)) {
+    return true;
+  }
+
+  // 2. Cuantificadores plurales o números cardinales > 1 al inicio
+  if (/^(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|varios|varias|muchos|muchas|pocos|pocas|algunos|algunas|tantos|tantas)\b/i.test(trimmed)) {
+    return true;
+  }
+
+  // 3. Conjunciones copulativas ("X y Y", "X e Y")
+  if (/\s+(y|e)\s+/i.test(trimmed)) {
+    return true;
+  }
+
+  // 4. Verbos plurales explícitos
+  if (/\b(son|estan|están|fueron|eran|parecen)\b/i.test(trimmed)) {
+    return true;
+  }
+
+  // 5. Excepciones de sustantivos singulares comunes que terminan en 's'
+  const singularExceptions = new Set([
+    "lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "cumpleaños",
+    "paraguas", "sacacorchos", "lavavajillas", "rompecabezas", "abrelatas", "limpiaparabrisas",
+    "crisis", "tesis", "analisis", "análisis", "hipotesis", "hipótesis", "dosis", "sintesis", "síntesis",
+    "pais", "país", "paris", "parís", "jesus", "jesús", "marcos", "carlos", "lucas", "matias", "matías",
+    "tomas", "tomás", "nicolas", "nicolás", "corrientes", "texas", "arkansas", "kansas",
+    "gas", "mes", "tos", "pus", "plus", "autobus", "autobús", "compas", "compás", "virus", "estatus", "campus", "atlas", "caos"
+  ]);
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const firstWord = words[0].toLowerCase().replace(/[.,;:!?]+$/, "");
+  const lastWord = words[words.length - 1].toLowerCase().replace(/[.,;:!?]+$/, "");
+
+  // Si inicia con artículo/determinante singular explícito ("el", "la", "un", "una", etc.), es singular
+  if (/^(el|la|un|una|este|esta|ese|esa|aquel|aquella|mi|tu|su)\b/i.test(trimmed)) {
+    return false;
+  }
+
+  // Si la primera o única palabra no es excepción y termina en 's' (longitud > 3)
+  if (!singularExceptions.has(firstWord) && firstWord.endsWith("s") && firstWord.length > 3) {
+    return true;
+  }
+
+  // Si la última palabra termina en 's' y no es excepción singular
+  if (!singularExceptions.has(lastWord) && lastWord.endsWith("s") && lastWord.length > 3) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Normaliza y formatea el sujeto para el meme de Milei: "X ES UNA MIERDA" o "X SON UNA MIERDA".
  */
 export function formatMileiMierdaPhrase(rawInput: string): string {
@@ -54,11 +113,7 @@ export function formatMileiMierdaPhrase(rawInput: string): string {
     clean = "TODO";
   }
 
-  const isPlural =
-    /^(las|los|unos|unas)\s+/i.test(clean) ||
-    /\s+(y|e)\s+/i.test(clean) ||
-    /\b(son|estan|están)\b/i.test(clean);
-
+  const isPlural = isPluralSubject(clean);
   const verb = isPlural ? "SON" : "ES";
 
   return `${clean.toUpperCase()} ${verb} UNA MIERDA`;
@@ -83,11 +138,7 @@ export function formatMileiClavePhrase(rawInput: string): string {
     clean = "ESTO";
   }
 
-  const isPlural =
-    /^(las|los|unos|unas)\s+/i.test(clean) ||
-    /\s+(y|e)\s+/i.test(clean) ||
-    /\b(son|estan|están)\b/i.test(clean);
-
+  const isPlural = isPluralSubject(clean);
   const verb = isPlural ? "SON" : "ES";
 
   return `${clean.toUpperCase()} ${verb} CLAVE`;

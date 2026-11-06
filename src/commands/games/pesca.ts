@@ -104,8 +104,8 @@ export const acuarioCommand: Command = {
     const percent = Math.round((discovered / totalFishes) * 100);
 
     // Conteo por rareza
-    const tierCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    const tierTotals: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const tierCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const tierTotals: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     for (const f of fishes) {
       tierTotals[f.tier] = (tierTotals[f.tier] || 0) + 1;
       if (state.collection.includes(f.id)) {
@@ -118,7 +118,8 @@ export const acuarioCommand: Command = {
       `• 🐠 *Raros:* ${tierCounts[2]}/${tierTotals[2]} ${tierCounts[2] === tierTotals[2] ? "✅" : ""}\n` +
       `• 🦈 *Épicos:* ${tierCounts[3]}/${tierTotals[3]} ${tierCounts[3] === tierTotals[3] ? "✅" : ""}\n` +
       `• 👑 *Legendarios:* ${tierCounts[4]}/${tierTotals[4]} ${tierCounts[4] === tierTotals[4] ? "✅" : ""}\n` +
-      `• 🧪 *Míticos:* ${tierCounts[5]}/${tierTotals[5]} ${tierCounts[5] === tierTotals[5] ? "✅" : ""}`;
+      `• 🧪 *Míticos:* ${tierCounts[5]}/${tierTotals[5]} ${tierCounts[5] === tierTotals[5] ? "✅" : ""}\n` +
+      `• 🌌 *Abisales:* ${tierCounts[6]}/${tierTotals[6]} ${tierCounts[6] === tierTotals[6] ? "✅" : ""}`;
 
     // Récord
     let recordText = "Sin capturas registradas";

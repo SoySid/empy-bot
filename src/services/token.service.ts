@@ -23,6 +23,8 @@ export const MODEL_RPD_LIMITS: Record<string, number> = {
   "gemma-4-31b-it": 14400,
   "gemma-4-26b-a4b-it": 14400,
   // Modelos Gemini oficiales dinámicos y rápidos
+  "gemini-2.5-flash-lite": 1500,
+  "gemini-2.0-flash-lite": 1500,
   "gemini-flash-lite-latest": 1500,
   "gemini-flash-latest": 1500,
   "gemini-3.1-flash-lite": 500,

@@ -6,8 +6,8 @@ export interface FishDefinition {
   id: string;
   name: string;
   icon: string;
-  tier: 1 | 2 | 3 | 4 | 5;
-  tierName: "Común" | "Raro" | "Épico" | "Legendario" | "Mítico";
+  tier: 1 | 2 | 3 | 4 | 5 | 6;
+  tierName: "Común" | "Raro" | "Épico" | "Legendario" | "Mítico" | "Abisal";
   probability: number; // Porcentaje (ej: 5.6 para 5.6%)
   minWeightKg: number;
   maxWeightKg: number;
@@ -400,6 +400,20 @@ export const FISH_CATALOG: Record<string, FishDefinition> = {
     maxWeightKg: 7.7,
     basePrice: 20000,
     lore: "Pez milagroso que bendice la billetera del pescador con abundancia infinita.",
+  },
+
+  // Tier 6: Abisales & Criaturas de las Fosas Profundas (0.5% total | $50.000 fichas)
+  calamar_abisal_primigenio: {
+    id: "calamar_abisal_primigenio",
+    name: "Calamar Abisal Primigenio",
+    icon: "🦑",
+    tier: 6,
+    tierName: "Abisal",
+    probability: 0.5,
+    minWeightKg: 120.0,
+    maxWeightKg: 350.0,
+    basePrice: 50000,
+    lore: "Monstruo de tentáculos bioluminiscentes que acecha en las fosas más oscuras e insondables del río.",
   },
 };
 
