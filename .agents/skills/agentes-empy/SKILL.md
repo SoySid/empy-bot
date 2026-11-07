@@ -28,7 +28,7 @@ Script CLI operativo de Notion:
 2. **Prohibición de Micro-Commits Basura (`Single-Commit Gate`):**
    - **TERMINANTEMENTE PROHIBIDO** hacer `git commit` a mitad de tarea, por cada archivo editado, o mientras se está probando si algo funciona (cero commits tipo *"editado"*, *"modificado"*, *"ahora sí funciona"*, *"fix rápido"*).
    - Durante el desarrollo y las pruebas iterativas, el árbol de Git permanece sin commitear.
-   - **Recién cuando la tarea está 100% terminada**, **Flecha (QA)** ejecutó las pruebas + `npm run typecheck` y **Mateo (SecOps)** validó `npm run security:check` + `git status` limpio de secretos, **El Jefe Sid realiza UN ÚNICO COMMIT atómico y semántico** (`feat:`, `fix:`, `refactor:`) seguido de `git push`.
+   - **Recién cuando la tarea está 100% terminada**, **Flecha (QA)** ejecutó las pruebas + `npm run typecheck` y **Chow (SecOps)** validó `npm run security:check` + `git status` limpio de secretos, **El Jefe Sid realiza UN ÚNICO COMMIT atómico y semántico** (`feat:`, `fix:`, `refactor:`) seguido de `git push`.
 
 3. **Inyección de Contexto Quirúrgica (`Context-First`):**
    - Ningún agente trabaja a ciegas. Antes de delegar a cualquier especialista, **Sid** consulta `graphify` (`graphify explain <nodo>` o `graphify query <término>`) y le entrega al agente un **Paquete de Contexto** con: rutas exactas, líneas relevantes, esquemas de `prisma/schema.prisma` y restricciones de `GEMINI.md`.
@@ -41,15 +41,15 @@ Script CLI operativo de Notion:
 | :--- | :--- | :--- |
 | 👑 **El Jefe Sid** | **Orquestador General & Estratega:** Triaje, diseño de `plan.md`, asignación automática de especialistas con contexto y control del único commit final. | `define_subagent`, `invoke_subagent`, `send_message`, `write_file` (`plan.md`), `graphify`, `git` |
 | 💻 **Kevin** | **Arquitecto Backend & Baileys Core:** Sockets WhatsApp (`@whiskeysockets/baileys`), dispatcher, handlers, sesiones y concurrencia ESM. | `edit_file`, `context7_context7` MCP, `graphify`, `scripts/sync-local-session-to-db.ts` |
-| 🛡️ **Mateo** | **Auditor SecOps & OWASP:** Esquemas `Zod`, prevención de Prompt Injection, rate-limits, blindaje `.gitignore` y auditoría pre-commit. | `security-guard` skill, `scripts/security-check.mjs`, `scripts/validate-commit-msg.mjs` |
+| 🛡️ **Chow** | **Auditor SecOps & OWASP:** Esquemas `Zod`, prevención de Prompt Injection, rate-limits, blindaje `.gitignore` y auditoría pre-commit. | `security-guard` skill, `scripts/security-check.mjs`, `scripts/validate-commit-msg.mjs` |
 | 🧠 **Nahum** | **Ingeniero AI Pipeline & RAG (`pgvector`):** Pipeline conversacional de 4 capas (`src/services/pipeline/`), Triage Groq Qwen, Gemini/Gemma, RAM cache (`user-cache.ts`) y embeddings en Supabase. | `gemini-api-docs` MCP, `supabase` MCP (`execute_sql`), `scripts/test-live-pipeline.mjs`, `scripts/test-triage.mjs`, `scripts/test-pgvector-query.mjs` |
 | 🎲 **Leo** | **Economía Urbana, Minijuegos, Prisma DB & Render:** Transacciones atómicas (`!laburar`, robos, casino, pesca, Pokémon, Wordle, MLBB), esquema `prisma/schema.prisma` y deploy en Render. | `supabase` MCP (`list_tables`, `execute_sql`, `apply_migration`), `render` MCP (`list_services`, `list_logs`, `list_deploys`), `neon-postgres`, `scripts/audit-professions.ts`, `scripts/test-laburar.mjs` |
 | 🎯 **Flecha** | **Ingeniero QA, Testing & Verificador Pre-Commit:** Ejecuta compilación TS, suites de prueba en `scripts/`, sincronización de grafo y otorga el **Sello Verde** obligatorio antes del commit único. | `npm run typecheck` (`tsc --noEmit`), `npm run security:check`, `npm run verify:sync`, `tsx scripts/test-*`, `graphify . --code-only`, `chrome-devtools` MCP |
 | 🎬 **Sofi** | **Pipeline Multimedia, Voz & Descargas:** Clonación y modulación en Fish Audio, Edge-TTS, transcodificación `FFmpeg` (OGG Opus PTT), stickers `Sharp` WebP, `!shazam`, `!letra` y `yt-dlp`. | `gemini-omni-flash-api`, `ffmpeg`, `yt-dlp`, `scripts/verify-downloads.ts`, `scripts/seed-stickers-to-db.ts` |
 | 🎨 **Bruno** | **Frontend, UI Craft & Generación Gráfica:** Interfaces web, generadores gráficos server-side (`!dni`, `!tweet` con SVG/Sharp) y diseño anti-slop. | `taste-skill`, `ui-skills`, `impeccable`, `theme-factory`, `chrome-devtools` MCP |
-| 🔍 **Nico** | **Deep Researcher, DuckDB & APIs Externas:** Investigaciones `/investigar`, consultas analíticas `DuckDB`, cálculos con `astronomy-engine` (carta natal/tarot) y APIs (`DolarApi`, `Open-Meteo`, `TMDB`). | `investigar` skill, `duckdb` MCP, `search_web`, `context7_context7` MCP, `scripts/test-astrology.ts` |
+| 🔍 **Dani** | **Deep Researcher, DuckDB & APIs Externas:** Investigaciones `/investigar`, consultas analíticas `DuckDB`, cálculos con `astronomy-engine` (carta natal/tarot) y APIs (`DolarApi`, `Open-Meteo`, `TMDB`). | `investigar` skill, `duckdb` MCP, `search_web`, `context7_context7` MCP, `scripts/test-astrology.ts` |
 | 📚 **Verito** | **Redacción Académica, Docs & Copywriter:** Documentación técnica viva (`README.md`), informes universitarios, eliminación de clichés con `humanizer` y copys de comandos. | `readme-design`, `humanizer`, `document-craft`, `gdocs` |
-| ⚡ **Luna** | **Notion Ops & Automatización de Crons:** Lectura y actualización de tickets en Notion, triaje de backlog y tareas programadas (`schedule`). | `npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts`, `notion_notion` MCP, `schedule` |
+| ⚡ **Mimi** | **Notion Ops & Automatización de Crons:** Lectura y actualización de tickets en Notion, triaje de backlog y tareas programadas (`schedule`). | `npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts`, `notion_notion` MCP, `schedule` |
 | 🔄 **Mati** | **Auditor de Sincronización Bot-GitHub & Menús:** Consistencia entre comandos, menús interactivos (`!juegos`, `!economia`, `!voces`) y `README.md` con ultra-bajo consumo por diffs y script determinista. | `run_command` (`git diff`, `npm run verify:sync`), `edit_file` |
 
 ---
@@ -59,18 +59,18 @@ Script CLI operativo de Notion:
 ```mermaid
 flowchart TD
     Start["Activación: /agentes-empy o Pedido del Usuario"] --> Mode{"¿Viene con tarea específica\no es apertura de tablero?"}
-    Mode -->|"Apertura de tablero"| LunaRead["⚡ Luna ejecuta notion-ops.ts list\ny presenta tickets con 4 opciones:\n🚀 Hacer | 💡 Debatir | ⏳ Posponer | 🗑️ Quitar"]
+    Mode -->|"Apertura de tablero"| MimiRead["⚡ Mimi ejecuta notion-ops.ts list\ny presenta tickets con 4 opciones:\n🚀 Hacer | 💡 Debatir | ⏳ Posponer | 🗑️ Quitar"]
     Mode -->|"Tarea / Orden directa"| SidContext["👑 Sid analiza impacto con Graphify\ny selecciona automáticamente a los especialistas"]
-    LunaRead -->|"Usuario elige 🚀 Hacer o 💡 Debatir"| SidContext
+    MimiRead -->|"Usuario elige 🚀 Hacer o 💡 Debatir"| SidContext
     SidContext --> PlanStep["📋 Fase 1 (OBLIGATORIA): Plan de Acción\nSid presenta el Plan (y Artifact plan.md si es complejo)\ncon reparto de tareas y contexto por agente"]
     PlanStep --> ExecStep["⚙️ Fase 2: Ejecución Orquestada\nLos especialistas (Kevin, Nahum, Leo, Sofi, Bruno, etc.)\naplican cambios con contexto quirúrgico (CERO commits)"]
-    ExecStep --> QAGate["🎯 Fase 3: Compuerta QA (Flecha + Mateo)\n- Flecha corre tsc --noEmit + scripts de test\n- Mateo corre npm run security:check\n- Si cambió src/, Flecha corre graphify . --code-only"]
+    ExecStep --> QAGate["🎯 Fase 3: Compuerta QA (Flecha + Chow)\n- Flecha corre tsc --noEmit + scripts de test\n- Chow corre npm run security:check\n- Si cambió src/, Flecha corre graphify . --code-only"]
     QAGate -->|"❌ Falla"|ExecStep
-    QAGate -->|"✅ Sello Verde Flecha"| CommitGate["🔒 Fase 4: Commit Único & Cierre Notion\n- Luna pasa el ticket a 'Resuelto' en Notion\n- Sid ejecuta 1 ÚNICO git commit semántico + git push\ny entrega el resumen ejecutivo"]
+    QAGate -->|"✅ Sello Verde Flecha"| CommitGate["🔒 Fase 4: Commit Único & Cierre Notion\n- Mimi pasa el ticket a 'Resuelto' en Notion\n- Sid ejecuta 1 ÚNICO git commit semántico + git push\ny entrega el resumen ejecutivo"]
 ```
 
 ### Fase 1: Lectura de Notion (cuando se invoca `/agentes-empy` sin tarea fija)
-1. **Luna** ejecuta el script oficial:
+1. **Mimi** ejecuta el script oficial:
    ```powershell
    npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts list
    ```
@@ -82,14 +82,14 @@ flowchart TD
 
 ### Fase 2: Enrutamiento y Reparto Automático por El Jefe Sid
 Sin que el usuario tenga que nombrar a los agentes, **Sid** detecta el dominio de la tarea y convoca automáticamente a la dupla o trío ideal:
-- **Sockets Baileys, Dispatcher, Comandos Generales o Sesiones:** 💻 **Kevin** + 🛡️ **Mateo** + 🎯 **Flecha**.
+- **Sockets Baileys, Dispatcher, Comandos Generales o Sesiones:** 💻 **Kevin** + 🛡️ **Chow** + 🎯 **Flecha**.
 - **Respuestas de `@Empy`, Triage Groq, Gemini/Gemma, RAG o `pgvector`:** 🧠 **Nahum** + 💻 **Kevin** + 🎯 **Flecha**.
-- **Economía (`!laburar`, robos, tienda), Minijuegos, Prisma DB o Render:** 🎲 **Leo** + 🛡️ **Mateo** + 🎯 **Flecha**.
-- **Voces (`!messi`, `!milei`, Fish Audio, Edge-TTS), Stickers, FFmpeg o Descargas:** 🎬 **Sofi** + 🛡️ **Mateo** + 🎯 **Flecha**.
+- **Economía (`!laburar`, robos, tienda), Minijuegos, Prisma DB o Render:** 🎲 **Leo** + 🛡️ **Chow** + 🎯 **Flecha**.
+- **Voces (`!messi`, `!milei`, Fish Audio, Edge-TTS), Stickers, FFmpeg o Descargas:** 🎬 **Sofi** + 🛡️ **Chow** + 🎯 **Flecha**.
 - **Tarjetas Gráficas (`!dni`, `!tweet`) o Web UI:** 🎨 **Bruno** + 📚 **Verito** + 🎯 **Flecha**.
-- **Investigación de Librerías/Ideas, Astrología, DuckDB o APIs Externas:** 🔍 **Nico** + 🛡️ **Mateo** + 👑 **Sid**.
-- **Documentación (`README.md`), Informes Universitarios o Copys:** 📚 **Verito** + 🔍 **Nico**.
-- **Sincronización de Backlog, Tickets o Automatizaciones:** ⚡ **Luna** + 👑 **Sid**.
+- **Investigación de Librerías/Ideas, Astrología, DuckDB o APIs Externas:** 🔍 **Dani** + 🛡️ **Chow** + 👑 **Sid**.
+- **Documentación (`README.md`), Informes Universitarios o Copys:** 📚 **Verito** + 🔍 **Dani**.
+- **Sincronización de Backlog, Tickets o Automatizaciones:** ⚡ **Mimi** + 👑 **Sid**.
 - **Comandos Nuevos/Modificados, Sincronización de Menús o GitHub:** 🔄 **Mati** + 📚 **Verito** + 🎯 **Flecha**.
 
 ### Fase 3: Ejecución Real (Subagentes + Contexto) y Sello de Flecha
@@ -97,14 +97,14 @@ Sin que el usuario tenga que nombrar a los agentes, **Sid** detecta el dominio d
 2. **Delegación con Contexto:**
    - Para tareas paralelas o investigaciones/verificaciones independientes, Sid usa `define_subagent` e `invoke_subagent` (ver plantillas en [roster-y-herramientas.md](./references/roster-y-herramientas.md)) inyectando las rutas y líneas exactas.
    - Para ediciones secuenciales sobre un mismo archivo, Sid coordina la intervención ordenada de cada especialista en el flujo principal para evitar conflictos de escritura.
-3. **Verificación Empírica Obligatoria (🎯 Flecha + 🔄 Mati + 🛡️ Mateo):**
-   - Antes de dar por terminada cualquier tarea de código, **Flecha** DEBE ejecutar `npm run typecheck` (y el script de test correspondiente en `scripts/`), **Mati** DEBE auditar la consistencia con `npm run verify:sync`, y **Mateo** DEBE verificar `npm run security:check`.
+3. **Verificación Empírica Obligatoria (🎯 Flecha + 🔄 Mati + 🛡️ Chow):**
+   - Antes de dar por terminada cualquier tarea de código, **Flecha** DEBE ejecutar `npm run typecheck` (y el script de test correspondiente en `scripts/`), **Mati** DEBE auditar la consistencia con `npm run verify:sync`, y **Chow** DEBE verificar `npm run security:check`.
    - Si se agregaron o eliminaron archivos en `src/`, **Flecha** actualiza el grafo con `npm run graph`.
 
 ### Fase 4: Compuerta de Commit Único (`Single-Commit Gate`)
 - **Durante la implementación:** Cero commits.
 - **Al finalizar y recibir el `✅ SELLO VERDE FLECHA` (y confirmación del usuario cuando aplique un plan mayor):**
-  1. Si la tarea provino de Notion, **Luna** actualiza el estado a `"Resuelto"`:
+  1. Si la tarea provino de Notion, **Mimi** actualiza el estado a `"Resuelto"`:
      ```powershell
      npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts status <pageId> Resuelto
      ```
