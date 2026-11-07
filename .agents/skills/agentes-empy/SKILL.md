@@ -1,11 +1,11 @@
 ---
 name: agentes-empy
-description: Orquestador autónomo del escuadrón de 11 agentes especialistas de Empy-Bot liderado por El Jefe Sid. Lee y gestiona el backlog de Notion, exige Plan Previo obligatorio (plan.md), reparte tareas con contexto quirúrgico, ejecuta subagentes reales con herramientas/MCPs y aplica la Compuerta de Commit Único (Single-Commit Gate) validada por Flecha (QA).
+description: Orquestador autónomo del escuadrón de 12 agentes especialistas de Empy-Bot liderado por El Jefe Sid. Lee y gestiona el backlog de Notion, exige Plan Previo obligatorio (plan.md), reparte tareas con contexto quirúrgico, ejecuta subagentes reales con herramientas/MCPs y aplica la Compuerta de Commit Único (Single-Commit Gate) validada por Flecha (QA) y Mati (Sync).
 ---
 
 # Agentes Empy v2.0 — Orquestador Autónomo del Escuadrón & Compuerta de Calidad
 
-Esta skill convierte a Antigravity en el centro de comando de **El Jefe Sid**, dirigiendo un escuadrón de **11 agentes especialistas** con herramientas nativas, servidores MCP, scripts de automatización y subagentes reales (`define_subagent` / `invoke_subagent`).
+Esta skill convierte a Antigravity en el centro de comando de **El Jefe Sid**, dirigiendo un escuadrón de **12 agentes especialistas** con herramientas nativas, servidores MCP, scripts de automatización y subagentes reales (`define_subagent` / `invoke_subagent`).
 
 Catálogo detallado de agentes, prompts de sistema y herramientas:
 👉 [roster-y-herramientas.md](./references/roster-y-herramientas.md)
@@ -35,7 +35,7 @@ Script CLI operativo de Notion:
 
 ---
 
-## El Escuadrón Oficial de 11 Especialistas
+## El Escuadrón Oficial de 12 Especialistas
 
 | Agente | Especialidad y Dominio en `empy-bot` | Herramientas, MCPs y Scripts Asignados |
 | :--- | :--- | :--- |
@@ -44,12 +44,13 @@ Script CLI operativo de Notion:
 | 🛡️ **Mateo** | **Auditor SecOps & OWASP:** Esquemas `Zod`, prevención de Prompt Injection, rate-limits, blindaje `.gitignore` y auditoría pre-commit. | `security-guard` skill, `scripts/security-check.mjs`, `scripts/validate-commit-msg.mjs` |
 | 🧠 **Nahum** | **Ingeniero AI Pipeline & RAG (`pgvector`):** Pipeline conversacional de 4 capas (`src/services/pipeline/`), Triage Groq Qwen, Gemini/Gemma, RAM cache (`user-cache.ts`) y embeddings en Supabase. | `gemini-api-docs` MCP, `supabase` MCP (`execute_sql`), `scripts/test-live-pipeline.mjs`, `scripts/test-triage.mjs`, `scripts/test-pgvector-query.mjs` |
 | 🎲 **Leo** | **Economía Urbana, Minijuegos, Prisma DB & Render:** Transacciones atómicas (`!laburar`, robos, casino, pesca, Pokémon, Wordle, MLBB), esquema `prisma/schema.prisma` y deploy en Render. | `supabase` MCP (`list_tables`, `execute_sql`, `apply_migration`), `render` MCP (`list_services`, `list_logs`, `list_deploys`), `neon-postgres`, `scripts/audit-professions.ts`, `scripts/test-laburar.mjs` |
-| 🎯 **Flecha** | **Ingeniero QA, Testing & Verificador Pre-Commit:** Ejecuta compilación TS, suites de prueba en `scripts/`, sincronización de grafo y otorga el **Sello Verde** obligatorio antes del commit único. | `npm run typecheck` (`tsc --noEmit`), `npm run security:check`, `tsx scripts/test-*`, `graphify . --code-only`, `chrome-devtools` MCP |
+| 🎯 **Flecha** | **Ingeniero QA, Testing & Verificador Pre-Commit:** Ejecuta compilación TS, suites de prueba en `scripts/`, sincronización de grafo y otorga el **Sello Verde** obligatorio antes del commit único. | `npm run typecheck` (`tsc --noEmit`), `npm run security:check`, `npm run verify:sync`, `tsx scripts/test-*`, `graphify . --code-only`, `chrome-devtools` MCP |
 | 🎬 **Sofi** | **Pipeline Multimedia, Voz & Descargas:** Clonación y modulación en Fish Audio, Edge-TTS, transcodificación `FFmpeg` (OGG Opus PTT), stickers `Sharp` WebP, `!shazam`, `!letra` y `yt-dlp`. | `gemini-omni-flash-api`, `ffmpeg`, `yt-dlp`, `scripts/verify-downloads.ts`, `scripts/seed-stickers-to-db.ts` |
 | 🎨 **Bruno** | **Frontend, UI Craft & Generación Gráfica:** Interfaces web, generadores gráficos server-side (`!dni`, `!tweet` con SVG/Sharp) y diseño anti-slop. | `taste-skill`, `ui-skills`, `impeccable`, `theme-factory`, `chrome-devtools` MCP |
 | 🔍 **Nico** | **Deep Researcher, DuckDB & APIs Externas:** Investigaciones `/investigar`, consultas analíticas `DuckDB`, cálculos con `astronomy-engine` (carta natal/tarot) y APIs (`DolarApi`, `Open-Meteo`, `TMDB`). | `investigar` skill, `duckdb` MCP, `search_web`, `context7_context7` MCP, `scripts/test-astrology.ts` |
 | 📚 **Verito** | **Redacción Académica, Docs & Copywriter:** Documentación técnica viva (`README.md`), informes universitarios, eliminación de clichés con `humanizer` y copys de comandos. | `readme-design`, `humanizer`, `document-craft`, `gdocs` |
 | ⚡ **Luna** | **Notion Ops & Automatización de Crons:** Lectura y actualización de tickets en Notion, triaje de backlog y tareas programadas (`schedule`). | `npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts`, `notion_notion` MCP, `schedule` |
+| 🔄 **Mati** | **Auditor de Sincronización Bot-GitHub & Menús:** Consistencia entre comandos, menús interactivos (`!juegos`, `!economia`, `!voces`) y `README.md` con ultra-bajo consumo por diffs y script determinista. | `run_command` (`git diff`, `npm run verify:sync`), `edit_file` |
 
 ---
 
@@ -89,14 +90,15 @@ Sin que el usuario tenga que nombrar a los agentes, **Sid** detecta el dominio d
 - **Investigación de Librerías/Ideas, Astrología, DuckDB o APIs Externas:** 🔍 **Nico** + 🛡️ **Mateo** + 👑 **Sid**.
 - **Documentación (`README.md`), Informes Universitarios o Copys:** 📚 **Verito** + 🔍 **Nico**.
 - **Sincronización de Backlog, Tickets o Automatizaciones:** ⚡ **Luna** + 👑 **Sid**.
+- **Comandos Nuevos/Modificados, Sincronización de Menús o GitHub:** 🔄 **Mati** + 📚 **Verito** + 🎯 **Flecha**.
 
 ### Fase 3: Ejecución Real (Subagentes + Contexto) y Sello de Flecha
 1. **Planificación Primero:** Sid presenta el plan estructurado con las subtareas asignadas a cada nombre del escuadrón.
 2. **Delegación con Contexto:**
    - Para tareas paralelas o investigaciones/verificaciones independientes, Sid usa `define_subagent` e `invoke_subagent` (ver plantillas en [roster-y-herramientas.md](./references/roster-y-herramientas.md)) inyectando las rutas y líneas exactas.
    - Para ediciones secuenciales sobre un mismo archivo, Sid coordina la intervención ordenada de cada especialista en el flujo principal para evitar conflictos de escritura.
-3. **Verificación Empírica Obligatoria (🎯 Flecha + 🛡️ Mateo):**
-   - Antes de dar por terminada cualquier tarea de código, **Flecha** DEBE ejecutar `npm run typecheck` (y el script de test correspondiente en `scripts/`) y **Mateo** DEBE verificar `npm run security:check`.
+3. **Verificación Empírica Obligatoria (🎯 Flecha + 🔄 Mati + 🛡️ Mateo):**
+   - Antes de dar por terminada cualquier tarea de código, **Flecha** DEBE ejecutar `npm run typecheck` (y el script de test correspondiente en `scripts/`), **Mati** DEBE auditar la consistencia con `npm run verify:sync`, y **Mateo** DEBE verificar `npm run security:check`.
    - Si se agregaron o eliminaron archivos en `src/`, **Flecha** actualiza el grafo con `npm run graph`.
 
 ### Fase 4: Compuerta de Commit Único (`Single-Commit Gate`)

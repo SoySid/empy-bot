@@ -43,6 +43,9 @@ export const juegosCommand: Command = {
       `🔫 *9. Ruleta Rusa* (\`!ruletarusa\` o \`!disparar\`)\n` +
       `• Tambor de 6 recámaras y 1 bala. ¿Te animás a apretar el gatillo?\n` +
       `• *Castigo:* Si sale la bala, ¡muerte! El bot te ignora totalmente durante 5 minutos.\n\n` +
+      `💣 *10. Campo Minado Grupal* (\`!campominado\`, \`!campo\` o \`!minas [apuesta]\`)\n` +
+      `• Tablero 4x4 con 3 minas ocultas y 13 casilleros con diamantes.\n` +
+      `• Pisá casilleros con \`!pisar <A1..D4>\` para multiplicar el pozo o retírate con \`!cobrar\`.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

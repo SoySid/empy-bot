@@ -42,7 +42,7 @@ Bot para WhatsApp desarrollado en TypeScript y Node.js sobre la librería Bailey
 - **Herramientas de grupo y dinámica:**
   - Encuestas nativas interactivas en WhatsApp.
   - Arbitraje de discusiones grupales mediante análisis contextual de mensajes.
-  - Cartelera de minijuegos cooperativos y de colección (pesca, Wordle, Pokémon, banderas, jefes grupales y trivia MLBB).
+  - Cartelera de minijuegos cooperativos y de colección (pesca, Wordle, Pokémon, banderas, jefes grupales, trivia MLBB, ahorcado, ruleta rusa y campo minado).
   - Consulta astrológica, horóscopo diario, carta natal, sinastría de compatibilidad y tarot.
   - Consulta en tiempo real de cotizaciones del dólar argentino (DolarApi), pronóstico meteorológico detallado (Open-Meteo), efemérides del día (Wikimedia) e información de cine/series (TMDB).
   - Podio diario e histórico de actividad de mensajes.
@@ -220,6 +220,9 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!coleccionheroes` | `!misheroes` | Álbum personal con los personajes de cómics coleccionados. |
 | `!mlbbquiz` | `!heromlbb` | Desafío de preguntas sobre habilidades y personajes de Mobile Legends. |
 | `!mlbbdex` | — | Registro de personajes de MLBB obtenidos en las trivias. |
+| `!ahorcado` | `!arriesgar` | Ahorcado grupal por categorías temáticas con pozo acumulado de fichas. |
+| `!ruletarusa` | `!disparar` | Desafío de supervivencia con tambor de 6 recámaras y 1 bala. |
+| `!campominado [apuesta]` | `!campo`, `!minas`, `!pisar`, `!cobrar` | Tablero de 16 casilleros con diamantes y minas ocultas con pozo multiplicador. |
 
 ---
 
