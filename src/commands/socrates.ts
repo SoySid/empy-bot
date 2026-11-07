@@ -61,7 +61,6 @@ export const socratesCommand: Command = {
         : senderProfile?.primaryName || senderProfile?.pushName || "el interlocutor";
 
       const cleanTarget = textTarget.replace(/\s+/g, " ").trim();
-      const previewTarget = cleanTarget.length > 110 ? `${cleanTarget.slice(0, 107)}...` : cleanTarget;
 
       const prompt = `Sos Sócrates encarnado en un grupo de amigos de WhatsApp en Argentina.
 Un participante del grupo acaba de sostener esta premisa o comentario:
@@ -83,8 +82,7 @@ REGLAS ESTRICTAS:
       const socratesText = await generateWithGemini(prompt, 300, 0.7, "socrates");
 
       const responseText =
-        `🏛️ *Premisa examinada:* _«${previewTarget}»_\n\n` +
-        `${socratesText || "Examiné tu premisa y descubrí que carece de sustancia hasta para ser refutada."}`;
+        socratesText || "Examiné tu afirmación y descubrí que carece de sustancia hasta para ser refutada.";
 
       await sock.sendMessage(
         remoteJid,
