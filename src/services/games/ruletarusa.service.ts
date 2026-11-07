@@ -14,7 +14,7 @@ const activeRoulettes = new Map<string, RouletteGame>();
 const deadUsers = new Map<string, number>(); // userJid -> timestamp de expiración del coma
 
 const TOTAL_CHAMBERS = 6;
-const IGNORE_DURATION_MS = 5 * 60 * 1000; // 5 minutos de ignoración
+const IGNORE_DURATION_MS = 1 * 60 * 1000; // 1 minuto de ignoración
 
 function getOrCreateRoulette(groupJid: string): RouletteGame {
   const existing = activeRoulettes.get(groupJid);

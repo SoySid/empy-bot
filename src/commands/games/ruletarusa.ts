@@ -12,7 +12,7 @@ import {
 export const ruletarusaCommand: Command = {
   name: "ruletarusa",
   aliases: ["ruleta-rusa", "disparar", "gatillar"],
-  description: "Probá tu suerte con el revólver. Si te toca la bala, el bot te ignora por 5 minutos.",
+  description: "Probá tu suerte con el revólver. Si sale la bala, el bot te ignora por 1 minuto.",
   execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
     const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
     const userName = senderProfile?.primaryName || senderProfile?.pushName || "Valiente";
@@ -22,7 +22,7 @@ export const ruletarusaCommand: Command = {
       await sock.sendMessage(
         remoteJid,
         {
-          text: `💀 *@${senderJid.split("@")[0].split(":")[0]}*, estás muerto en el más allá.\n\nTe quedan *${remaining}s* de ignoración antes de revivir.`,
+          text: `💀 *@${senderJid.split("@")[0].split(":")[0]}*, seguís fiambre.\n\nTe quedan *${remaining}s* de silencio antes de volver al juego.`,
           mentions: [senderJid],
         },
         { quoted: msg as any }
@@ -38,10 +38,9 @@ export const ruletarusaCommand: Command = {
       }
 
       const text =
-        `🔫 *¡¡CLICK!!* 😅\n\n` +
-        `*${userName}* apretó el gatillo en la recámara *${result.chamberNumber}/6*... ¡VACÍO!\n` +
-        `Te salvaste por un pelo.\n\n` +
-        `🎲 *Quedan:* ${result.remainingChambers} recámara(s) en el tambor. ¿Quién se anima al próximo tiro?`;
+        `🔫 *Click.* Zafaste.\n\n` +
+        `*${userName}* gatilló la recámara *${result.chamberNumber}/6*... ¡Vacía!\n\n` +
+        `🎲 Quedan *${result.remainingChambers}* tiro(s) en el tambor. ¿Quién sigue?`;
 
       await sock.sendMessage(
         remoteJid,
@@ -54,11 +53,10 @@ export const ruletarusaCommand: Command = {
       }
 
       const text =
-        `💥 *¡¡¡¡BOOOOOOOOM!!!!* 💀🩸\n\n` +
-        `*${userName}* apretó el gatillo en la recámara *${result.chamberNumber}/6*... *¡SALIÓ LA BALA!*\n\n` +
-        `⚰️ *HAS MUERTO EN COMBATE.*\n` +
-        `Por los próximos *5 minutos*, Empy-Bot te va a ignorar olímpicamente. No responderá a tus comandos ni a tus pedidos.\n\n` +
-        `🔄 _El tambor ha sido recargado y girado nuevamente._`;
+        `💥 *¡PUM!* Al lobby.\n\n` +
+        `*${userName}* gatilló la recámara *${result.chamberNumber}/6* y salió el plomo.\n\n` +
+        `⚰️ Quedás mudo por *1 minuto*. Empy no te va a registrar hasta que revivas.\n\n` +
+        `🔄 _Tambor recargado y girado._`;
 
       await sock.sendMessage(
         remoteJid,

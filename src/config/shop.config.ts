@@ -65,6 +65,17 @@ export const SHOP_ITEMS: Record<string, ShopItem> = {
     consumeText: "Destapaste la coquita con los dientes. Ese primer trago helado con gas picante en la garganta te revivió como a los dioses (+30% energía).",
     hungerRestore: 30,
   },
+  cafe: {
+    id: "cafe",
+    name: "Cafecito Batido",
+    aliases: ["cafe", "cafecito", "cortado", "espresso", "lagrima"],
+    price: 4500,
+    icon: "☕",
+    category: "bebida",
+    description: "Cafecito caliente bien batido con espuma y azúcar (+35% energía).",
+    consumeText: "Te tomaste un cafecito bien caliente con abundante espuma. Sentís cómo te arranca el corazón y te despierta la dopamina (+35% energía).",
+    hungerRestore: 35,
+  },
   cocido: {
     id: "cocido",
     name: "Mate Cocido Quemado",
