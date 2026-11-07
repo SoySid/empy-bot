@@ -81,7 +81,9 @@ export async function runLiveChatPipeline(ctx: MessageContext): Promise<boolean>
     activeUserJids,
     recentHistoryText,
     triage.intent,
-    triage.target_users
+    triage.target_users,
+    triage.search_query,
+    triage.needs_web_search
   );
 
   // Simular presencia de tipeo natural antes de responder

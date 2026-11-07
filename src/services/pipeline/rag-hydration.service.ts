@@ -2,7 +2,7 @@ import { prisma } from "../db/prisma.js";
 import { getAllCachedProfiles, getCachedUserProfile } from "../db/user.service.js";
 import { getRecentToneContext, getBurnedJokesContext, getActiveLessonsContext, getCachedGroupLexicon } from "../db/reflection.service.js";
 import { searchRelevantPastMessages } from "../db/embedding.service.js";
-import { REALTIME_SEARCH_REGEX, fetchLiveSearchData } from "../ai.service.js";
+import { fetchWebSearchContext } from "../web-search.service.js";
 
 export interface HydratedContext {
   activeUsersContext: string;
@@ -29,7 +29,9 @@ export async function hydrateContextForActiveUsers(
   activeUserJids: string[],
   recentText: string,
   intent?: string,
-  targetUsers: string[] = []
+  targetUsers: string[] = [],
+  webSearchQuery?: string,
+  needsWebSearch?: boolean
 ): Promise<HydratedContext> {
   const activeJidSet = new Set(activeUserJids.filter(Boolean));
   const finalJidSet = new Set(activeJidSet);
@@ -209,15 +211,17 @@ export async function hydrateContextForActiveUsers(
     }
   }
 
-  // 5. Búsqueda en tiempo real (clima, dólar, partidos, noticias)
+  // 5. Búsqueda web en tiempo real semántica y blindada (Capa 3 / Web Search Service)
   let liveSearchContext = "";
-  if (REALTIME_SEARCH_REGEX.test(recentText)) {
+  if (needsWebSearch && webSearchQuery) {
     try {
-      const liveData = await fetchLiveSearchData(recentText);
+      const liveData = await fetchWebSearchContext(webSearchQuery);
       if (liveData) {
-        liveSearchContext = `DATOS EN TIEMPO REAL:\n${liveData}`;
+        liveSearchContext = liveData;
       }
-    } catch {}
+    } catch (searchErr) {
+      console.warn("[RAG Hydration] Error en búsqueda web semántica:", searchErr);
+    }
   }
 
   return {

@@ -13,11 +13,14 @@ export interface TriageDecision {
   target_users: string[];
   suggested_angle?: string;
   reason?: string;
+  needs_web_search?: boolean;
+  search_query?: string;
 }
 
 /**
  * Capa 2: Triage Rápido con qwen/qwen3.8-27b en Groq
- * Analiza los últimos 5 mensajes y devuelve un JSON tipado en ~1s.
+ * Analiza el contexto de la conversación y devuelve un JSON tipado en ~1s,
+ * incluyendo clasificación semántica de búsqueda web (cero regexes frágiles).
  */
 export async function evaluateTriage(
   recentHistoryText: string,
@@ -25,22 +28,82 @@ export async function evaluateTriage(
   speakerName: string,
   quotedSpeakerName?: string
 ): Promise<TriageDecision> {
-  // Si fue llamado directamente (@Empy o respuesta a Empy), bypass total de LLM para ahorrar 100% de tokens de clasificación
+  const targets = [speakerName];
+  if (quotedSpeakerName && quotedSpeakerName !== speakerName) {
+    targets.push(quotedSpeakerName);
+  }
+
+  // 1. Si es llamada directa (@Empy o respuesta a Empy)
   if (isDirectCall) {
-    const targets = [speakerName];
-    if (quotedSpeakerName && quotedSpeakerName !== speakerName) {
-      targets.push(quotedSpeakerName);
+    try {
+      const completion = await groq.chat.completions.create({
+        model: TRIAGE_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: `Sos el clasificador de intenciones de "Empy", un bot de WhatsApp para un grupo de amigos.
+El usuario le habló o etiquetó directamente a Empy.
+Analizá el último mensaje del usuario en el contexto.
+
+Determina si el usuario solicita información fáctica externa o en tiempo real que requiera buscar en internet:
+- SÍ requiere búsqueda web (needs_web_search = true): noticias, resultados deportivos, partidos, clima, cotizaciones (dólar, cripto), fechas, eventos, lanzamientos, datos de personajes públicos, definiciones técnicas, etc.
+- NO requiere búsqueda web (needs_web_search = false): saludos, bromas, anécdotas personales, chicanas, preguntas sobre integrantes del grupo, opiniones subjetivas, mini-juegos o charla casual.
+
+Respondé ÚNICAMENTE un JSON:
+{
+  "needs_web_search": boolean,
+  "search_query": string
+}
+Si needs_web_search es true, en search_query escribe una consulta de búsqueda en Google limpia, concisa y neutral (máximo 6 palabras). Si es false, escribe "".`,
+          },
+          {
+            role: "user",
+            content: recentHistoryText,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 100,
+      });
+
+      if (completion.usage) {
+        trackTokens(
+          "groq",
+          TRIAGE_MODEL,
+          completion.usage.prompt_tokens || 0,
+          completion.usage.completion_tokens || 0,
+          "classifier_direct"
+        );
+      }
+
+      const raw = completion.choices[0]?.message?.content;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          should_intervene: true,
+          intent: "respuesta_directa",
+          target_users: targets,
+          suggested_angle: "Responder al usuario",
+          reason: "Llamada directa al bot",
+          needs_web_search: Boolean(parsed.needs_web_search),
+          search_query: typeof parsed.search_query === "string" ? parsed.search_query.trim() : undefined,
+        };
+      }
+    } catch (directErr) {
+      console.warn("[Triage Service] Advertencia evaluando búsqueda en llamada directa:", directErr);
     }
+
     return {
       should_intervene: true,
       intent: "respuesta_directa",
       target_users: targets,
       suggested_angle: "Responder al usuario",
-      reason: "Llamada directa al bot (bypass)",
+      reason: "Llamada directa al bot (fallback sin búsqueda)",
+      needs_web_search: false,
     };
   }
 
-  // Si es espontáneo, qwen/qwen3.8-27b evalúa si amerita meterse
+  // 2. Si es intervención espontánea en la charla grupal
   try {
     const completion = await groq.chat.completions.create({
       model: TRIAGE_MODEL,
@@ -62,18 +125,24 @@ Criterios para should_intervene = false (SILENCIO OBLIGATORIO):
 - Mensajes cortados, fragmentos o charla rápida donde una intervención del bot interrumpiría o sonaría forzada.
 - Si no hay un pie CLARO y genuino para sumar, la respuesta DEBE ser should_intervene = false y intent = "silencio". Ante la menor duda, callate.
 
+Criterio de búsqueda web semántica:
+- needs_web_search = true si el debate grupal gira en torno a un dato fáctico del mundo real (ej: si están discutiendo quién ganó un partido o qué pasó en una noticia).
+
 Respondé ÚNICAMENTE un JSON con:
 {
   "should_intervene": boolean,
   "intent": "broma" | "opinion" | "consejo" | "chicana" | "recuerdo" | "silencio",
   "target_users": string[],
   "suggested_angle": string,
-  "reason": string
+  "reason": string,
+  "needs_web_search": boolean,
+  "search_query": string
 }
 
 REGLAS PARA target_users Y suggested_angle:
 - En target_users incluí a los participantes del debate Y a cualquier integrante del grupo mencionado en la charla.
-- En suggested_angle definí la postura u objetivo (ej: "Burlarse de la derrota del Rojo", "Opinar sobre el juego"). NO asumas si conocés o no a los integrantes.`,
+- En suggested_angle definí la postura u objetivo (ej: "Burlarse de la derrota del Rojo", "Opinar sobre el juego"). NO asumas si conocés o no a los integrantes.
+- Si needs_web_search es true, search_query debe ser una búsqueda limpia de Google (máximo 6 palabras). Si es false, escribe "".`,
         },
         {
           role: "user",
@@ -91,7 +160,7 @@ REGLAS PARA target_users Y suggested_angle:
         TRIAGE_MODEL,
         completion.usage.prompt_tokens || 0,
         completion.usage.completion_tokens || 0,
-        "classifier"
+        "classifier_spontaneous"
       );
     }
 
@@ -113,6 +182,8 @@ REGLAS PARA target_users Y suggested_angle:
         target_users: Array.isArray(parsed.target_users) ? parsed.target_users : [],
         suggested_angle: angle,
         reason: parsed.reason,
+        needs_web_search: Boolean(parsed.needs_web_search),
+        search_query: typeof parsed.search_query === "string" ? parsed.search_query.trim() : undefined,
       };
     }
   } catch (err: any) {
@@ -124,5 +195,6 @@ REGLAS PARA target_users Y suggested_angle:
     intent: "silencio",
     target_users: [],
     reason: "Fallback por error o descarte",
+    needs_web_search: false,
   };
 }
