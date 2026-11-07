@@ -161,6 +161,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!tweet <texto>` | `!faketweet`, `!tweetfalso` | Genera una imagen simulando un tweet verificado de Twitter/X en modo oscuro. Admite etiquetar o citar a otro miembro para atribuirle la autoría. |
 | `!dni [@usuario]` | `!carnet`, `!cedula`, `!identidad` | Genera una tarjeta paródica de DNI argentino con foto de perfil de WhatsApp y campos humorísticos. |
 | `!roast` | `!quemar`, `!criticar`, `!basurear` | Analiza una foto o sticker citado y devuelve un remate contextual. |
+| `!socrates [frase]` | `!filosofo`, `!mayeutica` | Examina una frase u opinión con ironía socrática y mayéutica punzante (admite citar mensajes). |
 
 ---
 

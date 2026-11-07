@@ -22,6 +22,7 @@ import { mierdaCommand } from "./mierda.js";
 import { claveCommand } from "./clave.js";
 import { dniCommand } from "./dni.js";
 import { roastCommand } from "./roast.js";
+import { socratesCommand } from "./socrates.js";
 import { peliCommand } from "./peli.js";
 import { shazamCommand } from "./shazam.js";
 import { banCommand, unbanCommand, desbanCommand, bansListCommand } from "./ban.js";
@@ -204,6 +205,7 @@ const staticCommands: Command[] = [
   claveCommand,
   dniCommand,
   roastCommand,
+  socratesCommand,
   peliCommand,
   shazamCommand,
   banCommand,
