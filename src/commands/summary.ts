@@ -11,6 +11,11 @@ import {
   generateMicrosoftTTS,
 } from "../services/tts.service.js";
 import { registerBotResponse } from "../services/feedback.service.js";
+import {
+  generateElevenLabsTTS,
+  ELEVENLABS_TOMAS_VOICE_ID,
+  isElevenLabsConfigured,
+} from "../services/elevenlabs.service.js";
 import { getGroupParticipantJidSet } from "../services/whatsapp-identity.js";
 
 function getArgentinaDayBounds(offsetDays = 0): { start: Date; end: Date } {
@@ -143,11 +148,22 @@ export const summaryCommand: Command = {
       const referenceId = selectedVoice ? voiceMap[selectedVoice] : "";
 
       // Generar guion oral ultra conciso y picante (30-45s)
-      const audioScript = await generateGroupAudioScript(chronological, mode);
+      const isTomas = tokens.some((t) => t === "tomas" || t === "tomás");
+      const audioScript = await generateGroupAudioScript(chronological, mode, isTomas ? "tomas" : "standard");
 
       let pttBuffer: Buffer | null = null;
 
-      if (referenceId) {
+      if (isTomas) {
+        if (isElevenLabsConfigured()) {
+          try {
+            const voiceId = process.env.ELEVENLABS_VOICE_TOMAS || ELEVENLABS_TOMAS_VOICE_ID;
+            const modelId = process.env.ELEVENLABS_MODEL || "eleven_v4";
+            pttBuffer = await generateElevenLabsTTS(audioScript, voiceId, modelId);
+          } catch (elevenErr: any) {
+            console.warn("[Summary Command] ElevenLabs falló para Tomás:", elevenErr?.message || elevenErr);
+          }
+        }
+      } else if (referenceId) {
         try {
           pttBuffer = await generateFishAudioTTS(audioScript, referenceId);
         } catch (fishErr: any) {

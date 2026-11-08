@@ -59,6 +59,8 @@ export const vocesCommand: Command = {
       "🎙️ *CATÁLOGO DE VOCES DE EMPY-BOT*\n\n" +
       "🇦🇷 *Voz Argentina Gratuita:*\n" +
       "• `!decir <mensaje>`\n\n" +
+      "💎 *Voz Ultra Expresiva (ElevenLabs v4):*\n" +
+      "• `!tomas <mensaje>` _(Admite tags como [happy], [chuckles], [sad], [whispering], [applause])_\n\n" +
       "🌟 *Famosos y Streamers:*\n" +
       (famous || "_(ninguno configurado)_") +
       "\n\n🎮 *Personajes & Mobile Legends:*\n" +

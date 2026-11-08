@@ -4,6 +4,7 @@ import { shutdownCommand } from "./shutdown.js";
 import { sCommand } from "./s.js";
 import { stickerCommand } from "./sticker.js";
 import { audioCommand } from "./audio.js";
+import { tomasCommand } from "./tomas.js";
 import { downloadCommand, mp3Command } from "./download.js";
 import { tokensCommand } from "./tokens.js";
 import { reactionCommand } from "./reaction.js";
@@ -117,6 +118,7 @@ const staticCommands: Command[] = [
   summaryCommand,
   sayCommand,
   vocesCommand,
+  tomasCommand,
   pollCommand,
   rankingCommand,
   arbitroCommand,

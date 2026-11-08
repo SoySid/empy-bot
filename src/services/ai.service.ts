@@ -853,7 +853,8 @@ export async function generateWithGroqReasoning(
 
 export async function generateGroupAudioScript(
   chatMessages: { senderName: string; body: string }[],
-  mode: "recent" | "today" | "yesterday" = "recent"
+  mode: "recent" | "today" | "yesterday" = "recent",
+  voiceStyle: "standard" | "tomas" = "standard"
 ): Promise<string> {
   if (chatMessages.length === 0) {
     return mode === "today"
@@ -869,7 +870,27 @@ export async function generateGroupAudioScript(
 
   const participantsList = Array.from(new Set(chatMessages.map((m) => m.senderName)));
 
-  const scriptPrompt = `Sos empy-bot (grupo Empyreal de WhatsApp, Argentina).
+  const scriptPrompt = voiceStyle === "tomas"
+    ? `Sos empy-bot (grupo Empyreal de WhatsApp, Argentina) narrando con la voz de Tomás en ElevenLabs v4.
+Armá un guion corto y picante para mandar en un audio de voz de 20 a 25 segundos (máximo 280 caracteres).
+Reglas:
+- Hablá en 1ra persona como compinche de grupo, con humor argentino y chicana.
+- Resumí de qué hablaron: ${participantsList.join(", ")}.
+- Es OBLIGATORIO intercalar tags expresivos entre corchetes para modular la voz y los efectos en ElevenLabs v4, exactamente como en este formato:
+  [happy] ¡Hola! ¿Cómo están? [chuckles] Yo por suerte muy bien... aunque por momentos me acuerdo que renunció Messi y... [sad] [sniffles] me pongo a llorar.
+- Podés usar únicamente los siguientes tags permitidos:
+  Emociones: [weak], [angry], [bored], [menacing], [playful], [tired], [excited], [happy], [sad]
+  Vocalizaciones: [clears throat], [coughing], [chuckling], [chuckles], [sighing], [sniffling], [sniffles], [yawning], [laughing], [sharp exhale], [scoffing], [humming], [panting], [gasping]
+  Cadencia: [whispering], [singing], [slowly], [softly], [pause], [voice breaking]
+  Personaje: [sleepy drowsy voice], [witch voice], [drunken voice]
+  Efectos de sonido: [keyboard typing], [echoing], [knocking on door], [bell ringing], [phone ringing], [dog barking], [crowd cheering], [applause], [rain falling], [drum roll], [heartbeat], [engine starting]
+- CERO asteriscos, CERO emojis, CERO markdown (#, _, ~). Solo texto plano con los tags entre corchetes intercalados.
+
+Mensajes:
+${transcript}
+
+Guion:`.trim()
+    : `Sos empy-bot (grupo Empyreal de WhatsApp, Argentina).
 Armá un guion corto y picante para mandar en un audio de voz de 20 a 30 segundos.
 Reglas:
 - Hablá en 1ra persona como compinche de grupo, con humor argentino y chicana.
