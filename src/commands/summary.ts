@@ -148,7 +148,7 @@ export const summaryCommand: Command = {
       const referenceId = selectedVoice ? voiceMap[selectedVoice] : "";
 
       // Generar guion oral ultra conciso y picante (30-45s)
-      const isTomas = tokens.some((t) => t === "tomas" || t === "tomás");
+      const isTomas = tokens.some((t) => t === "tomas" || t === "tomás" || t === "chris");
       const audioScript = await generateGroupAudioScript(chronological, mode, isTomas ? "tomas" : "standard");
 
       let pttBuffer: Buffer | null = null;

@@ -60,7 +60,7 @@ export const vocesCommand: Command = {
       "🇦🇷 *Voz Argentina Gratuita:*\n" +
       "• `!decir <mensaje>`\n\n" +
       "💎 *Voz Ultra Expresiva (ElevenLabs v4):*\n" +
-      "• `!tomas <mensaje>` _(Admite tags como [happy], [chuckles], [sad], [whispering], [applause])_\n\n" +
+      "• `!tomas <mensaje>` o `!chris <mensaje>` _(Admite tags como [happy], [chuckles], [sad], [whispering], [applause])_\n\n" +
       "🌟 *Famosos y Streamers:*\n" +
       (famous || "_(ninguno configurado)_") +
       "\n\n🎮 *Personajes & Mobile Legends:*\n" +

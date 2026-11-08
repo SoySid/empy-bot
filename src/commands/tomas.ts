@@ -26,8 +26,8 @@ const TOMAS_COOLDOWN_MS = 15 * 1000;
 
 export const tomasCommand: Command = {
   name: "tomas",
-  aliases: ["el-tomas", "vozdetomas"],
-  description: "Nota de voz neuronal de Tomás con ElevenLabs v4 (admite tags de emociones y efectos).",
+  aliases: ["chris", "el-tomas", "vozdetomas"],
+  description: "Nota de voz neuronal masculina con ElevenLabs v4 (admite tags de emociones y efectos).",
   execute: async ({ sock, msg, remoteJid, cleanText, quotedMsg, senderProfile }: CommandContext) => {
     const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
 

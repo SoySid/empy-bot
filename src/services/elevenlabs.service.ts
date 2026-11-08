@@ -3,7 +3,9 @@ import { convertToWhatsAppPtt } from "./tts.service.js";
 
 dotenv.config();
 
-export const ELEVENLABS_TOMAS_VOICE_ID = "QK4xDwo9ESPHA4JNUpX3";
+// Voz oficial premade de ElevenLabs habilitada para cuentas gratuitas vía API (Chris - Charming & Down-to-Earth)
+// Las voces de la comunidad (Library) como el Tomás clonado requieren plan de pago Starter en la API (error 402)
+export const ELEVENLABS_TOMAS_VOICE_ID = "iP95p4xoKVk53GoZ742B";
 export const DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
 export const MAX_ELEVENLABS_CHARS = 500;
 
