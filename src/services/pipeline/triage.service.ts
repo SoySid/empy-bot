@@ -1,11 +1,33 @@
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import { trackTokens } from "../token.service.js";
+import { getAllCachedProfiles } from "../db/user.service.js";
 
 dotenv.config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "" });
 const TRIAGE_MODEL = "qwen/qwen3.8-27b";
+
+function getKnownMemberNames(): string[] {
+  try {
+    const profiles = getAllCachedProfiles();
+    const names = new Set<string>();
+    for (const p of profiles) {
+      if (p.primaryName && !p.primaryName.startsWith("@") && !p.primaryName.startsWith("Usuario")) {
+        names.add(p.primaryName);
+      }
+      if (p.realName) names.add(p.realName);
+      if (p.aliases) {
+        for (const a of p.aliases) {
+          if (a.alias && !a.alias.startsWith("@")) names.add(a.alias);
+        }
+      }
+    }
+    return Array.from(names);
+  } catch {
+    return [];
+  }
+}
 
 export interface TriageDecision {
   should_intervene: boolean;
@@ -33,6 +55,22 @@ export async function evaluateTriage(
     targets.push(quotedSpeakerName);
   }
 
+  const knownMembers = getKnownMemberNames();
+  const knownMembersStr = knownMembers.length > 0
+    ? knownMembers.join(", ")
+    : "Leo, Sid, Cris, Dany, Nahum, Flecha, Magali, Mati";
+
+  // Identificar si en el texto reciente se menciona a algún integrante del grupo para sumarlo a targets
+  const lowerHistory = recentHistoryText.toLowerCase();
+  for (const member of knownMembers) {
+    if (member.length >= 3) {
+      const regex = new RegExp(`\\b${member.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      if (regex.test(lowerHistory) && !targets.includes(member)) {
+        targets.push(member);
+      }
+    }
+  }
+
   // 1. Si es llamada directa (@Empy o respuesta a Empy)
   if (isDirectCall) {
     try {
@@ -45,9 +83,14 @@ export async function evaluateTriage(
 El usuario le habló o etiquetó directamente a Empy.
 Analizá el último mensaje del usuario en el contexto.
 
+INTEGRANTES CONOCIDOS DEL GRUPO (Amigos reales del chat):
+${knownMembersStr}
+
 Determina si el usuario solicita información fáctica externa o en tiempo real que requiera buscar en internet:
-- SÍ requiere búsqueda web (needs_web_search = true): noticias, resultados deportivos, partidos, clima, cotizaciones (dólar, cripto), fechas, eventos, lanzamientos, datos de personajes públicos, definiciones técnicas, etc.
-- NO requiere búsqueda web (needs_web_search = false): saludos, bromas, anécdotas personales, chicanas, preguntas sobre integrantes del grupo, opiniones subjetivas, mini-juegos o charla casual.
+- SÍ requiere búsqueda web (needs_web_search = true): noticias, resultados deportivos, partidos, clima, cotizaciones (dólar, cripto), fechas históricas, eventos, lanzamientos, datos de personajes públicos externos, definiciones técnicas, etc.
+- NO requiere búsqueda web (needs_web_search = false):
+  * CUALQUIER consulta o mención sobre integrantes del grupo (${knownMembersStr}): NUNCA buscar en internet, son amigos del chat y NO figuras públicas (ej: si preguntan por "Leo", NO es Leo Messi; si preguntan por "Cris", NO es Cristiano Ronaldo).
+  * Saludos, bromas, anécdotas personales, chicanas, opiniones subjetivas, mini-juegos o charla casual.
 
 Respondé ÚNICAMENTE un JSON:
 {
@@ -114,6 +157,9 @@ Si needs_web_search es true, en search_query escribe una consulta de búsqueda e
 Analizá los mensajes recientes de la conversación.
 Decidí si Empy debe intervenir espontáneamente.
 
+INTEGRANTES CONOCIDOS DEL GRUPO (Amigos reales del chat):
+${knownMembersStr}
+
 Criterios para should_intervene = true:
 - Hay un debate abierto u opinión colectiva donde Empy puede aportar con naturalidad ("opinion").
 - Se prestó para un remate cómico o descansada amistosa muy oportuna ("broma" o "chicana").
@@ -127,6 +173,7 @@ Criterios para should_intervene = false (SILENCIO OBLIGATORIO):
 
 Criterio de búsqueda web semántica:
 - needs_web_search = true si el debate grupal gira en torno a un dato fáctico del mundo real (ej: si están discutiendo quién ganó un partido o qué pasó en una noticia).
+- NUNCA activar búsqueda web si se habla de integrantes del grupo (${knownMembersStr}).
 
 Respondé ÚNICAMENTE un JSON con:
 {

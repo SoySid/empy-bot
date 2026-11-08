@@ -139,7 +139,36 @@ export async function hydrateContextForActiveUsers(
     );
 
     const now = new Date();
-    const activeFacts = (u.facts || []).filter((f: any) => !f.expiresAt || f.expiresAt > now);
+
+    // Excluir claves técnicas de minijuegos / colecciones serializadas en JSON para que no contaminen los hechos humanos
+    const isMinigameKey = (clave: string) => {
+      const lower = clave.toLowerCase();
+      return (
+        lower.endsWith("_v1") ||
+        lower.startsWith("fishing_") ||
+        lower.startsWith("pokedex_") ||
+        lower.startsWith("mlbb_") ||
+        lower.startsWith("superheroes_") ||
+        lower.startsWith("inventory_")
+      );
+    };
+
+    // Prioridad biográfica: hechos identitarios de alto valor
+    const BIOGRAPHICAL_KEYS = new Set([
+      "fechanacimiento", "cumpleanos", "cumpleaños", "nacimiento", "horanacimiento",
+      "signo", "ciudadnacimiento", "origen", "ciudad", "ubicacion", "vivienda",
+      "profesion", "trabajo", "estudio", "estudios", "carrera", "universidad", "escuela",
+      "pareja", "convivencia", "edad", "genero", "mascotas", "idioma", "hobbies"
+    ]);
+
+    const activeFacts = (u.facts || [])
+      .filter((f: any) => (!f.expiresAt || f.expiresAt > now) && !isMinigameKey(f.clave))
+      .sort((a: any, b: any) => {
+        const aBio = BIOGRAPHICAL_KEYS.has(a.clave.toLowerCase()) ? 1 : 0;
+        const bBio = BIOGRAPHICAL_KEYS.has(b.clave.toLowerCase()) ? 1 : 0;
+        if (aBio !== bBio) return bBio - aBio; // Hechos biográficos primero
+        return (b.weight || 1) - (a.weight || 1);
+      });
 
     const relevantFacts: string[] = [];
     const formatFactString = (f: any) => {
@@ -153,7 +182,7 @@ export async function hydrateContextForActiveUsers(
     };
 
     if (isTargetOfQuery) {
-      // Si preguntaron por esta persona puntual, traer hasta 6 hechos destacados
+      // Si preguntaron por esta persona puntual, traer hasta 6 hechos destacados limpios
       for (const f of activeFacts.slice(0, 6)) {
         relevantFacts.push(formatFactString(f));
       }
