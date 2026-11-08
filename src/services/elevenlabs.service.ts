@@ -5,7 +5,7 @@ dotenv.config();
 
 export const ELEVENLABS_TOMAS_VOICE_ID = "QK4xDwo9ESPHA4JNUpX3";
 export const DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
-export const MAX_ELEVENLABS_CHARS = 350;
+export const MAX_ELEVENLABS_CHARS = 500;
 
 export function isElevenLabsConfigured(): boolean {
   return Boolean(process.env.ELEVENLABS_API_KEY?.trim());
@@ -18,22 +18,28 @@ export function isElevenLabsConfigured(): boolean {
 export async function generateElevenLabsTTS(
   text: string,
   voiceId: string = process.env.ELEVENLABS_VOICE_TOMAS || ELEVENLABS_TOMAS_VOICE_ID,
-  modelId: string = process.env.ELEVENLABS_MODEL || DEFAULT_ELEVENLABS_MODEL
+  modelId: string = process.env.ELEVENLABS_MODEL || DEFAULT_ELEVENLABS_MODEL,
+  maxChars: number = 650
 ): Promise<Buffer> {
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("No se ha configurado ELEVENLABS_API_KEY en el archivo de entorno (.env).");
+    throw new Error("No se ha configurado ELEVENLABS_API_KEY en las variables de entorno.");
   }
 
-  const cleanText = text.trim();
+  let cleanText = text.trim();
   if (!cleanText) {
     throw new Error("El texto a sintetizar no puede estar vacío.");
   }
 
-  if (cleanText.length > MAX_ELEVENLABS_CHARS) {
-    throw new Error(
-      `El texto supera el límite seguro de ${MAX_ELEVENLABS_CHARS} caracteres (${cleanText.length} caracteres). Por favor recortalo para no agotar la cuota mensual.`
+  if (cleanText.length > maxChars) {
+    const truncated = cleanText.slice(0, maxChars);
+    const lastPunctuation = Math.max(
+      truncated.lastIndexOf("."),
+      truncated.lastIndexOf("!"),
+      truncated.lastIndexOf("?"),
+      truncated.lastIndexOf("]")
     );
+    cleanText = lastPunctuation > 60 ? truncated.slice(0, lastPunctuation + 1) : truncated;
   }
 
   const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;

@@ -156,12 +156,15 @@ export const summaryCommand: Command = {
       if (isTomas) {
         if (isElevenLabsConfigured()) {
           try {
+            console.log(`[Summary Command] 🎙️ Generando resumen con voz de Tomás (ElevenLabs v4, ${audioScript.length} chars)...`);
             const voiceId = process.env.ELEVENLABS_VOICE_TOMAS || ELEVENLABS_TOMAS_VOICE_ID;
             const modelId = process.env.ELEVENLABS_MODEL || "eleven_v4";
-            pttBuffer = await generateElevenLabsTTS(audioScript, voiceId, modelId);
+            pttBuffer = await generateElevenLabsTTS(audioScript, voiceId, modelId, 650);
           } catch (elevenErr: any) {
-            console.warn("[Summary Command] ElevenLabs falló para Tomás:", elevenErr?.message || elevenErr);
+            console.error("[Summary Command] ❌ ElevenLabs falló para Tomás:", elevenErr?.message || elevenErr);
           }
+        } else {
+          console.warn("[Summary Command] ⚠️ isElevenLabsConfigured() retornó false (falta ELEVENLABS_API_KEY).");
         }
       } else if (referenceId) {
         try {
