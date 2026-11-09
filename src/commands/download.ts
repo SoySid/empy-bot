@@ -12,24 +12,40 @@ const URL_REGEX = /(https?:\/\/[^\s]+)/gi;
 
 function extractTargetUrl(ctx: CommandContext): string | null {
   // 1. Si el usuario pasó un link en los argumentos o texto directo:
-  const directMatch = ctx.cleanText.match(URL_REGEX);
+  const directText = `${ctx.cleanText || ""} ${ctx.body || ""}`;
+  const directMatch = directText.match(URL_REGEX);
   if (directMatch && directMatch[0]) {
     return directMatch[0].replace(/[>\]\)\.\,\;\"\'\?\¿\!\¡]+$/, "");
   }
 
   // 2. Si el usuario está respondiendo/citando a un mensaje con link:
-  const quoted = ctx.quotedMsg;
-  if (quoted) {
-    const quotedText =
-      quoted.conversation ||
-      quoted.extendedTextMessage?.text ||
-      quoted.imageMessage?.caption ||
-      quoted.videoMessage?.caption ||
-      "";
+  const rawQuoted: any = ctx.quotedMsg;
+  if (rawQuoted) {
+    const unwrapQuoted =
+      rawQuoted?.ephemeralMessage?.message ||
+      rawQuoted?.viewOnceMessage?.message ||
+      rawQuoted?.viewOnceMessageV2?.message ||
+      rawQuoted?.documentWithCaptionMessage?.message ||
+      rawQuoted;
 
-    const quotedMatch = quotedText.match(URL_REGEX);
-    if (quotedMatch && quotedMatch[0]) {
-      return quotedMatch[0].replace(/[>\]\)\.\,\;\"\'\?\¿\!\¡]+$/, "");
+    const extText = unwrapQuoted?.extendedTextMessage;
+    const candidates = [
+      extText?.text,
+      extText?.matchedText,
+      extText?.canonicalUrl,
+      unwrapQuoted?.conversation,
+      unwrapQuoted?.imageMessage?.caption,
+      unwrapQuoted?.videoMessage?.caption,
+      unwrapQuoted?.documentMessage?.caption,
+    ];
+
+    for (const text of candidates) {
+      if (typeof text === "string" && text) {
+        const match = text.match(URL_REGEX);
+        if (match && match[0]) {
+          return match[0].replace(/[>\]\)\.\,\;\"\'\?\¿\!\¡]+$/, "");
+        }
+      }
     }
   }
 
