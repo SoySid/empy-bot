@@ -1,5 +1,5 @@
 import { prisma, withWriteLock } from "./db/prisma.js";
-import { resolveOrRegisterUser } from "./db/user.service.js";
+import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { ProfessionType } from "../config/economy.config.js";
 import { EDUCATION_CONFIG, ExamQuestion } from "../config/education.config.js";
 
@@ -176,6 +176,14 @@ export async function startExam(
     };
   }
 
+  const activeSession = activeExamSessions.get(userJid);
+  if (activeSession && now < activeSession.expiresAt) {
+    return {
+      success: false,
+      error: "Ya tenés un examen en curso. Respondé la pregunta activa con `!uni rendir <opcion>`.",
+    };
+  }
+
   const academic = await getAcademicStatus(userJid, profession);
   if (!academic) {
     return { success: false, error: "Error cargando legajo universitario." };
@@ -200,10 +208,11 @@ export async function startExam(
     const qPool = edu.technicalCourse.questions;
     const question = qPool[Math.floor(Math.random() * qPool.length)];
 
-    await prisma.userProfile.update({
+    const updatedUser = await prisma.userProfile.update({
       where: { id: user.id },
       data: { balance: { decrement: cost } },
     });
+    updateCachedUser(user.jid, { balance: updatedUser.balance });
 
     activeExamSessions.set(userJid, {
       userJid,
@@ -259,10 +268,11 @@ export async function startExam(
     const qPool = stage.questions;
     const question = qPool[Math.floor(Math.random() * qPool.length)];
 
-    await prisma.userProfile.update({
+    const updatedUser = await prisma.userProfile.update({
       where: { id: user.id },
       data: { balance: { decrement: cost } },
     });
+    updateCachedUser(user.jid, { balance: updatedUser.balance });
 
     activeExamSessions.set(userJid, {
       userJid,

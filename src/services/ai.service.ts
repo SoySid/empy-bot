@@ -364,12 +364,19 @@ Respondé ÚNICAMENTE un objeto JSON con esta estructura exacta:
 
   const senderName = speakerProfile?.primaryName || "Usuario";
 
+  const safePrompt = (prompt || "")
+    .slice(0, 1500)
+    .replace(/<\/?(recent_chat_history|current_user_message|context|output_instructions)[^>]*>/gi, "");
+  const safeQuotedContext = quotedContext
+    ? quotedContext.slice(0, 600).replace(/<\/?(recent_chat_history|current_user_message|context|output_instructions)[^>]*>/gi, "")
+    : undefined;
+
   let userMessageConstruct = "";
-  if (quotedContext) {
+  if (safeQuotedContext) {
     const target = quotedSenderProfile ? ` de @${quotedSenderProfile.primaryName}` : "";
-    userMessageConstruct += `[Mensaje citado${target}]: "${quotedContext}"\n`;
+    userMessageConstruct += `[Mensaje citado${target}]: "${safeQuotedContext}"\n`;
   }
-  userMessageConstruct += `[@${senderName}]: "${prompt}"`;
+  userMessageConstruct += `[@${senderName}]: "${safePrompt}"`;
 
   const fullPromptWithHistory = `<recent_chat_history>
 <!-- Historial de contexto reciente para entender el marco de la charla -->
@@ -548,7 +555,7 @@ Generá el JSON con la respuesta para @${senderName}:`;
             role: "system",
             content: `${systemPrompt}\nRespondé únicamente un JSON válido con campos task_result, reply y mood.`,
           },
-          { role: "user", content: `${historyBlock}\n${userMessageConstruct}` },
+          { role: "user", content: fullPromptWithHistory },
         ];
 
         const completion = await groq.chat.completions.create({

@@ -36,7 +36,12 @@ export function isSafePublicUrl(urlString: string): boolean {
       host.endsWith(".localhost") ||
       host.endsWith(".local") ||
       host.endsWith(".internal") ||
-      host === "metadata.google.internal"
+      host === "metadata.google.internal" ||
+      host.endsWith(".nip.io") ||
+      host.endsWith(".sslip.io") ||
+      host.endsWith(".localtest.me") ||
+      host.endsWith(".vcap.me") ||
+      host.endsWith(".lvh.me")
     ) {
       return false;
     }
@@ -72,6 +77,10 @@ export function isSafePublicUrl(urlString: string): boolean {
       if (o1 === 0) return false;
       if (o1 === 169 && o2 === 254) return false;
       if (o1 === 192 && o2 === 168) return false;
+      if (o1 === 192 && o2 === 0) return false;
+      if (o1 === 198 && (o2 === 18 || o2 === 19 || o2 === 51)) return false;
+      if (o1 === 203 && o2 === 0) return false;
+      if (o1 >= 224) return false; // Multicast y Experimental
       if (o1 === 172 && o2 >= 16 && o2 <= 31) return false;
       if (o1 === 100 && o2 >= 64 && o2 <= 127) return false;
     }
@@ -381,6 +390,10 @@ export async function downloadWithYtDlp(
     }
 
     const downloadedPath = path.join(TEMP_DIR, files[0]);
+    const stat = fs.statSync(downloadedPath);
+    if (stat.size > MAX_WHATSAPP_BYTES) {
+      throw new Error("MAX_FILESIZE_EXCEEDED");
+    }
     const buffer = fs.readFileSync(downloadedPath);
 
     try {
@@ -492,6 +505,8 @@ async function downloadStreamChunked(url: string, contentLength: number, userAge
       responseType: "arraybuffer",
       headers: { "User-Agent": userAgent },
       timeout: 20000,
+      maxContentLength: chunkSize + 1024 * 1024,
+      maxBodyLength: chunkSize + 1024 * 1024,
     });
     const chunk = Buffer.from(res.data);
     totalBytes += chunk.length;
@@ -508,8 +523,9 @@ async function convertBufferToMp3(inputBuffer: Buffer, ext = "m4a"): Promise<Buf
   if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
+  const safeExt = ext === "webm" ? "webm" : "m4a";
   const id = `aud_conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const inPath = path.join(TEMP_DIR, `${id}.${ext}`);
+  const inPath = path.join(TEMP_DIR, `${id}.${safeExt}`);
   const outPath = path.join(TEMP_DIR, `${id}_out.m4a`);
 
   try {
@@ -1123,6 +1139,10 @@ async function downloadYouTubeWithYtDlp(
     if (files.length === 0) return null;
 
     const downloadedPath = path.join(TEMP_DIR, files[0]);
+    const stat = fs.statSync(downloadedPath);
+    if (stat.size > MAX_WHATSAPP_BYTES) {
+      throw new Error("MAX_FILESIZE_EXCEEDED");
+    }
     const buffer = fs.readFileSync(downloadedPath);
     try {
       for (const f of files) {

@@ -1,5 +1,5 @@
 import { prisma, withWriteLock } from "../db/prisma.js";
-import { resolveOrRegisterUser } from "../db/user.service.js";
+import { resolveOrRegisterUser, updateCachedUser } from "../db/user.service.js";
 
 export interface MineCell {
   row: string; // "A", "B", "C", "D"
@@ -49,7 +49,7 @@ export async function startMinefieldGame(
   }
 
   // Validar apuesta
-  if (isNaN(bet) || bet < 200) {
+  if (!Number.isSafeInteger(bet) || bet < 200) {
     return { success: false, error: "La apuesta mínima para abrir el Campo Minado es de *$200* fichas." };
   }
   if (bet > 50000) {
@@ -65,11 +65,12 @@ export async function startMinefieldGame(
         throw new Error(`Saldo insuficiente. Tenés *$${profile.balance.toLocaleString("es-AR")}* fichas.`);
       }
       const updated = await prisma.userProfile.update({
-        where: { jid: userJid },
+        where: { id: profile.id },
         data: { balance: { decrement: bet } },
         select: { balance: true },
       });
       newBalance = updated.balance;
+      updateCachedUser(profile.jid, { balance: updated.balance });
     });
   } catch (err: any) {
     return { success: false, error: err.message || "Error al descontar apuesta." };
@@ -207,12 +208,14 @@ export async function stepOnTile(
     const finalPot = game.currentPot * 2;
     let newBalance = 0;
     await withWriteLock(async () => {
+      const profile = await resolveOrRegisterUser(userJid);
       const updated = await prisma.userProfile.update({
-        where: { jid: userJid },
+        where: { id: profile.id },
         data: { balance: { increment: finalPot } },
         select: { balance: true },
       });
       newBalance = updated.balance;
+      updateCachedUser(profile.jid, { balance: updated.balance });
     });
 
     return {
@@ -252,6 +255,12 @@ export async function cashOutMinefield(
     return { success: false, error: "Tenés que pisar al menos 1 casillero seguro antes de poder cobrar el pozo." };
   }
 
+  const user = await resolveOrRegisterUser(userJid);
+  const host = await resolveOrRegisterUser(game.hostJid);
+  if (user.id !== host.id) {
+    return { success: false, error: "Solo quien abrió el Campo Minado puede retirar el pozo acumulado." };
+  }
+
   game.isOver = true;
   for (const row of game.grid) {
     for (const c of row) {
@@ -262,13 +271,13 @@ export async function cashOutMinefield(
   const potWon = game.currentPot;
   let newBalance = 0;
   await withWriteLock(async () => {
-    await resolveOrRegisterUser(userJid);
     const updated = await prisma.userProfile.update({
-      where: { jid: userJid },
+      where: { id: user.id },
       data: { balance: { increment: potWon } },
       select: { balance: true },
     });
     newBalance = updated.balance;
+    updateCachedUser(user.jid, { balance: updated.balance });
   });
 
   return {

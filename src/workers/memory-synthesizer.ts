@@ -38,7 +38,12 @@ export const UserFactExtractionSchema = z.object({
   accion: z.enum(["UPSERT", "DELETE"]),
   tipo: z.enum(["PERMANENTE", "TEMPORADA", "EPISODICO"]),
   clave: z.string().transform((k) => k.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 40)),
-  valor: z.string().transform((v) => v.trim()),
+  valor: z.string().transform((v) => v.trim().slice(0, 160)),
+});
+
+export const BotCorrectionSchema = z.object({
+  authorJid: z.string(),
+  correction: z.string().transform((c) => c.trim().slice(0, 200)),
 });
 
 export const MemorableMomentSchema = z.object({
@@ -63,7 +68,7 @@ export const SocialPromiseExtractionSchema = z.object({
 
 export const MemorySynthesisSchema = z.object({
   userFacts: z.array(UserFactExtractionSchema).default([]),
-  botCorrections: z.array(z.string()).default([]),
+  botCorrections: z.array(BotCorrectionSchema).default([]),
   burnedJokes: z.array(z.string()).default([]),
   memorableMoments: z.array(MemorableMomentSchema).default([]),
   groupLexicon: z.array(GroupLexiconSchema).default([]),
@@ -93,7 +98,14 @@ const GEMINI_RESPONSE_SCHEMA = {
     },
     botCorrections: {
       type: "ARRAY",
-      items: { type: "STRING" },
+      items: {
+        type: "OBJECT",
+        properties: {
+          authorJid: { type: "STRING" },
+          correction: { type: "STRING" },
+        },
+        required: ["authorJid", "correction"],
+      },
     },
     burnedJokes: {
       type: "ARRAY",
@@ -242,8 +254,16 @@ export async function runSynthesis(): Promise<void> {
       return;
     }
 
+    const sanitizeTranscriptLine = (text: string) => {
+      return (text || "")
+        .replace(/<\/?(chat_transcript|known_user_facts)[^>]*>/gi, "")
+        .replace(/\n\s*\[[^\]]+\]:/g, " ")
+        .slice(0, 400)
+        .trim();
+    };
+
     const formattedTranscript = conversationalBatch
-      .map((m) => `[${m.senderName} (${m.userJid})]: ${m.body}`)
+      .map((m) => `[${(m.senderName || "").replace(/[<>[\]{}\r\n]/g, "").slice(0, 35)} (${m.userJid})]: ${sanitizeTranscriptLine(m.body)}`)
       .join("\n");
 
     const userPrompt = `<known_user_facts>\n${currentKnowledge || "Sin datos previos."}\n</known_user_facts>\n\n<chat_transcript>\n${formattedTranscript}\n</chat_transcript>`;
@@ -326,11 +346,13 @@ export async function runSynthesis(): Promise<void> {
       "espía", "cartonero", "minero", "cv", "curriculum"
     ];
 
-    // 1. Aplicar hechos aprendidos (con deduplicación en el lote)
+    // 1. Aplicar hechos aprendidos (con deduplicación en el lote y validación de presencia real)
+    const activeJidsInBatch = new Set(conversationalBatch.map((m) => m.userJid));
+
     if (Array.isArray(parsedData.userFacts)) {
       const uniqueFactsMap = new Map<string, z.infer<typeof UserFactExtractionSchema>>();
       for (const fact of parsedData.userFacts) {
-        if (!fact.jid || !fact.clave) continue;
+        if (!fact.jid || !fact.clave || !activeJidsInBatch.has(fact.jid)) continue;
 
         const lowerKey = fact.clave.toLowerCase();
         const lowerVal = fact.valor.toLowerCase();
@@ -363,11 +385,19 @@ export async function runSynthesis(): Promise<void> {
 
     // 2. Aplicar lecciones/reglas aprendidas por el bot (restringido a instrucciones explícitas del Creador)
     if (Array.isArray(parsedData.botCorrections) && parsedData.botCorrections.length > 0) {
-      const hasOwnerInBatch = conversationalBatch.some((m) => isBotOwner(null, m.userJid));
-      if (hasOwnerInBatch) {
-        await replaceMasterLessons(parsedData.botCorrections);
+      const validOwnerLessons = parsedData.botCorrections
+        .filter((c) => {
+          if (!c.correction || !c.authorJid) return false;
+          const isOwner = isBotOwner(null, c.authorJid);
+          const authorInBatch = conversationalBatch.some((m) => m.userJid === c.authorJid);
+          return isOwner && authorInBatch;
+        })
+        .map((c) => c.correction);
+
+      if (validOwnerLessons.length > 0) {
+        await replaceMasterLessons(validOwnerLessons);
       } else {
-        console.log(`[Memory Worker] 🛡️ Ignorando botCorrections sin autorización del Creador.`);
+        console.log(`[Memory Worker] 🛡️ Ignorando botCorrections sin autorización válida del Creador.`);
       }
     }
 

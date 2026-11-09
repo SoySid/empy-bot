@@ -33,12 +33,26 @@ function getArgentinaDayBounds(offsetDays = 0): { start: Date; end: Date } {
   };
 }
 
+const summaryCooldowns = new Map<string, number>();
+const SUMMARY_COOLDOWN_MS = 60 * 1000;
+
 export const summaryCommand: Command = {
   name: "resumen",
   aliases: ["resumengrupo", "summary", "resume"],
   description: "Genera un resumen oral en nota de voz (PTT nativo de WhatsApp vía Fish Audio) o texto.",
   execute: async ({ sock, msg, remoteJid, cleanText }: CommandContext) => {
     try {
+      const now = Date.now();
+      const lastRun = summaryCooldowns.get(remoteJid) || 0;
+      if (now - lastRun < SUMMARY_COOLDOWN_MS) {
+        const remainingSec = Math.ceil((SUMMARY_COOLDOWN_MS - (now - lastRun)) / 1000);
+        await sock.sendMessage(remoteJid, {
+          text: `⏳ El comando !resumen tiene un enfriamiento de ${remainingSec}s para cuidar las cuotas de audio.`,
+        }, { quoted: msg as any });
+        return;
+      }
+      summaryCooldowns.set(remoteJid, now);
+
       const tokens = cleanText.toLowerCase().trim().split(/\s+/).filter(Boolean);
       const isToday = tokens.some((t) => t === "hoy" || t === "today" || t === "dia" || t === "día");
       const isYesterday = tokens.some((t) => t === "ayer" || t === "yesterday");

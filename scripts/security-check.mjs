@@ -62,7 +62,35 @@ function checkFiles() {
   }
 
   // 2. Validar contenido (secretos y comentarios delatores)
-  if (!isFullScan) {
+  if (isFullScan) {
+    const BINARY_EXTENSIONS = /\.(png|jpg|jpeg|webp|gif|mp3|m4a|ogg|opus|wav|zip|tar|gz|exe|bin|ico)$/i;
+    for (const file of filesToCheck) {
+      if (file === ".env.example" || file === "package-lock.json" || BINARY_EXTENSIONS.test(file)) continue;
+      if (file === "scripts/security-check.mjs") continue;
+      if (!fs.existsSync(file)) continue;
+
+      try {
+        const content = fs.readFileSync(file, "utf8");
+        const lines = content.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.includes(".env.example") || line.includes("[PROJECT-REF]")) continue;
+
+          for (const secret of SECRET_PATTERNS) {
+            if (secret.regex.test(line)) {
+              violations.push(`[Secreto Detectado] ${secret.name} en ${file}:${i + 1}`);
+            }
+          }
+
+          for (const marker of AI_MARKER_PATTERNS) {
+            if (marker.regex.test(line)) {
+              violations.push(`[Texto Delator de AI] "${line.trim()}" en ${file}:${i + 1}`);
+            }
+          }
+        }
+      } catch {}
+    }
+  } else {
     try {
       const diffOutput = execSync("git diff --cached -U0", { encoding: "utf8" });
       const addedLines = diffOutput

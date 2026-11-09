@@ -3,6 +3,12 @@ import { MessageContext } from "./types.js";
 import { isUserCommandBanned } from "../services/command-ban.service.js";
 import { isUserIgnoredByRoulette } from "../services/games/ruletarusa.service.js";
 
+const userLastCommandTime = new Map<string, number>();
+const userLastHeavyCommandTime = new Map<string, number>();
+const HEAVY_COMMANDS = new Set(["descargar", "d", "mp3", "s", "sticker", "audio", "shazam", "resumen"]);
+const GENERAL_COMMAND_COOLDOWN_MS = 1200;
+const HEAVY_COMMAND_COOLDOWN_MS = 6000;
+
 const PREFIX: string = process.env.BOT_PREFIX || "!";
 
 /**
@@ -44,6 +50,27 @@ export async function handlePrefixCommand(ctx: MessageContext): Promise<boolean>
       return true;
     }
 
+    const now = Date.now();
+    const lastCmd = userLastCommandTime.get(userJid) || 0;
+    if (now - lastCmd < GENERAL_COMMAND_COOLDOWN_MS) {
+      return true;
+    }
+
+    if (HEAVY_COMMANDS.has(command.name) || HEAVY_COMMANDS.has(normalizedCommandName)) {
+      const lastHeavy = userLastHeavyCommandTime.get(userJid) || 0;
+      if (now - lastHeavy < HEAVY_COMMAND_COOLDOWN_MS) {
+        const waitSec = Math.ceil((HEAVY_COMMAND_COOLDOWN_MS - (now - lastHeavy)) / 1000);
+        await ctx.sock.sendMessage(
+          ctx.remoteJid,
+          { text: `⏳ Esperá ${waitSec}s antes de volver a usar un comando multimedia o pesado.` },
+          { quoted: ctx.msg as any }
+        ).catch(() => {});
+        return true;
+      }
+      userLastHeavyCommandTime.set(userJid, now);
+    }
+    userLastCommandTime.set(userJid, now);
+
     if (isUserCommandBanned(userJid, normalizedCommandName, command.name)) {
       const userName = ctx.senderProfile?.primaryName || "usuario";
       await ctx.sock.sendMessage(
@@ -75,7 +102,7 @@ export async function handlePrefixCommand(ctx: MessageContext): Promise<boolean>
       });
       return true;
     } catch (cmdErr: any) {
-      console.error(`[Command Error] ❌ Error ejecutando !${command.name}:`, cmdErr);
+      console.error(`[Command Error] ❌ Error ejecutando !${command.name}:`, cmdErr?.message || String(cmdErr));
       await ctx.sock.sendMessage(
         ctx.remoteJid,
         {

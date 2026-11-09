@@ -69,7 +69,7 @@ export async function buyItem(
     };
   }
 
-  const qty = Math.max(1, Math.min(quantity, 50));
+  const qty = Number.isSafeInteger(quantity) ? Math.max(1, Math.min(quantity, 50)) : 1;
 
   // Los escudos fueron abolidos por ley marcial
   if (item.id === "escudo") {

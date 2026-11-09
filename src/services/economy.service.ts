@@ -572,6 +572,8 @@ export async function getWallet(userJid: string): Promise<{
   };
 }
 
+export const MAX_ECONOMY_BALANCE = 2_000_000_000;
+
 /**
  * Modifica el saldo atómicamente asegurando saldo >= 0.
  */
@@ -580,6 +582,10 @@ export async function modifyBalance(
   delta: number,
   allowNegative = false
 ): Promise<{ success: boolean; oldBalance: number; newBalance: number; error?: string }> {
+  if (!Number.isSafeInteger(delta)) {
+    return { success: false, oldBalance: 0, newBalance: 0, error: "Monto inválido." };
+  }
+
   const user = await resolveOrRegisterUser(userJid);
 
   return await withWriteLock(async () => {
@@ -588,7 +594,7 @@ export async function modifyBalance(
     })) || user;
 
     const currentBalance = current.balance;
-    const computedBalance = currentBalance + delta;
+    const computedBalance = Math.min(MAX_ECONOMY_BALANCE, currentBalance + delta);
     if (!allowNegative && computedBalance < 0) {
       return {
         success: false,
@@ -601,7 +607,7 @@ export async function modifyBalance(
     const updated = await prisma.userProfile.update({
       where: { id: current.id },
       data: {
-        balance: allowNegative && computedBalance < 0 ? 0 : { increment: delta },
+        balance: allowNegative && computedBalance < 0 ? 0 : Math.min(MAX_ECONOMY_BALANCE, computedBalance),
       },
     });
 
@@ -623,8 +629,8 @@ export async function transfer(
   targetJid: string,
   amount: number
 ): Promise<{ success: boolean; error?: string; senderBalance?: number; targetBalance?: number }> {
-  if (amount <= 0 || !Number.isInteger(amount)) {
-    return { success: false, error: "El monto debe ser un número entero positivo." };
+  if (amount <= 0 || !Number.isSafeInteger(amount) || amount > MAX_ECONOMY_BALANCE) {
+    return { success: false, error: "El monto debe ser un número entero positivo válido." };
   }
 
   const sender = await resolveOrRegisterUser(senderJid);

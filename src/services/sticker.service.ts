@@ -441,7 +441,7 @@ export async function getTriggerSticker(triggerPrefix: string): Promise<{ buffer
 }
 
 export async function createSticker(imageBuffer: Buffer): Promise<Buffer> {
-  return sharp(imageBuffer)
+  return sharp(imageBuffer, { limitInputPixels: 16777216 })
     .resize(512, 512, {
       fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -473,16 +473,21 @@ export async function createAnimatedSticker(videoBuffer: Buffer): Promise<Buffer
       .on("end", () => {
         try {
           const buffer = fs.readFileSync(outputPath);
-          if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
           resolve(buffer);
         } catch (e) {
           reject(e);
+        } finally {
+          try {
+            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+          } catch {}
         }
       })
       .on("error", (err) => {
-        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        try {
+          if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        } catch {}
         reject(err);
       });
   });

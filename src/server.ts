@@ -1,6 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import crypto from "node:crypto";
+import { z } from "zod";
 import { clearAuthFromDb } from "./services/db/auth-sync.service.js";
 
 export interface BotController {
@@ -72,9 +73,15 @@ if (!IS_ADMIN_AUTH_CONFIGURED) {
     "[Server Security] 🔒 ADMIN_PASSWORD no está configurado en .env. El panel administrativo web permanece deshabilitado por seguridad (Fail-Closed)."
   );
 }
-const AUTH_HASH = IS_ADMIN_AUTH_CONFIGURED
-  ? crypto.createHash("sha256").update(ADMIN_PASSWORD).digest("hex")
+
+const SERVER_SESSION_SECRET = crypto.randomBytes(32);
+const ADMIN_SESSION_TOKEN = IS_ADMIN_AUTH_CONFIGURED
+  ? crypto.createHmac("sha256", SERVER_SESSION_SECRET).update(ADMIN_PASSWORD).digest("hex")
   : "";
+
+const LoginPayloadSchema = z.object({
+  password: z.string().min(1).max(256),
+});
 
 function parseCookies(req: http.IncomingMessage): Record<string, string> {
   const list: Record<string, string> = {};
@@ -93,7 +100,13 @@ function parseCookies(req: http.IncomingMessage): Record<string, string> {
 
 function isSameOriginRequest(req: http.IncomingMessage, host: string): boolean {
   const origin = req.headers.origin || req.headers.referer;
-  if (!origin) return true;
+  if (!origin) {
+    const cookies = parseCookies(req);
+    if (cookies.admin_session && req.method && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      return false;
+    }
+    return true;
+  }
   try {
     const originUrl = new URL(origin);
     return originUrl.host.toLowerCase() === host.toLowerCase();
@@ -102,21 +115,19 @@ function isSameOriginRequest(req: http.IncomingMessage, host: string): boolean {
   }
 }
 
-function checkAdminAuth(req: http.IncomingMessage, parsedUrl: URL): boolean {
+function checkAdminAuth(req: http.IncomingMessage, _parsedUrl: URL): boolean {
   if (!IS_ADMIN_AUTH_CONFIGURED || !ADMIN_PASSWORD) {
     return false;
   }
   const cookies = parseCookies(req);
-  if (cookies.admin_session && isConstantTimeMatch(cookies.admin_session, AUTH_HASH)) {
+  if (cookies.admin_session && isConstantTimeMatch(cookies.admin_session, ADMIN_SESSION_TOKEN)) {
     return true;
   }
-  const isSafeMethod = req.method === "GET" || req.method === "HEAD";
   const token =
-    (isSafeMethod ? parsedUrl.searchParams.get("token") : null) ||
     (req.headers["x-reset-token"] as string) ||
     (req.headers["authorization"]?.replace(/^Bearer\s+/i, "")) ||
     "";
-  if (token && (isConstantTimeMatch(token, ADMIN_PASSWORD) || isConstantTimeMatch(token, AUTH_HASH))) {
+  if (token && (isConstantTimeMatch(token, ADMIN_PASSWORD) || isConstantTimeMatch(token, ADMIN_SESSION_TOKEN))) {
     return true;
   }
   return false;
@@ -127,7 +138,10 @@ function parseJsonBody(req: http.IncomingMessage): Promise<any> {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 50000) req.destroy();
+      if (body.length > 50000) {
+        req.destroy();
+        resolve({});
+      }
     });
     req.on("end", () => {
       try {
@@ -140,10 +154,23 @@ function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
+const MAX_RATE_LIMIT_KEYS = 2000;
+function pruneRateLimitMap(map: Map<string, { count: number; resetAt: number }>, now: number) {
+  if (map.size <= MAX_RATE_LIMIT_KEYS) return;
+  for (const [key, val] of map.entries()) {
+    if (now > val.resetAt) map.delete(key);
+  }
+  if (map.size > MAX_RATE_LIMIT_KEYS) {
+    const keysToDelete = Array.from(map.keys()).slice(0, 500);
+    for (const k of keysToDelete) map.delete(k);
+  }
+}
+
 // Rate Limiter estricto para intentos de login (máx 5 intentos en 15 minutos)
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 function isLoginRateLimited(ip: string, maxAttempts = 5, windowMs = 15 * 60 * 1000): boolean {
   const now = Date.now();
+  pruneRateLimitMap(loginAttempts, now);
   const entry = loginAttempts.get(ip);
   if (!entry || now > entry.resetAt) {
     loginAttempts.set(ip, { count: 1, resetAt: now + windowMs });
@@ -157,14 +184,10 @@ function isLoginRateLimited(ip: string, maxAttempts = 5, windowMs = 15 * 60 * 10
 const ipRequestCounts = new Map<string, { count: number; resetAt: number }>();
 function isIpRateLimited(ip: string, maxRequests = 60, windowMs = 60000): boolean {
   const now = Date.now();
+  pruneRateLimitMap(ipRequestCounts, now);
   const entry = ipRequestCounts.get(ip);
   if (!entry || now > entry.resetAt) {
     ipRequestCounts.set(ip, { count: 1, resetAt: now + windowMs });
-    if (ipRequestCounts.size > 1000) {
-      for (const [key, val] of ipRequestCounts.entries()) {
-        if (now > val.resetAt) ipRequestCounts.delete(key);
-      }
-    }
     return false;
   }
   entry.count++;
@@ -176,7 +199,7 @@ function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Content-Security-Policy", "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';");
+  res.setHeader("Content-Security-Policy", "default-src 'self' https: data: 'unsafe-inline';");
 }
 
 /**
@@ -185,8 +208,10 @@ function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
 export function startHttpServer(port = Number(process.env.PORT) || 3000): http.Server {
   const server = http.createServer(async (req, res) => {
     const socketIp = req.socket.remoteAddress || "127.0.0.1";
-    const forwardedHeader = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
-    const rawIp = forwardedHeader ? `${forwardedHeader}#${socketIp}` : socketIp;
+    const forwardedHeader = req.headers["x-forwarded-for"] as string;
+    const hops = forwardedHeader ? forwardedHeader.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const clientIp = hops.length > 0 ? (hops[hops.length - 1] || socketIp) : socketIp;
+    const rawIp = `${clientIp}#${socketIp}`;
 
     if (isIpRateLimited(rawIp)) {
       setSecurityHeaders(res, "application/json");
@@ -240,12 +265,19 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
         res.end(JSON.stringify({ error: "Demasiados intentos fallidos. Intenta nuevamente en 15 minutos." }));
         return;
       }
-      const data = await parseJsonBody(req);
-      const provided = String(data.password || "");
+      const rawBody = await parseJsonBody(req);
+      const parsedPayload = LoginPayloadSchema.safeParse(rawBody);
+      if (!parsedPayload.success) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Formato de contraseña inválido." }));
+        return;
+      }
+      const provided = parsedPayload.data.password;
       if (isConstantTimeMatch(provided, ADMIN_PASSWORD)) {
+        loginAttempts.delete(rawIp);
         const isSecure = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
         const secureFlag = isSecure ? "; Secure" : "";
-        res.setHeader("Set-Cookie", `admin_session=${AUTH_HASH}; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=2592000`);
+        res.setHeader("Set-Cookie", `admin_session=${ADMIN_SESSION_TOKEN}; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=86400`);
         res.writeHead(200);
         res.end(JSON.stringify({ success: true, message: "Acceso autorizado." }));
       } else {
@@ -537,7 +569,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Empy Bot - Panel de Control</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {

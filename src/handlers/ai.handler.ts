@@ -11,6 +11,7 @@ import { recordIncomingMessage } from "../services/db/message.service.js";
 import { registerBotResponse } from "../services/feedback.service.js";
 import { getRandomLocalSticker } from "../services/sticker.service.js";
 import { streamToBuffer } from "../services/media.service.js";
+import { isUserCommandBanned } from "../services/command-ban.service.js";
 import { MessageContext } from "./types.js";
 
 const STICKER_CREATION_REGEX =
@@ -110,6 +111,10 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
     ((hasQuotedImage || hasDirectImage || hasQuotedVideo || hasDirectVideo) && wantsStickerCreation) ||
     (hasQuotedSticker && (wantsMediaExtraction || wantsStickerCreation))
   ) {
+    const userJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
+    if (isUserCommandBanned(userJid, "s", "s")) {
+      return false;
+    }
     const universalCmd = commandMap.get("s");
     if (universalCmd) {
       await universalCmd.execute({
@@ -196,6 +201,10 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
           // Si el usuario pidió explícitamente solo transcribir ("transcribí", "transcribir", "qué dice"), delegar a !audio
           const wantsOnlyTranscription = /\b(transcrib[ií]|transcripci[oó]n|pasa a texto|pasalo a texto)\b/i.test(cleanPrompt);
           if (wantsOnlyTranscription) {
+            const userJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
+            if (isUserCommandBanned(userJid, "audio", "audio")) {
+              return false;
+            }
             const audioCmd = commandMap.get("audio");
             if (audioCmd) {
               await audioCmd.execute({
@@ -268,7 +277,11 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
     switch (aiResult.toolName) {
       case "create_sticker":
       case "sticker_to_image": {
-        const universalCmd = commandMap.get("s");
+        const userJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
+    if (isUserCommandBanned(userJid, "s", "s")) {
+      return false;
+    }
+    const universalCmd = commandMap.get("s");
         if (universalCmd) {
           await universalCmd.execute({
             sock,
@@ -288,6 +301,8 @@ export async function handleAiInteraction(ctx: MessageContext): Promise<boolean>
       case "download_tiktok": {
         const url = typeof toolArgs.url === "string" ? toolArgs.url.trim() : "";
         if (/^https?:\/\/(?:www\.|vm\.|vt\.)?tiktok\.com\//i.test(url)) {
+          const userJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
+          if (isUserCommandBanned(userJid, "tiktok", "tiktok")) break;
           const dlCmd = commandMap.get("tiktok");
           if (dlCmd) {
             await dlCmd.execute({

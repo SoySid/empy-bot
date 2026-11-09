@@ -551,15 +551,16 @@ export async function resolveOrRegisterUser(
       }
 
       // Si viene un pushName nuevo, guardarlo como alias secundario si no existía
-      if (profile && pushName && pushName.trim().length >= 2) {
-        const normPush = normalizeEntityName(pushName);
+      const cleanPush = pushName ? pushName.replace(/[<>[\]{}\r\n]/g, "").trim().slice(0, 35) : "";
+      if (profile && cleanPush && cleanPush.length >= 2) {
+        const normPush = normalizeEntityName(cleanPush);
         const aliasExists = profile.aliases.some((a) => a.normalized === normPush);
 
         if (!aliasExists && normPush !== normalizeEntityName(profile.primaryName)) {
           await prisma.userAlias.create({
             data: {
               userJid: profile.jid,
-              alias: pushName.trim(),
+              alias: cleanPush,
               normalized: normPush,
               isPrimary: false,
             },
@@ -576,14 +577,14 @@ export async function resolveOrRegisterUser(
         const isCanonicalPhone = canonicalJid.endsWith("@s.whatsapp.net");
         const realPhone = isCanonicalPhone && phoneDigits ? phoneDigits : `lid_${extractDigits(cleanRaw)}`;
         const userCanonicalJid = isCanonicalPhone && phoneDigits ? `${phoneDigits}@s.whatsapp.net` : cleanRaw;
-        const displayName = pushName?.trim() || (isCanonicalPhone && phoneDigits ? `@${phoneDigits}` : "Usuario");
+        const displayName = cleanPush || (isCanonicalPhone && phoneDigits ? `@${phoneDigits}` : "Usuario");
 
         profile = await prisma.userProfile.create({
           data: {
             jid: userCanonicalJid,
             lid: isLid ? cleanRaw : null,
             phone: realPhone,
-            pushName: pushName?.trim() || null,
+            pushName: cleanPush || null,
             primaryName: displayName,
             role: "member",
           },

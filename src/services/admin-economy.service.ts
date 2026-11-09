@@ -8,10 +8,12 @@ import type { UserProfile } from "@prisma/client";
 import { cleanJid, extractDigits, ramLidToPhoneMap, ramPhoneToLidMap } from "./whatsapp-identity.js";
 
 // ID canónico, LID y teléfono del Creador, configurable exclusivamente vía .env
-export const BOT_OWNER_PHONE = (process.env.BOT_OWNER_PHONE || "").replace(/\D/g, "");
+const rawOwnerPhone = (process.env.BOT_OWNER_PHONE || "").replace(/\D/g, "");
+export const BOT_OWNER_PHONE = rawOwnerPhone.length >= 10 ? rawOwnerPhone : "";
 export const BOT_OWNER_JID = process.env.BOT_OWNER_JID || (BOT_OWNER_PHONE ? `${BOT_OWNER_PHONE}@s.whatsapp.net` : "");
 export const BOT_OWNER_LID = process.env.BOT_OWNER_LID || "";
-export const BOT_OWNER_LID_DIGITS = (process.env.BOT_OWNER_LID_DIGITS || BOT_OWNER_LID).replace(/\D/g, "");
+const rawOwnerLidDigits = (process.env.BOT_OWNER_LID_DIGITS || BOT_OWNER_LID).replace(/\D/g, "");
+export const BOT_OWNER_LID_DIGITS = rawOwnerLidDigits.length >= 10 ? rawOwnerLidDigits : "";
 
 // Tracking en memoria de usuarios congelados temporalmente (userJid/phone -> unfreezeTimestamp)
 const frozenUsers = new Map<string, number>();
@@ -134,8 +136,8 @@ export async function grantCash(
   newBalance?: number;
   targetUser?: UserProfile;
 }> {
-  if (isNaN(amount) || amount <= 0) {
-    return { success: false, error: "El monto a transferir debe ser un número entero mayor a 0." };
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 2_000_000_000) {
+    return { success: false, error: "El monto a transferir debe ser un número entero válido (1 - 2.000.000.000)." };
   }
 
   const user = await resolveOrRegisterUser(targetJid);
@@ -143,7 +145,7 @@ export async function grantCash(
   return await withWriteLock(async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
     const oldBalance = current.balance;
-    const newBalance = oldBalance + amount;
+    const newBalance = Math.min(2_000_000_000, oldBalance + amount);
 
     const updated = await prisma.userProfile.update({
       where: { id: user.id },
@@ -176,7 +178,7 @@ export async function seizeCash(
   newBalance?: number;
   targetUser?: UserProfile;
 }> {
-  if (isNaN(amount) || amount <= 0) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
     return { success: false, error: "El monto a confiscar debe ser un número entero mayor a 0." };
   }
 

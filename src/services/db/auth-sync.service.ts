@@ -12,7 +12,7 @@ let isSyncing = false;
 let pendingSync = false;
 
 function getEncryptionKey(): Buffer | null {
-  const secret = process.env.SESSION_ENCRYPTION_KEY || process.env.RESET_AUTH_SECRET;
+  const secret = process.env.SESSION_ENCRYPTION_KEY || process.env.RESET_AUTH_SECRET || process.env.ADMIN_PASSWORD;
   if (!secret || secret.trim().length === 0) return null;
   return crypto.createHash("sha256").update(secret).digest();
 }
@@ -20,6 +20,7 @@ function getEncryptionKey(): Buffer | null {
 function encryptPayload(plainBuffer: Buffer): string {
   const key = getEncryptionKey();
   if (!key) {
+    console.warn("[Auth Sync] ⚠️ SESSION_ENCRYPTION_KEY no configurada. Almacenando credenciales de sesión en Base64 sin cifrar.");
     return plainBuffer.toString("base64");
   }
   const iv = crypto.randomBytes(12);
@@ -48,6 +49,10 @@ function decryptPayload(storedValue: string): Buffer {
   const iv = Buffer.from(parts[2], "base64");
   const tag = Buffer.from(parts[3], "base64");
   const ciphertext = Buffer.from(parts[4], "base64");
+
+  if (iv.length !== 12 || tag.length !== 16) {
+    throw new Error("Parámetros criptográficos de sesión inválidos.");
+  }
 
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);

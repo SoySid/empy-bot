@@ -58,7 +58,7 @@ export async function recordIncomingMessage(
   replyToSnippet?: string,
   rawMsg?: any
 ): Promise<void> {
-  const cleanText = body.trim();
+  const cleanText = body.trim().slice(0, 1500);
   if (!cleanText) return;
 
   const normalizedJid = cleanJid(userJid || (isBot ? "bot" : "usuario"));
@@ -81,7 +81,7 @@ export async function recordIncomingMessage(
     lastLive.replyToSender === cleanReplySender;
 
   if (isBurst && lastLive) {
-    lastLive.text = `${lastLive.text} ${cleanText}`;
+    lastLive.text = `${lastLive.text} ${cleanText}`.slice(0, 2500);
     lastLive.timestamp = now;
     if (rawMsg) lastLive.rawMsg = rawMsg;
   } else {
@@ -120,7 +120,7 @@ export async function recordIncomingMessage(
       lastRecordedRawJid === normalizedJid &&
       now - lastRecordedRawTime <= 6000
     ) {
-      const updatedBody = `${lastRecordedRawBody} ${cleanText}`;
+      const updatedBody = `${lastRecordedRawBody} ${cleanText}`.slice(0, 2500);
       await prisma.rawMessage.update({
         where: { id: lastRecordedRawId! },
         data: { body: updatedBody },
@@ -209,10 +209,11 @@ export function getRecentConversationContext(limit = 15): string {
   const lines = valid.map((m, idx) => {
     const snippetClean = m.replyToSnippet ? ` "${m.replyToSnippet.slice(0, 40).replace(/[\r\n]+/g, " ")}"` : "";
     const reply = m.replyToSender ? ` (en respuesta a @${m.replyToSender}${snippetClean})` : "";
-    return `[#${idx + 1}] [${m.sender}${reply}]: "${m.text.replace(/[\r\n]+/g, " ")}"`;
+    const textSnippet = m.text.replace(/[\r\n]+/g, " ").slice(0, 500);
+    return `[#${idx + 1}] [${m.sender}${reply}]: "${textSnippet}"`;
   });
 
-  return lines.join("\n");
+  return lines.join("\n").slice(0, 4000);
 }
 
 /**
