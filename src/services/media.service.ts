@@ -5,6 +5,7 @@ import dns from "dns";
 import fs from "fs";
 import path from "path";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import { Ytdl, createPoTokenProvider, Quality } from "@distube/ytdl-core";
 
 try {
   dns.setDefaultResultOrder("ipv4first");
@@ -1040,6 +1041,138 @@ async function downloadYouTubeInvidious(
   return null;
 }
 
+let ytdlClientPromise: Promise<Ytdl> | null = null;
+
+async function getYtdlClient(): Promise<Ytdl> {
+  if (!ytdlClientPromise) {
+    ytdlClientPromise = (async () => {
+      const cookiesPath = ensureCookiesFile();
+      const hasCookies = hasUsableYouTubeCookies(cookiesPath);
+      let cookies: string | undefined = undefined;
+      if (hasCookies) {
+        try {
+          cookies = fs.readFileSync(cookiesPath, "utf-8");
+        } catch {}
+      }
+      try {
+        const poTokenProvider = await createPoTokenProvider();
+        return new Ytdl({
+          getPoToken: poTokenProvider,
+          ...(cookies ? { cookie: cookies } : {}),
+        });
+      } catch (err: any) {
+        console.warn("[Media Service] Falló inicialización de PO token provider:", err?.message || err);
+        return new Ytdl({
+          ...(cookies ? { cookie: cookies } : {}),
+        });
+      }
+    })();
+  }
+  return ytdlClientPromise;
+}
+
+async function downloadYouTubeWithYtdlCore(
+  videoId: string,
+  audioOnly: boolean,
+  defaultCaption?: string
+): Promise<MediaDownloadResult | null> {
+  const mediaType = audioOnly ? "audio" : "video";
+  const mediaName = audioOnly ? "El audio" : "El video";
+  const targetUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+  try {
+    const yt = await getYtdlClient();
+    const info = await yt.getInfo(targetUrl);
+    const title = info.videoDetails.title || defaultCaption || "YouTube Media";
+
+    if (audioOnly) {
+      const aStream = yt.download(info, {
+        quality: Quality.HighestAudio,
+        filter: { hasAudio: true, hasVideo: false },
+      });
+      const rawAudio = await streamToBuffer(aStream, MAX_WHATSAPP_BYTES);
+      const mp3Buffer = await convertBufferToMp3(rawAudio, "m4a");
+
+      if (mp3Buffer.length > MAX_WHATSAPP_BYTES) {
+        return {
+          type: "audio",
+          errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+        };
+      }
+
+      return {
+        buffer: mp3Buffer,
+        type: "audio",
+        title,
+        caption: defaultCaption || title || "Audio de YouTube",
+      };
+    }
+
+    // Modo Video:
+    // 1. Si existe formato multiplexado (audio + video) mp4 <= 720p y <= 50MB
+    const muxedCandidate = info.formats.find(
+      (f: any) =>
+        f.hasAudio &&
+        f.hasVideo &&
+        f.container === "mp4" &&
+        (!f.height || f.height <= 720) &&
+        (!f.contentLength || parseInt(f.contentLength, 10) <= MAX_WHATSAPP_BYTES)
+    );
+
+    if (muxedCandidate) {
+      const vStream = yt.download(info, {
+        format: muxedCandidate,
+      });
+      const buffer = await streamToBuffer(vStream, MAX_WHATSAPP_BYTES);
+      return {
+        buffer,
+        type: "video",
+        title,
+        caption: defaultCaption || title || "Acá tenés el video de YouTube",
+      };
+    }
+
+    // 2. Si no hay multiplexado directo (Shorts o videos 720p adaptive):
+    const aStream = yt.download(info, {
+      quality: Quality.HighestAudio,
+      filter: { hasAudio: true, hasVideo: false },
+    });
+    const vStream = yt.download(info, {
+      quality: Quality.HighestVideo,
+      filter: (f: any) => f.hasVideo && !f.hasAudio && f.container === "mp4" && (!f.height || f.height <= 720),
+    });
+
+    const [vBuf, aBuf] = await Promise.all([
+      streamToBuffer(vStream, MAX_WHATSAPP_BYTES),
+      streamToBuffer(aStream, MAX_WHATSAPP_BYTES),
+    ]);
+
+    const mp4Buffer = await muxVideoAndAudioToMp4(vBuf, aBuf);
+    if (mp4Buffer.length > MAX_WHATSAPP_BYTES) {
+      return {
+        type: "video",
+        errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+      };
+    }
+
+    return {
+      buffer: mp4Buffer,
+      type: "video",
+      title,
+      caption: defaultCaption || title || "Acá tenés el video de YouTube",
+    };
+  } catch (err: any) {
+    if (err?.message?.includes("supera el límite de seguridad") || err?.message === "MAX_FILESIZE_EXCEEDED") {
+      return {
+        type: mediaType,
+        errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+      };
+    }
+    console.warn(`[Media Service] ytdl-core no pudo procesar ${videoId}:`, err.message);
+    return null;
+  }
+}
+
 async function downloadYouTubeWithYtDlp(
   input: string,
   audioOnly: boolean,
@@ -1054,6 +1187,9 @@ async function downloadYouTubeWithYtDlp(
   }
 
   if (ytId) {
+    const ytdlResult = await downloadYouTubeWithYtdlCore(ytId, audioOnly, defaultCaption);
+    if (ytdlResult) return ytdlResult;
+
     const fastResult = await downloadYouTubeInnerTube(ytId, audioOnly, defaultCaption);
     if (fastResult) return fastResult;
 

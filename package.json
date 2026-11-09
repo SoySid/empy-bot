@@ -25,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@distube/ytdl-core": "^5.2.1",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "6.19.3",
@@ -32,7 +33,6 @@
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "astronomy-engine": "^2.1.19",
     "axios": "^1.20.0",
-    "btch-downloader": "^6.4.0",
     "dotenv": "^17.4.2",
     "edge-tts-node": "^1.5.7",
     "fluent-ffmpeg": "^2.1.3",
