@@ -10,8 +10,8 @@ export const mlbbCommand: Command = {
   name: "mlbb",
   aliases: ["heroe", "heroemlbb", "mobilelegends"],
   description: "Adiviná el héroe de Mobile Legends: Bang Bang por su avatar pixelado (!mlbb).",
-  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

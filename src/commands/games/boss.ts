@@ -11,8 +11,8 @@ export const bossCommand: Command = {
   name: "boss",
   aliases: ["raid", "jefe", "monstruo"],
   description: "Invoca un jefe de raid grupal para derrotar cooperativamente (!boss).",
-  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

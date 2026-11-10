@@ -10,8 +10,8 @@ export const superheroeCommand: Command = {
   name: "superheroe",
   aliases: ["comic", "superheroes", "personaje"],
   description: "Adiviná el personaje o superhéroe de cómics y películas para ganar fichas (!superheroe).",
-  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

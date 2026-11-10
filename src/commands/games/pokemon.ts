@@ -10,8 +10,8 @@ export const pokemonCommand: Command = {
   name: "pokemon",
   aliases: ["poke", "wtp"],
   description: "Inicia el juego de ¿Quién es este Pokémon? con silueta y premio en fichas (!pokemon).",
-  execute: async ({ sock, remoteJid, msg, args }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, args, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

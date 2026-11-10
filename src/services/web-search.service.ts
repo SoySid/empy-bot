@@ -171,10 +171,12 @@ async function fetchDolarRates(): Promise<string | null> {
   try {
     const res = await axios.get("https://dolarapi.com/v1/dolares", { timeout: 3500 });
     if (Array.isArray(res.data) && res.data.length > 0) {
-      const rates = res.data
-        .map((d: any) => `${d.nombre}: Compra $${d.compra} / Venta $${d.venta}`)
-        .join(" | ");
-      return `Cotizaciones DolarApi Argentina: ${rates}`;
+      const priorityNames = ["Oficial", "Blue", "Bolsa", "Cripto"];
+      const filtered = res.data.filter((d: any) => priorityNames.includes(d.nombre));
+      const target = filtered.length > 0 ? filtered : res.data.slice(0, 4);
+      return target
+        .map((d: any) => `💵 *Dólar ${d.nombre}:* Compra $${d.compra} | Venta $${d.venta}`)
+        .join("\n");
     }
   } catch {}
   return null;
@@ -207,30 +209,31 @@ async function fetchWeather(query: string): Promise<string | null> {
     targetCity = "Buenos Aires";
   }
 
-  // 1. Geocodificación precisa en Argentina con Open-Meteo (reconoce pueblos, comunas y partidos)
+  // 1. Geocodificación precisa priorizando Argentina con Open-Meteo
   try {
     const geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
       params: {
         name: targetCity,
-        count: 5,
+        count: 10,
         language: "es",
         format: "json",
-        country_code: "AR",
       },
       timeout: 3500,
     });
 
     const results = geoRes.data?.results;
     if (Array.isArray(results) && results.length > 0) {
-      const topMatch = results[0];
-      const { name, admin1, latitude, longitude } = topMatch;
+      const isExplicitCountry = /(,\s*|\s+(en|de)\s+)(españa|espana|mexico|méxico|chile|uruguay|brasil|brazil|peru|perú|colombia|venezuela|eeuu|usa|estados unidos|francia|italia|alemania|inglaterra|reino unido|uk)/i.test(targetCity);
+      const arMatch = isExplicitCountry ? null : results.find((r: any) => r.country_code === "AR");
+      const topMatch = arMatch || results[0];
+      const { name, country, admin1, latitude, longitude } = topMatch;
 
       const weatherRes = await axios.get("https://api.open-meteo.com/v1/forecast", {
         params: {
           latitude,
           longitude,
           current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
-          timezone: "America/Argentina/Buenos_Aires",
+          timezone: "auto",
         },
         timeout: 3500,
       });
@@ -238,8 +241,8 @@ async function fetchWeather(query: string): Promise<string | null> {
       const current = weatherRes.data?.current;
       if (current) {
         const desc = interpretWeatherCode(current.weather_code);
-        const prov = admin1 ? ` (${admin1})` : "";
-        return `Clima en ${name}${prov}, Argentina: ${desc} | Temp: ${current.temperature_2m}°C (ST: ${current.apparent_temperature}°C) | Humedad: ${current.relative_humidity_2m}% | Viento: ${current.wind_speed_10m} km/h`;
+        const regionInfo = admin1 ? ` (${admin1}, ${country})` : ` (${country})`;
+        return `Clima en ${name}${regionInfo}: ${desc} | Temp: ${current.temperature_2m}°C (ST: ${current.apparent_temperature}°C) | Humedad: ${current.relative_humidity_2m}% | Viento: ${current.wind_speed_10m} km/h`;
       }
     }
   } catch (err: any) {
@@ -390,8 +393,51 @@ export async function searchWebForUser(rawQuery: string): Promise<{ success: boo
     .replace(/<\/?external_reference_data[^>]*>/gi, "")
     .trim();
 
+  // Si ya es un resultado estructurado directo (clima o cotización), devolverlo limpio
+  if (cleanSanitized.startsWith("Clima en ") || cleanSanitized.includes("Dólar ")) {
+    return {
+      success: true,
+      message: `🔎 *Consulta:* "${cleanQuery}"\n\n${cleanSanitized}`,
+    };
+  }
+
+  // Condensar resultados web evitando muros de texto en WhatsApp
+  const lines = cleanSanitized.split("\n").map((l) => l.trim()).filter(Boolean);
+  const formattedSections: string[] = [];
+  let bulletCount = 0;
+
+  for (const line of lines) {
+    if (/^(Resumen sintético:|Dato directo:)/i.test(line)) {
+      const summary = line.replace(/^(Resumen sintético:|Dato directo:)\s*/i, "").trim();
+      const cleanSummary = summary.length > 200 ? summary.slice(0, 197).trim() + "..." : summary;
+      formattedSections.push(`💡 *Resumen:* ${cleanSummary}`);
+    } else if (line.startsWith("•") || line.startsWith("-")) {
+      if (bulletCount < 2) {
+        const bulletMatch = line.match(/^[•\-]\s*\[([^\]]+)\]:\s*(.+)$/);
+        if (bulletMatch) {
+          const title = bulletMatch[1].trim();
+          const rawDesc = bulletMatch[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+          const desc = rawDesc.length > 130 ? rawDesc.slice(0, 127).trim() + "..." : rawDesc;
+          formattedSections.push(`🔹 *${title}:* ${desc}`);
+        } else {
+          const rawDesc = line.replace(/^[•\-]\s*/, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+          const desc = rawDesc.length > 130 ? rawDesc.slice(0, 127).trim() + "..." : rawDesc;
+          formattedSections.push(`🔹 ${desc}`);
+        }
+        bulletCount++;
+      }
+    } else if (formattedSections.length === 0) {
+      const shortLine = line.length > 200 ? line.slice(0, 197).trim() + "..." : line;
+      formattedSections.push(shortLine);
+    }
+  }
+
+  const finalOutput = formattedSections.length > 0
+    ? formattedSections.join("\n\n")
+    : cleanSanitized.slice(0, 220).trim() + "...";
+
   return {
     success: true,
-    message: `🌐 *Resultados web:* "${cleanQuery}"\n\n${cleanSanitized}`,
+    message: `🌐 *Búsqueda:* "${cleanQuery}"\n\n${finalOutput}`,
   };
 }

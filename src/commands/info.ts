@@ -80,29 +80,14 @@ export const climaCommand: Command = {
       let geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
         params: {
           name: city,
-          count: 5,
+          count: 10,
           language: "es",
           format: "json",
-          country_code: "AR",
         },
         timeout: 6000,
       });
 
       let geoResults = geoRes.data?.results;
-
-      // Fallback global únicamente si no se halló en Argentina
-      if (!geoResults || geoResults.length === 0) {
-        geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
-          params: {
-            name: city,
-            count: 1,
-            language: "es",
-            format: "json",
-          },
-          timeout: 6000,
-        });
-        geoResults = geoRes.data?.results;
-      }
 
       if (!geoResults || geoResults.length === 0) {
         await sock.sendMessage(
@@ -113,7 +98,10 @@ export const climaCommand: Command = {
         return;
       }
 
-      const location = geoResults[0];
+      // Priorizar coincidencia en Argentina salvo que el usuario haya especificado un país explícitamente
+      const isExplicitCountry = /(,\s*|\s+(en|de)\s+)(españa|espana|mexico|méxico|chile|uruguay|brasil|brazil|peru|perú|colombia|venezuela|eeuu|usa|estados unidos|francia|italia|alemania|inglaterra|reino unido|uk|europa|asia)/i.test(city);
+      const arMatch = isExplicitCountry ? null : geoResults.find((r: any) => r.country_code === "AR");
+      const location = arMatch || geoResults[0];
       const { name, latitude, longitude, country, admin1 } = location;
 
       // 2. Consulta de clima actual y extremos del día

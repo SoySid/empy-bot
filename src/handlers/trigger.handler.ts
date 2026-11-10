@@ -81,8 +81,12 @@ export async function handleTriggerStickers(ctx: MessageContext): Promise<boolea
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    // Buscar coincidencia de palabra completa
-    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegex(cleanPrefix)}([^a-z0-9]|$)`, "i");
+    // Buscar coincidencia de palabra completa o frases compuestas (ej: "me_das", "que_onda")
+    const escapedParts = cleanPrefix
+      .split(/[\s_\-]+/)
+      .filter(Boolean)
+      .map(escapeRegex);
+    const pattern = new RegExp(`(^|[^a-z0-9])${escapedParts.join("\\s+")}([^a-z0-9]|$)`, "i");
 
     if (pattern.test(normalizedBody)) {
       const stickerData = await getTriggerSticker(prefix);

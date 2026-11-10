@@ -9,8 +9,8 @@ export const banderaCommand: Command = {
   name: "bandera",
   aliases: ["pais", "geoguessr", "paises"],
   description: "Adiviná a qué país pertenece la bandera para ganar fichas (!bandera).",
-  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

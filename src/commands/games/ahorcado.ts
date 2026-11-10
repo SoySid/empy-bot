@@ -25,7 +25,7 @@ export const ahorcadoCommand: Command = {
       return;
     }
 
-    const cd = checkGameCooldown(remoteJid);
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,

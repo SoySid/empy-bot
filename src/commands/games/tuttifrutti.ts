@@ -9,8 +9,8 @@ export const tuttifruttiCommand: Command = {
   name: "tuttifrutti",
   aliases: ["basta", "tutti", "frutti"],
   description: "Inicia una ronda relámpago de Tutti Frutti / Basta en el grupo (!tuttifrutti).",
-  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
-    const cd = checkGameCooldown(remoteJid);
+  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
       await sock.sendMessage(
         remoteJid,
