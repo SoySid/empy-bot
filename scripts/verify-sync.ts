@@ -42,6 +42,8 @@ function verifySync(): void {
     mlbb: { triggers: ["!mlbb", "!heroe"], label: "Mobile Legends (MLBB)" },
     ruletarusa: { triggers: ["!ruletarusa"], label: "Ruleta Rusa" },
     campominado: { triggers: ["!campominado", "!campo", "!minas"], label: "Campo Minado" },
+    tuttifrutti: { triggers: ["!tuttifrutti", "!basta"], label: "Tutti Frutti" },
+    ciego: { triggers: ["!ciego", "!elnumero"], label: "El Número Ciego" },
   };
 
   for (const [key, meta] of Object.entries(expectedGames)) {

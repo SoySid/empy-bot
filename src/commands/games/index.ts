@@ -15,3 +15,4 @@ export { ahorcadoCommand, arriesgarCommand } from "./ahorcado.js";
 export { ruletarusaCommand } from "./ruletarusa.js";
 export { campominadoCommand, pisarCommand, cobrarCommand } from "./campominado.js";
 export { tuttifruttiCommand } from "./tuttifrutti.js";
+export { ciegoCommand, unirmeCommand } from "./ciego.js";

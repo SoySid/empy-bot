@@ -357,11 +357,11 @@ export async function checkTuttiFruttiSubmission(
     game.stopTriggered = true;
     game.stopTriggeredBy = { jid: userJid, name: userName };
 
-    // Cancelar timer principal e iniciar prórroga de 15 segundos para el resto
+    // Cancelar timer principal e iniciar prórroga de 60 segundos (1 minuto) para el resto
     clearTimeout(game.timer);
     game.timer = setTimeout(async () => {
       await endTuttiFruttiRound(chatJid);
-    }, 15000);
+    }, 60000);
 
     return {
       matched: true,

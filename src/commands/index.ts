@@ -106,6 +106,8 @@ import {
   pisarCommand,
   cobrarCommand,
   tuttifruttiCommand,
+  ciegoCommand,
+  unirmeCommand,
 } from "./games/index.js";
 
 // Comandos estáticos
@@ -201,6 +203,8 @@ const staticCommands: Command[] = [
   pisarCommand,
   cobrarCommand,
   tuttifruttiCommand,
+  ciegoCommand,
+  unirmeCommand,
   hoyCommand,
   cumpleCommand,
   letraCommand,

@@ -224,6 +224,8 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!ahorcado` | `!arriesgar` | Ahorcado grupal por categorías temáticas con pozo acumulado de fichas. |
 | `!ruletarusa` | `!disparar` | Desafío de supervivencia con tambor de 6 recámaras y 1 bala. |
 | `!campominado [apuesta]` | `!campo`, `!minas`, `!pisar`, `!cobrar` | Tablero de 16 casilleros con diamantes y minas ocultas con pozo multiplicador. |
+| `!tuttifrutti` | `!basta`, `!tutti` | Tutti Frutti multijugador con 7 categorías oficiales, sistema de puntos y ranking. |
+| `!ciego` | `!elnumero`, `!unirme`, `!arriesgar` | Juego de deducción con números asignados al privado, debate grupal y margen ±3. |
 
 ---
 

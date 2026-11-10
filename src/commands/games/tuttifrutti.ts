@@ -115,7 +115,7 @@ export const tuttifruttiCommand: Command = {
       `\n\n` +
       `💡 *¿Cómo jugar?*\n` +
       `• Mandá las 7 palabras separadas por comas (todas con *${letter}* y mín. 3 letras).\n` +
-      `• El primero en mandar grita *¡BASTA!* y quedan *15s finales* para el resto.\n` +
+      `• El primero en mandar grita *¡BASTA!* y queda *1 minuto de prórroga* para el resto.\n` +
       `• *Puntos:* 10 pts si nadie la repite, 5 pts si se repite, 0 si duplicás tu propia palabra.\n` +
       `• *Mínimo 2 jugadores* para que sea válida.\n\n` +
       `💰 *Premio en juego:* *$${reward.toLocaleString("es-AR")}* fichas al ganador.\n` +

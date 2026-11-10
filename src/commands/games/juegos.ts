@@ -46,9 +46,13 @@ export const juegosCommand: Command = {
       `💣 *10. Campo Minado Grupal* (\`!campominado\`, \`!campo\` o \`!minas [apuesta]\`)\n` +
       `• Tablero 4x4 con 3 minas ocultas y 13 casilleros con diamantes.\n` +
       `• Pisá casilleros con \`!pisar <A1..D4>\` para multiplicar el pozo o retírate con \`!cobrar\`.\n\n` +
-      `🍓 *11. Tutti Frutti Relámpago* (\`!tuttifrutti\` o \`!basta\`)\n` +
-      `• El bot sortea una letra y 3 categorías al azar.\n` +
-      `• El primero que mande las 3 palabras válidas al chat grita ¡BASTA! y cobra el pozo.\n\n` +
+      `🍓 *11. Tutti Frutti Multijugador* (\`!tuttifrutti\` o \`!basta\`)\n` +
+      `• Sorteo de letra y 7 categorías oficiales con puntuación clásica.\n` +
+      `• El primero canta ¡BASTA!, activa 1 min de prórroga y compiten por puntos.\n\n` +
+      `🕶️ *12. El Número Ciego* (\`!ciego\` | \`!unirme\` | \`!arriesgar <número>\`)\n` +
+      `• Números del 1 al 99 al privado de cada jugador (el tuyo es secreto).\n` +
+      `• Debate libre sin interrupciones del bot y deducción con tolerancia ±3.\n` +
+      `• *Premios escalonados:* Desde *$10.000* hasta *$50.000* fichas.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

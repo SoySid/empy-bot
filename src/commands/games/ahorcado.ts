@@ -69,19 +69,36 @@ export const ahorcadoCommand: Command = {
   },
 };
 
+import { isCiegoGameActive, submitCiegoGuess } from "../../services/games/ciego.service.js";
+
 export const arriesgarCommand: Command = {
   name: "arriesgar",
   aliases: ["resolver"],
-  description: "Arriesga la solución completa de la partida activa de Ahorcado (!arriesgar <frase>).",
+  description: "Arriesga la solución del Ahorcado (!arriesgar <frase>) o de El Número Ciego (!arriesgar <número>).",
   execute: async ({ sock, remoteJid, msg, args, senderProfile }: CommandContext) => {
     const rawAttempt = args.join(" ").trim();
     if (!rawAttempt) {
       await sock.sendMessage(
         remoteJid,
-        { text: "Uso: `!arriesgar <frase o palabra completa>` (¡Cuidado! Si fallas restará 2 vidas)." },
+        { text: "Uso: `!arriesgar <número>` (en El Número Ciego) o `!arriesgar <frase>` (en Ahorcado)." },
         { quoted: msg as any }
       );
       return;
+    }
+
+    // Si hay partida de El Número Ciego activa y mandaron un número
+    if (isCiegoGameActive(remoteJid)) {
+      const num = parseInt(rawAttempt, 10);
+      if (!isNaN(num) && num >= 1 && num <= 99) {
+        const senderJid = senderProfile?.jid || msg.key?.participant || remoteJid;
+        const res = await submitCiegoGuess(remoteJid, senderJid, num, sock);
+        if (!res.success) {
+          await sock.sendMessage(remoteJid, { text: res.error || "No se pudo arriesgar." }, { quoted: msg as any });
+        } else if (!res.allGuessed) {
+          await sock.sendMessage(remoteJid, { react: { text: "🎯", key: msg.key } }).catch(() => {});
+        }
+        return;
+      }
     }
 
     await handleSolveGuess(sock, remoteJid, msg, senderProfile, rawAttempt);

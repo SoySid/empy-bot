@@ -301,7 +301,7 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         const text =
           `🛑 *¡BASTA PARA MÍ, BASTA PARA TODOS!* 🎉\n\n` +
           `👑 ${mention} completó las 7 categorías con la letra *"${tfRes.game.letter}"* y cantó ¡BASTA!\n\n` +
-          `⏳ *¡Quedan 15 segundos de prórroga para que los demás manden sus 7 palabras!*`;
+          `⏳ *¡Queda 1 minuto (60s) de prórroga para que los demás manden sus 7 palabras!*`;
 
         await sock.sendMessage(
           remoteJid,
