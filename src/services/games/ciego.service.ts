@@ -166,16 +166,11 @@ async function launchCiegoRound(chatJid: string, sock: WASocket): Promise<void> 
     `👥 *Participantes:* ${mentionNames}\n\n` +
     `📩 *¡Los números de sus compañeros ya fueron enviados al privado de cada uno!*\n` +
     `🤫 Nadie sabe su propio número.\n\n` +
-    `🗣️ *¡2 minutos de debate libre en el grupo!* Pregúntense, compárense y dénse pistas.\n` +
+    `🗣️ *¡Debate libre sin límite de tiempo!* Pregúntense, compárense y dénse pistas cuando quieran.\n` +
     `🎯 Para arriesgar manden: *!arriesgar <número>*\n` +
-    `*(Tolerancia de victoria: ±3 números. Premios de $10.000 a $50.000 fichas).*`;
+    `*(La partida finaliza automáticamente cuando todos hayan arriesgado).*`;
 
   await sock.sendMessage(chatJid, { text: groupText, mentions }).catch(() => {});
-
-  // Timer de 2 minutos para el debate y arriesgar
-  game.playTimer = setTimeout(async () => {
-    await finishCiegoGame(chatJid, sock);
-  }, 120000);
 }
 
 /**
@@ -213,6 +208,30 @@ export async function submitCiegoGuess(
   }
 
   return { success: true, allGuessed: false };
+}
+
+/**
+ * Permite cerrar manualmente la partida en curso evaluando a quienes hayan arriesgado.
+ */
+export async function finishCiegoManually(chatJid: string, sock: WASocket): Promise<{ success: boolean; error?: string }> {
+  const game = activeCiegoGames.get(chatJid);
+  if (!game || game.status !== "playing") {
+    return { success: false, error: "⚠️ No hay una partida en curso para finalizar." };
+  }
+  await finishCiegoGame(chatJid, sock);
+  return { success: true };
+}
+
+/**
+ * Cancela la partida o convocatoria activa.
+ */
+export function cancelCiegoGame(chatJid: string): { success: boolean; error?: string } {
+  const game = activeCiegoGames.get(chatJid);
+  if (!game) return { success: false, error: "⚠️ No hay partida de El Número Ciego activa." };
+  if (game.lobbyTimer) clearTimeout(game.lobbyTimer);
+  if (game.playTimer) clearTimeout(game.playTimer);
+  activeCiegoGames.delete(chatJid);
+  return { success: true };
 }
 
 /**

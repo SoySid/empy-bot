@@ -3,6 +3,8 @@ import {
   startCiegoLobby,
   joinCiegoGame,
   submitCiegoGuess,
+  finishCiegoManually,
+  cancelCiegoGame,
   isCiegoGameActive,
   getActiveCiegoGame,
 } from "../../services/games/ciego.service.js";
@@ -56,7 +58,27 @@ export const ciegoCommand: Command = {
       return;
     }
 
-    // 3. Inicio normal del juego (!ciego)
+    // 3. Subcomando !ciego terminar / cerrar
+    if (subCommand === "terminar" || subCommand === "cerrar" || subCommand === "fin") {
+      const res = await finishCiegoManually(remoteJid, sock);
+      if (!res.success) {
+        await sock.sendMessage(remoteJid, { text: res.error || "No se pudo finalizar." }, { quoted: msg as any });
+      }
+      return;
+    }
+
+    // 4. Subcomando !ciego cancelar
+    if (subCommand === "cancelar") {
+      const res = cancelCiegoGame(remoteJid);
+      if (!res.success) {
+        await sock.sendMessage(remoteJid, { text: res.error || "No se pudo cancelar." }, { quoted: msg as any });
+        return;
+      }
+      await sock.sendMessage(remoteJid, { text: "🛑 La partida de El Número Ciego fue cancelada." }, { quoted: msg as any });
+      return;
+    }
+
+    // 5. Inicio normal del juego (!ciego)
     const res = await startCiegoLobby(remoteJid, senderJid, senderName, sock);
     if (!res.success) {
       await sock.sendMessage(remoteJid, { text: res.error || "No se pudo iniciar El Número Ciego." }, { quoted: msg as any });
