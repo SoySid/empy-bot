@@ -42,15 +42,15 @@ export const ruletaCommand: Command = {
     if (["all", "todo", "toda"].includes(rawAmountArg)) {
       const cur = await prisma.userProfile.findUnique({ where: { jid: senderJid } });
       const balance = cur?.balance ?? senderProfile?.balance ?? 0;
-      if (balance < 20) {
+      if (balance < 1000) {
         await sock.sendMessage(
           remoteJid,
-          { text: `❌ *Saldo insuficiente:* Tenés apenas *$${balance}* fichas para apostar (el mínimo es *$20*).` },
+          { text: `❌ *Saldo insuficiente:* Tenés apenas *$${balance}* fichas para apostar (el mínimo es *$1.000*).` },
           { quoted: msg as any }
         );
         return;
       }
-      targetAmount = Math.min(balance, 1000);
+      targetAmount = balance;
     } else {
       const parsed = parseInt(rawAmountArg, 10);
       if (!isNaN(parsed) && parsed > 0) {
@@ -65,11 +65,11 @@ export const ruletaCommand: Command = {
           text:
             `🎰 *RULETA CLÁSICA (Casino de Empyreal)*\n\n` +
             `Podés apostar en cualquier orden:\n` +
-            `• \`!ruleta <color> <monto>\` (ej: \`!ruleta rojo 100\`)\n` +
-            `• \`!ruleta <monto> <color>\` (ej: \`!ruleta 100 rojo\` o \`!ruleta 100 roja\`)\n` +
-            `• \`!ruleta todo negro\` (apuesta todo tu saldo hasta $1000)\n\n` +
+            `• \`!ruleta <color> <monto>\` (ej: \`!ruleta rojo 50000\`)\n` +
+            `• \`!ruleta <monto> <color>\` (ej: \`!ruleta 50000 rojo\` o \`!ruleta 50000 roja\`)\n` +
+            `• \`!ruleta todo negro\` (apuesta todo tu saldo actual: *¡all-in!*)\n\n` +
             `• *Colores válidos:* \`rojo\` / \`roja\`, \`negro\` / \`negra\` (pagan 2x), o \`verde\` (paga 14x)\n` +
-            `• *Apuesta permitida:* Entre $20 y $1000 fichas.`,
+            `• *Apuesta permitida:* Desde $1.000 fichas (¡sin tope máximo de apuesta!).`,
         },
         { quoted: msg as any }
       );
@@ -124,15 +124,15 @@ export const slotCommand: Command = {
     if (["all", "todo", "toda"].includes(arg0)) {
       const cur = await prisma.userProfile.findUnique({ where: { jid: senderJid } });
       const balance = cur?.balance ?? senderProfile?.balance ?? 0;
-      if (balance < 20) {
+      if (balance < 1000) {
         await sock.sendMessage(
           remoteJid,
-          { text: `❌ *Saldo insuficiente:* Tenés apenas *$${balance}* fichas para apostar (el mínimo es *$20*).` },
+          { text: `❌ *Saldo insuficiente:* Tenés apenas *$${balance}* fichas para apostar (el mínimo es *$1.000*).` },
           { quoted: msg as any }
         );
         return;
       }
-      rawAmount = Math.min(balance, 1000);
+      rawAmount = balance;
     } else {
       rawAmount = parseInt(arg0, 10);
     }
@@ -144,7 +144,7 @@ export const slotCommand: Command = {
           text:
             `🎰 *TRAGAMONEDAS (SLOT)*\n\n` +
             `Uso: \`!slot <monto>\` (o \`!slot todo\`)\n` +
-            `• *Apuesta permitida:* Entre $20 y $1000 fichas.\n\n` +
+            `• *Apuesta permitida:* Desde $1.000 fichas (¡sin tope máximo de apuesta!).\n\n` +
             `💎 *Premios triples:*\n` +
             `• 7️⃣ 7️⃣ 7️⃣ = x25 (JACKPOT)\n` +
             `• 💎 💎 💎 = x15\n` +

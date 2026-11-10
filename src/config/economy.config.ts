@@ -172,15 +172,15 @@ export const ECONOMY_CONFIG = {
   COST_STICKER: 1500,
   COST_FISH_AUDIO: 3500,
 
-  // Casino (Apuestas acordes a saldos millonarios)
+  // Casino (Sin límite de monto: podés apostar todo tu saldo / all-in)
   CASINO_MAX_BETS_PER_MINUTE: 5,
   ROULETTE: {
     MIN_BET: 1000,
-    MAX_BET: 100000,
+    MAX_BET: Number.MAX_SAFE_INTEGER,
   },
   SLOT: {
     MIN_BET: 1000,
-    MAX_BET: 100000,
+    MAX_BET: Number.MAX_SAFE_INTEGER,
   },
 
   // Rotación de clima (Cada 15 minutos para mayor dinamismo)

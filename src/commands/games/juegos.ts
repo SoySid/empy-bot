@@ -46,6 +46,9 @@ export const juegosCommand: Command = {
       `💣 *10. Campo Minado Grupal* (\`!campominado\`, \`!campo\` o \`!minas [apuesta]\`)\n` +
       `• Tablero 4x4 con 3 minas ocultas y 13 casilleros con diamantes.\n` +
       `• Pisá casilleros con \`!pisar <A1..D4>\` para multiplicar el pozo o retírate con \`!cobrar\`.\n\n` +
+      `🍓 *11. Tutti Frutti Relámpago* (\`!tuttifrutti\` o \`!basta\`)\n` +
+      `• El bot sortea una letra y 3 categorías al azar.\n` +
+      `• El primero que mande las 3 palabras válidas al chat grita ¡BASTA! y cobra el pozo.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

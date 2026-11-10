@@ -9,6 +9,10 @@ import {
   submitHangmanSolve,
   isHangmanGameActive,
 } from "./ahorcado.service.js";
+import {
+  checkTuttiFruttiSubmission,
+  isTuttiFruttiGameActive,
+} from "./tuttifrutti.service.js";
 import { setGameCooldown } from "./game-cooldown.service.js";
 
 function formatMention(senderProfile: any): string {
@@ -281,6 +285,29 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         }
         return true;
       }
+    }
+  }
+
+  // 7. ¿Hay partida de Tutti Frutti / Basta activa?
+  if (isTuttiFruttiGameActive(remoteJid)) {
+    const tfRes = await checkTuttiFruttiSubmission(remoteJid, senderProfile.jid, cleanBody);
+    if (tfRes.matched && tfRes.game) {
+      setGameCooldown(remoteJid);
+      const text =
+        `🛑 *¡BASTA PARA MÍ, BASTA PARA TODOS!* 🎉\n\n` +
+        `👑 ${mention} completó las 3 palabras con la letra *"${tfRes.game.letter}"*:\n` +
+        `1️⃣ *${tfRes.game.categories[0]}:* ${tfRes.words?.[0]}\n` +
+        `2️⃣ *${tfRes.game.categories[1]}:* ${tfRes.words?.[1]}\n` +
+        `3️⃣ *${tfRes.game.categories[2]}:* ${tfRes.words?.[2]}\n\n` +
+        `💰 *Premio cobrado:* +*$${tfRes.reward?.toLocaleString("es-AR")}* fichas\n` +
+        `💳 *Tu saldo actual:* *$${tfRes.newBalance?.toLocaleString("es-AR")}* fichas`;
+
+      await sock.sendMessage(
+        remoteJid,
+        { text, mentions: [senderProfile.jid] },
+        { quoted: msg as any }
+      );
+      return true;
     }
   }
 

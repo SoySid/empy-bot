@@ -76,23 +76,44 @@ export const climaCommand: Command = {
     const city = cleanText.trim() || "Buenos Aires";
 
     try {
-      // 1. Geocodificación del nombre de la ciudad
-      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-        city
-      )}&language=es&count=1`;
-      const geoRes = await axios.get(geoUrl, { timeout: 6000 });
-      const geoData = geoRes.data;
+      // 1. Geocodificación priorizando estrictamente localidades, partidos y pueblos de Argentina
+      let geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+        params: {
+          name: city,
+          count: 5,
+          language: "es",
+          format: "json",
+          country_code: "AR",
+        },
+        timeout: 6000,
+      });
 
-      if (!geoData.results || geoData.results.length === 0) {
+      let geoResults = geoRes.data?.results;
+
+      // Fallback global únicamente si no se halló en Argentina
+      if (!geoResults || geoResults.length === 0) {
+        geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+          params: {
+            name: city,
+            count: 1,
+            language: "es",
+            format: "json",
+          },
+          timeout: 6000,
+        });
+        geoResults = geoRes.data?.results;
+      }
+
+      if (!geoResults || geoResults.length === 0) {
         await sock.sendMessage(
           remoteJid,
-          { text: `❌ No encontré datos para la ciudad "*${city}*". Probá con un nombre más específico.` },
+          { text: `❌ No encontré datos para la localidad "*${city}*". Probá con el nombre exacto del pueblo o ciudad.` },
           { quoted: msg as any }
         );
         return;
       }
 
-      const location = geoData.results[0];
+      const location = geoResults[0];
       const { name, latitude, longitude, country, admin1 } = location;
 
       // 2. Consulta de clima actual y extremos del día

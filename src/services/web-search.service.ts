@@ -180,21 +180,83 @@ async function fetchDolarRates(): Promise<string | null> {
   return null;
 }
 
+function interpretWeatherCode(code: number): string {
+  if (code === 0) return "Cielo despejado ☀️";
+  if (code === 1) return "Principalmente despejado 🌤️";
+  if (code === 2) return "Parcialmente nublado ⛅";
+  if (code === 3) return "Nublado ☁️";
+  if (code === 45 || code === 48) return "Niebla / Neblina 🌫️";
+  if (code >= 51 && code <= 55) return "Llovizna 🌦️";
+  if (code >= 61 && code <= 65) return "Lluvia 🌧️";
+  if (code >= 71 && code <= 77) return "Nieve ❄️";
+  if (code >= 80 && code <= 82) return "Chaparrones 🌧️";
+  if (code >= 95 && code <= 99) return "Tormenta eléctrica ⛈️";
+  return "Tiempo variable 🌡️";
+}
+
 /**
- * Consulta Clima y Temperatura (wttr.in)
+ * Consulta Clima y Temperatura enfocado en Argentina y pueblos (Open-Meteo con fallback wttr.in)
  */
 async function fetchWeather(query: string): Promise<string | null> {
   const cityMatch = query.match(/(?:en|de|para)\s+([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+)/i);
-  const targetCity = cityMatch ? cityMatch[1].trim() : "Buenos Aires";
+  let targetCity = cityMatch
+    ? cityMatch[1].trim()
+    : query.replace(/clima|temperatura|tiempo|grados|lluvia|pron[oó]stico/gi, "").trim();
+
+  if (!targetCity || targetCity.length < 2) {
+    targetCity = "Buenos Aires";
+  }
+
+  // 1. Geocodificación precisa en Argentina con Open-Meteo (reconoce pueblos, comunas y partidos)
+  try {
+    const geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+      params: {
+        name: targetCity,
+        count: 5,
+        language: "es",
+        format: "json",
+        country_code: "AR",
+      },
+      timeout: 3500,
+    });
+
+    const results = geoRes.data?.results;
+    if (Array.isArray(results) && results.length > 0) {
+      const topMatch = results[0];
+      const { name, admin1, latitude, longitude } = topMatch;
+
+      const weatherRes = await axios.get("https://api.open-meteo.com/v1/forecast", {
+        params: {
+          latitude,
+          longitude,
+          current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
+          timezone: "America/Argentina/Buenos_Aires",
+        },
+        timeout: 3500,
+      });
+
+      const current = weatherRes.data?.current;
+      if (current) {
+        const desc = interpretWeatherCode(current.weather_code);
+        const prov = admin1 ? ` (${admin1})` : "";
+        return `Clima en ${name}${prov}, Argentina: ${desc} | Temp: ${current.temperature_2m}°C (ST: ${current.apparent_temperature}°C) | Humedad: ${current.relative_humidity_2m}% | Viento: ${current.wind_speed_10m} km/h`;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[Weather Open-Meteo] Fallback por error:", err?.message || err);
+  }
+
+  // 2. Fallback a wttr.in forzando estrictamente Argentina
   try {
     const res = await axios.get(
-      `https://wttr.in/${encodeURIComponent(targetCity)}?format=%l:+%C,+temperatura:+%t,+humedad:+%h,+viento:+%w&lang=es`,
+      `https://wttr.in/${encodeURIComponent(targetCity + ", Argentina")}?format=%l:+%C,+temperatura:+%t,+humedad:+%h,+viento:+%w&lang=es`,
       { timeout: 3500 }
     );
     if (res.data && !res.data.includes("Unknown")) {
-      return `Clima actual en ${targetCity}: ${res.data.trim()}`;
+      return `Clima en ${targetCity} (Argentina): ${res.data.trim()}`;
     }
   } catch {}
+
   return null;
 }
 
@@ -265,4 +327,71 @@ ${sanitizedOutput}
 
   searchCache.set(cleanQuery, { data: formattedContext, timestamp: Date.now() });
   return formattedContext;
+}
+
+/**
+ * Consulta web en tiempo real para usuarios en WhatsApp (limpio y formateado)
+ */
+export async function searchWebForUser(rawQuery: string): Promise<{ success: boolean; message: string }> {
+  const parseResult = WebSearchQuerySchema.safeParse(rawQuery);
+  if (!parseResult.success) {
+    return {
+      success: false,
+      message: "⚠️ Por favor ingresá un término de búsqueda válido (entre 2 y 150 caracteres).",
+    };
+  }
+
+  const cleanQuery = parseResult.data.trim();
+
+  // Control de tasa
+  if (!checkRateLimit()) {
+    return {
+      success: false,
+      message: "⏳ Se superó el límite de búsquedas web en esta ventana. Probá de nuevo en un minuto.",
+    };
+  }
+
+  let resultText: string | null = null;
+
+  // Clima o cotizaciones directas
+  if (/\b(d[oó]lar|blue|oficial|mep|ccl|cripto|cotizac|divisas?)\b/i.test(cleanQuery)) {
+    resultText = await fetchDolarRates();
+  } else if (/\b(clima|temperatura|tiempo|grados|lluvia|pron[oó]stico)\b/i.test(cleanQuery)) {
+    resultText = await fetchWeather(cleanQuery);
+  }
+
+  // Motores de búsqueda
+  if (!resultText) {
+    const tavilyKey = process.env.TAVILY_API_KEY;
+    const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+    const serperKey = process.env.SERPER_API_KEY;
+
+    if (tavilyKey) {
+      resultText = await searchTavily(tavilyKey, cleanQuery);
+    } else if (braveKey) {
+      resultText = await searchBrave(braveKey, cleanQuery);
+    } else if (serperKey) {
+      resultText = await searchSerper(serperKey, cleanQuery);
+    }
+
+    if (!resultText) {
+      resultText = await searchWikipedia(cleanQuery);
+    }
+  }
+
+  if (!resultText || !resultText.trim()) {
+    return {
+      success: false,
+      message: `🔍 No encontré resultados recientes para: *"${cleanQuery}"*.`,
+    };
+  }
+
+  const cleanSanitized = resultText
+    .replace(/<\/?external_reference_data[^>]*>/gi, "")
+    .trim();
+
+  return {
+    success: true,
+    message: `🌐 *Resultados web:* "${cleanQuery}"\n\n${cleanSanitized}`,
+  };
 }

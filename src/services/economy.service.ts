@@ -1129,8 +1129,11 @@ export async function executeRoulette(
   }
 
   const { MIN_BET, MAX_BET } = ECONOMY_CONFIG.ROULETTE;
-  if (amount < MIN_BET || amount > MAX_BET) {
-    return { success: false, error: `La apuesta debe estar entre *$${MIN_BET}* y *$${MAX_BET}* fichas.` };
+  if (amount < MIN_BET) {
+    return { success: false, error: `La apuesta mínima en la Ruleta es de *$${MIN_BET}* fichas.` };
+  }
+  if (amount > MAX_BET) {
+    return { success: false, error: `La apuesta excede el límite permitido.` };
   }
 
   const user = await resolveOrRegisterUser(userJid);
@@ -1232,8 +1235,11 @@ export async function executeSlot(
   }
 
   const { MIN_BET, MAX_BET } = ECONOMY_CONFIG.SLOT;
-  if (amount < MIN_BET || amount > MAX_BET) {
-    return { success: false, error: `La apuesta de tragamonedas debe ser entre *$${MIN_BET}* y *$${MAX_BET}* fichas.` };
+  if (amount < MIN_BET) {
+    return { success: false, error: `La apuesta mínima de tragamonedas es de *$${MIN_BET}* fichas.` };
+  }
+  if (amount > MAX_BET) {
+    return { success: false, error: `La apuesta excede el límite permitido.` };
   }
 
   const user = await resolveOrRegisterUser(userJid);

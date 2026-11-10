@@ -117,11 +117,17 @@ export async function startBlackjack(
     };
   }
 
-  const { MIN_BET, MAX_BET } = ECONOMY_CONFIG.ROULETTE; // Entre 20 y 1000
-  if (isNaN(bet) || bet < MIN_BET || bet > MAX_BET) {
+  const { MIN_BET, MAX_BET } = ECONOMY_CONFIG.ROULETTE;
+  if (isNaN(bet) || bet < MIN_BET) {
     return {
       success: false,
-      error: `La apuesta debe ser entre *$${MIN_BET}* y *$${MAX_BET}* fichas.`,
+      error: `La apuesta mínima de Blackjack es de *$${MIN_BET}* fichas.`,
+    };
+  }
+  if (bet > MAX_BET) {
+    return {
+      success: false,
+      error: `La apuesta excede el límite permitido.`,
     };
   }
 

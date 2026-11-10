@@ -1,5 +1,6 @@
 import { Command } from "./types.js";
-import { bugCommand, ideaCommand, listaCommand } from "./feedback.js";
+import { bugCommand, ideaCommand, listaCommand, borrarIdeaCommand } from "./feedback.js";
+import { searchCommand } from "./search.js";
 import { shutdownCommand } from "./shutdown.js";
 import { sCommand } from "./s.js";
 import { stickerCommand } from "./sticker.js";
@@ -104,6 +105,7 @@ import {
   campominadoCommand,
   pisarCommand,
   cobrarCommand,
+  tuttifruttiCommand,
 } from "./games/index.js";
 
 // Comandos estáticos
@@ -198,6 +200,7 @@ const staticCommands: Command[] = [
   campominadoCommand,
   pisarCommand,
   cobrarCommand,
+  tuttifruttiCommand,
   hoyCommand,
   cumpleCommand,
   letraCommand,
@@ -217,6 +220,8 @@ const staticCommands: Command[] = [
   bugCommand,
   ideaCommand,
   listaCommand,
+  borrarIdeaCommand,
+  searchCommand,
   shutdownCommand,
 ];
 
