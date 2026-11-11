@@ -72,27 +72,32 @@ export const tiendaCommand: Command = {
         (i) => i.category === "negocio" && i.profession === matchedProf.id
       );
 
+      const isOwnProf = userProf === matchedProf.id;
+
       const toolList = tools
         .map((t, idx) => {
           const isOwned = ownedItemIds.has(t.id);
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${t.price.toLocaleString("es-AR")}* (\`!comprar ${t.id}\`)`;
-          return `${idx + 1}. ${t.icon} *${t.name}* — ${buySnippet}${formatBuffShort(t.buff)}`;
+          const codeHint = isOwnProf ? `t${idx + 1}` : t.id;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${t.price.toLocaleString("es-AR")}* (\`!comprar ${codeHint}\`)`;
+          return `*[T${idx + 1}]* ${t.icon} *${t.name}* — ${buySnippet}${formatBuffShort(t.buff)}`;
         })
         .join("\n");
 
       const relicList = relics.length > 0
         ? `\n\n✨ *5 Reliquias Únicas Legendarias:*\n` +
           relics
-            .map((r) => {
+            .map((r, idx) => {
               const isOwned = ownedItemIds.has(r.id);
-              const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${r.price.toLocaleString("es-AR")}* (\`!comprar ${r.id}\`)`;
-              return `• ${r.icon} *${r.name}* — ${buySnippet}${formatBuffShort(r.buff)}\n  _${r.description}_`;
+              const codeHint = isOwnProf ? `r${idx + 1}` : r.id;
+              const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${r.price.toLocaleString("es-AR")}* (\`!comprar ${codeHint}\`)`;
+              return `*[R${idx + 1}]* ${r.icon} *${r.name}* — ${buySnippet}${formatBuffShort(r.buff)}\n  _${r.description}_`;
             })
             .join("\n")
         : "";
 
+      const hqCodeHint = isOwnProf ? "sede" : hq?.id;
       const hqText = hq
-        ? `\n\n🏢 *Sede Central Inmobiliaria:*\n• ${hq.icon} *${hq.name}* — ${ownedItemIds.has(hq.id) ? "✅ *[ADQUIRIDO]*" : `*$${hq.price.toLocaleString("es-AR")}* (\`!comprar ${hq.id}\`)`}\n  _Renta: +$${(hq.passiveMessageBonus || 2200).toLocaleString("es-AR")} c/50 msgs (+15% cobro)_`
+        ? `\n\n🏢 *Sede Central Inmobiliaria:*\n*[S0]* ${hq.icon} *${hq.name}* — ${ownedItemIds.has(hq.id) ? "✅ *[ADQUIRIDO]*" : `*$${hq.price.toLocaleString("es-AR")}* (\`!comprar ${hqCodeHint}\`)`}\n  _Renta: +$${(hq.passiveMessageBonus || 2200).toLocaleString("es-AR")} c/50 msgs (+15% cobro)_`
         : "";
 
       const text =
@@ -100,7 +105,7 @@ export const tiendaCommand: Command = {
         `🛠️ *Herramientas de Carrera (T1 a T7):*\n${toolList}` +
         relicList +
         hqText +
-        `\n\n💡 _Comprá cualquier ítem con \`!comprar <id>\` (ej: \`!comprar ${tools[0]?.id || "llave10"}\`)._`;
+        `\n\n💡 _Comprá rápido usando el código (ej: \`!comprar t1\`, \`!comprar r1\`, \`!comprar sede\`)._`;
 
       await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
       return;
@@ -129,18 +134,20 @@ export const tiendaCommand: Command = {
         .filter((i) => i.uniqueProfessionItem && i.profession === pMeta.id)
         .sort((a, b) => a.price - b.price);
 
+      const isOwnRelicProf = userProf === pMeta.id;
       const relicList = relics
-        .map((r) => {
+        .map((r, idx) => {
           const isOwned = ownedItemIds.has(r.id);
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${r.price.toLocaleString("es-AR")}* (\`!comprar ${r.id}\`)`;
-          return `• ${r.icon} *${r.name}* — ${buySnippet}${formatBuffShort(r.buff)}\n  _${r.description}_`;
+          const codeHint = isOwnRelicProf ? `r${idx + 1}` : r.id;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${r.price.toLocaleString("es-AR")}* (\`!comprar ${codeHint}\`)`;
+          return `*[R${idx + 1}]* ${r.icon} *${r.name}* — ${buySnippet}${formatBuffShort(r.buff)}\n  _${r.description}_`;
         })
         .join("\n\n");
 
       const text =
         `✨ *5 RELIQUIAS LEGENDARIAS: ${pMeta.icon} ${pMeta.name.toUpperCase()}*\n\n` +
         `${relicList}\n\n` +
-        `💡 _Solo podés poseer 1 copia única de cada reliquia. Comprá con \`!comprar <id>\`._`;
+        `💡 _Solo podés poseer 1 copia única de cada reliquia. Comprá con \`!comprar r1\` (o el ID completo)._`;
 
       await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
       return;
@@ -162,18 +169,18 @@ export const tiendaCommand: Command = {
         .filter((i) => i.category === "kiosco" || (i.category === "especial" && !i.uniqueProfessionItem))
         .sort((a, b) => a.price - b.price);
 
-      const formatItems = (items: ShopItem[], verb: string) =>
+      const formatItems = (items: ShopItem[], verb: string, prefix: string) =>
         items
-          .map((i) => `• ${i.icon} *${i.name}* — *$${i.price.toLocaleString("es-AR")}* (+${i.hungerRestore || 0}% energ) (\`!${verb} ${i.id}\`)`)
+          .map((i, idx) => `*[${prefix.toUpperCase()}${idx + 1}]* ${i.icon} *${i.name}* — *$${i.price.toLocaleString("es-AR")}* (+${i.hungerRestore || 0}% energ) (\`!${verb} ${prefix}${idx + 1}\`)`)
           .join("\n");
 
       const text =
         `🍽️ *ROTISERÍA, BEBIDAS & KIOSCO CENTRAL*\n` +
         `_Ordenado por precio ascendente:_\n\n` +
-        `🥘 *COMIDAS CALIENTES:*\n${formatItems(comidas, "comer")}\n\n` +
-        `🥤 *BEBIDAS HELADAS:*\n${formatItems(bebidas, "tomar")}\n\n` +
-        `⚡ *KIOSCO, ENERGIZANTES & VICIOS:*\n${formatItems(kiosco, "comer")}\n\n` +
-        `💡 _Comé con \`!comer <item>\` y tomá con \`!tomar <item>\`._`;
+        `🥘 *COMIDAS CALIENTES:*\n${formatItems(comidas, "comer", "m")}\n\n` +
+        `🥤 *BEBIDAS HELADAS:*\n${formatItems(bebidas, "tomar", "b")}\n\n` +
+        `⚡ *KIOSCO, ENERGIZANTES & VICIOS:*\n${formatItems(kiosco, "comer", "k")}\n\n` +
+        `💡 _Comprá y consumí rápido con código: \`!comer m1\`, \`!tomar b1\` o \`!comprar m1 3\`._`;
 
       await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
       return;
@@ -188,19 +195,19 @@ export const tiendaCommand: Command = {
         .sort((a, b) => a.price - b.price);
 
       const list = sedes
-        .map((s) => {
+        .map((s, idx) => {
           const isOwned = ownedItemIds.has(s.id);
           const profName = s.profession ? (PROFESSIONS as any)[s.profession]?.name || s.profession : "";
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${s.price.toLocaleString("es-AR")}* (\`!comprar ${s.id}\`)`;
-          return `• ${s.icon} *${s.name}* [${profName}]\n  _Renta: +$${(s.passiveMessageBonus || 2200).toLocaleString("es-AR")} c/50 msgs_ — ${buySnippet}`;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${s.price.toLocaleString("es-AR")}* (\`!comprar s${idx + 1}\`)`;
+          return `*[S${idx + 1}]* ${s.icon} *${s.name}* [${profName}]\n  _Renta: +$${(s.passiveMessageBonus || 2200).toLocaleString("es-AR")} c/50 msgs_ — ${buySnippet}`;
         })
         .join("\n\n");
 
       const text =
-        `🏛️ *DIRECTORIO DE LAS 10 SEDES DE OFICIO*\n\n` +
+        `🏛️ *DIRECTORIO DE SEDES DE OFICIO*\n\n` +
         `_Cada sede es exclusiva de su rubro y suma renta automática cada 50 mensajes:_\n\n` +
         `${list}\n\n` +
-        `💡 _Comprá tu sede con \`!comprar <id>\` (ej: \`!comprar software_factory\`)._`;
+        `💡 _Comprá tu sede rápido con \`!comprar s1\` (o \`!comprar sede\` para la de tu oficio)._`;
 
       await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
       return;
@@ -212,11 +219,11 @@ export const tiendaCommand: Command = {
         .sort((a, b) => a.price - b.price);
 
       const generalList = generalNegocios
-        .map((n) => {
+        .map((n, idx) => {
           const isOwned = ownedItemIds.has(n.id);
           const bonus = n.passiveMessageBonus || n.passiveDailyBonus || 500;
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${n.price.toLocaleString("es-AR")}* (\`!comprar ${n.id}\`)`;
-          return `• ${n.icon} *${n.name}* — ${buySnippet}\n  _Renta pasiva: +$${bonus.toLocaleString("es-AR")} cada 50 mensajes_`;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${n.price.toLocaleString("es-AR")}* (\`!comprar n${idx + 1}\`)`;
+          return `*[N${idx + 1}]* ${n.icon} *${n.name}* — ${buySnippet}\n  _Renta pasiva: +$${bonus.toLocaleString("es-AR")} cada 50 mensajes_`;
         })
         .join("\n\n");
 
@@ -227,10 +234,10 @@ export const tiendaCommand: Command = {
         if (hq) {
           const isOwned = ownedItemIds.has(hq.id);
           const bonus = hq.passiveMessageBonus || hq.passiveDailyBonus || 2200;
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${hq.price.toLocaleString("es-AR")}* (\`!comprar ${hq.id}\`)`;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${hq.price.toLocaleString("es-AR")}* (\`!comprar sede\`)`;
           profHqSection =
             `\n\n🏢 *SEDE DE TU OFICIO (${prof.icon} ${prof.name.toUpperCase()}):*\n` +
-            `• ${hq.icon} *${hq.name}* — ${buySnippet}\n` +
+            `*[S0]* ${hq.icon} *${hq.name}* — ${buySnippet}\n` +
             `  _Renta pasiva: +$${bonus.toLocaleString("es-AR")} cada 50 msgs (+15% cobro en changas)_`;
         }
       }
@@ -255,10 +262,10 @@ export const tiendaCommand: Command = {
         .sort((a, b) => a.price - b.price);
 
       const list = coleccionables
-        .map((c) => {
+        .map((c, idx) => {
           const isOwned = ownedItemIds.has(c.id);
-          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${c.price.toLocaleString("es-AR")}* (\`!comprar ${c.id}\`)`;
-          return `• ${c.icon} *${c.name}* — ${buySnippet}${formatBuffShort(c.buff)}\n  _${c.description}_`;
+          const buySnippet = isOwned ? "✅ *[ADQUIRIDO]*" : `*$${c.price.toLocaleString("es-AR")}* (\`!comprar v${idx + 1}\`)`;
+          return `*[V${idx + 1}]* ${c.icon} *${c.name}* — ${buySnippet}${formatBuffShort(c.buff)}\n  _${c.description}_`;
         })
         .join("\n\n");
 
@@ -266,7 +273,7 @@ export const tiendaCommand: Command = {
         `🏎️ *CONCESIONARIA & COLECCIONABLES DE PRESTIGIO*\n` +
         `_Ordenados por gama y precio ascendente:_\n\n` +
         `${list}\n\n` +
-        `💡 _Comprá tu vehículo con \`!comprar <id>\` (ej: \`!comprar lamborghini\`, \`!comprar peugeot504\`, \`!comprar zanella50\`)._`;
+        `💡 _Comprá rápido con \`!comprar v1\` (o el nombre: \`!comprar lamborghini\`)._`;
 
       await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
       return;
@@ -330,13 +337,12 @@ export const comprarCommand: Command = {
         {
           text:
             `🛒 *¿Qué querés comprar?*\n\n` +
-            `Uso: \`!comprar <item> [cantidad]\`\n\n` +
-            `_Ejemplos:_\n` +
-            `• \`!comprar chipa\`\n` +
-            `• \`!comprar guiso 2\`\n` +
-            `• \`!comprar coquita\`\n` +
-            `• \`!comprar alfajor\`\n` +
-            `• \`!comprar llave10\`\n\n` +
+            `Uso: \`!comprar <código o item> [cantidad]\`\n\n` +
+            `_Ejemplos rápidos:_\n` +
+            `• \`!comprar m1\` _(por código de menú)_\n` +
+            `• \`!comprar m2 3\` _(3 unidades)_\n` +
+            `• \`!comprar t1\` _(herramienta T1 de tu oficio)_\n` +
+            `• \`!comprar chipa\` _(por nombre o ID)_\n\n` +
             `Tirá \`!tienda\` para consultar el catálogo de precios.`,
         },
         { quoted: msg as any }

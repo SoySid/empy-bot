@@ -17,6 +17,7 @@ export interface FishDefinition {
 
 export interface FishingShopItem {
   id: string;
+  code: string;
   name: string;
   icon: string;
   category: "carnada" | "cana" | "accesorio";
@@ -421,6 +422,7 @@ export const FISH_CATALOG: Record<string, FishDefinition> = {
 export const FISHING_SHOP: Record<string, FishingShopItem> = {
   pote_lombrices: {
     id: "pote_lombrices",
+    code: "1",
     name: "Pote de Lombrices Coloradas",
     icon: "🪱",
     category: "carnada",
@@ -430,6 +432,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   masa_vainilla: {
     id: "masa_vainilla",
+    code: "2",
     name: "Masa Dulce con Vainillín",
     icon: "🍯",
     category: "carnada",
@@ -440,6 +443,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   mojarra_viva: {
     id: "mojarra_viva",
+    code: "3",
     name: "Mojarra Viva de Río",
     icon: "🐟",
     category: "carnada",
@@ -450,6 +454,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   repelente_pesca: {
     id: "repelente_pesca",
+    code: "4",
     name: "Repelente Off! de Costa",
     icon: "🧴",
     category: "accesorio",
@@ -460,6 +465,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   conservadora: {
     id: "conservadora",
+    code: "5",
     name: "Conservadora Térmica",
     icon: "🧊",
     category: "accesorio",
@@ -469,6 +475,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   cana_fibra: {
     id: "cana_fibra",
+    code: "6",
     name: "Caña de Fibra de Vidrio",
     icon: "🎣",
     category: "cana",
@@ -478,6 +485,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   cana_grafito: {
     id: "cana_grafito",
+    code: "7",
     name: "Caña de Grafito & Riel Rotativo",
     icon: "🏆",
     category: "cana",
@@ -487,6 +495,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
   },
   permiso_pesca: {
     id: "permiso_pesca",
+    code: "8",
     name: "Permiso de Prefectura (Río Abierto)",
     icon: "📜",
     category: "accesorio",

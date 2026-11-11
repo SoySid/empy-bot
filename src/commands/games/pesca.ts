@@ -193,9 +193,9 @@ export const tiendaPescaCommand: Command = {
       list
         .map(
           (it) =>
-            `• ${it.icon} *${it.name}* — *$${it.price.toLocaleString("es-AR")}* fichas\n` +
+            `*[${it.code}]* ${it.icon} *${it.name}* — *$${it.price.toLocaleString("es-AR")}* fichas\n` +
             `  _${it.description}_\n` +
-            `  👉 Comprar: \`!comprarpesca ${it.id}\``
+            `  👉 Comprar: \`!comprarpesca ${it.code}\` _(o \`${it.id}\`)_`
         )
         .join("\n\n");
 
@@ -204,7 +204,7 @@ export const tiendaPescaCommand: Command = {
       `🪱 *CARNADAS & CEBOS:*\n${formatList(carnadas)}\n\n` +
       `🎣 *CAÑAS & EQUIPAMIENTO PESADO:*\n${formatList(cañas)}\n\n` +
       `🧰 *ACCESORIOS & PERMISOS:*\n${formatList(accesorios)}\n\n` +
-      `_Para comprar escribí \`!comprarpesca <id>\` (ej: \`!comprarpesca pote_lombrices\`)._`;
+      `_Para comprar rápido escribí el número: \`!comprarpesca 1\` (o \`!tiendapesca 1\`)._`;
 
     await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
   },
@@ -213,31 +213,35 @@ export const tiendaPescaCommand: Command = {
 export const comprarPescaCommand: Command = {
   name: "comprarpesca",
   aliases: ["comprarcana", "comprarcarnada"],
-  description: "Comprá artículos de pesca: !comprarpesca <id_articulo>.",
+  description: "Comprá artículos de pesca: !comprarpesca <código_o_id> [cantidad].",
   execute: async ({ sock, remoteJid, msg, args, senderProfile }: CommandContext) => {
     const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
     const itemId = (args[0] || "").toLowerCase().trim();
+    const rawQty = args[1] ? Number(args[1]) : 1;
 
     if (!itemId) {
       await sock.sendMessage(
         remoteJid,
-        { text: "Uso: `!comprarpesca <id_articulo>`. Mirá las opciones disponibles con `!tiendapesca`." },
+        { text: "Uso: `!comprarpesca <código_o_id> [cantidad]`. Mirá las opciones disponibles con `!tiendapesca`." },
         { quoted: msg as any }
       );
       return;
     }
 
-    const res = await buyFishingShopItem(senderJid, itemId);
+    const res = await buyFishingShopItem(senderJid, itemId, rawQty);
 
     if (!res.success) {
       await sock.sendMessage(remoteJid, { text: res.error || "No se pudo realizar la compra." }, { quoted: msg as any });
       return;
     }
 
+    const qtyLabel = (res.quantity ?? 1) > 1 ? ` x${res.quantity}` : "";
+    const costValue = res.totalCost ?? res.item?.price ?? 0;
+
     const text =
       `✅ *¡COMPRA EXITOSA EN LA TIENDA DE PESCA!*\n\n` +
-      `Adquiriste: ${res.item?.icon} *${res.item?.name}*\n` +
-      `• *Costo:* -$${res.item?.price.toLocaleString("es-AR")} fichas\n` +
+      `Adquiriste: ${res.item?.icon} *${res.item?.name}${qtyLabel}*\n` +
+      `• *Costo:* -$${costValue.toLocaleString("es-AR")} fichas\n` +
       `• *Efecto aplicado:* _${res.item?.description}_\n` +
       `• *Tu nuevo saldo:* *$${res.newBalance?.toLocaleString("es-AR")}* fichas\n\n` +
       `¡Salí al río a probarlo con \`!pescar\`!`;

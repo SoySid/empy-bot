@@ -8,15 +8,97 @@ import { isUserEconomyFrozen } from "./admin-economy.service.js";
 import { renderHungerBar } from "./hunger.service.js";
 
 /**
- * Busca un ítem en el catálogo por ID o alias insensible a mayúsculas/acentos.
+ * Resuelve un código corto de tienda (ej: m1, b2, k1, v1, n1, s1, t1, r1) al ítem correspondiente.
  */
-export function findShopItem(query: string): ShopItem | undefined {
+function resolveByShortCode(cleanCode: string, userProf?: string | null): ShopItem | undefined {
+  const allItems = Object.values(SHOP_ITEMS);
+
+  const matchM = cleanCode.match(/^m(\d+)$/);
+  if (matchM) {
+    const idx = parseInt(matchM[1], 10) - 1;
+    const comidas = allItems.filter((i) => i.category === "comida").sort((a, b) => a.price - b.price);
+    return comidas[idx];
+  }
+
+  const matchB = cleanCode.match(/^b(\d+)$/);
+  if (matchB) {
+    const idx = parseInt(matchB[1], 10) - 1;
+    const bebidas = allItems.filter((i) => i.category === "bebida").sort((a, b) => a.price - b.price);
+    return bebidas[idx];
+  }
+
+  const matchK = cleanCode.match(/^k(\d+)$/);
+  if (matchK) {
+    const idx = parseInt(matchK[1], 10) - 1;
+    const kiosco = allItems
+      .filter((i) => i.category === "kiosco" || (i.category === "especial" && !i.uniqueProfessionItem))
+      .sort((a, b) => a.price - b.price);
+    return kiosco[idx];
+  }
+
+  const matchV = cleanCode.match(/^v(\d+)$/);
+  if (matchV) {
+    const idx = parseInt(matchV[1], 10) - 1;
+    const vehiculos = allItems.filter((i) => i.category === "coleccionable").sort((a, b) => a.price - b.price);
+    return vehiculos[idx];
+  }
+
+  const matchN = cleanCode.match(/^n(\d+)$/);
+  if (matchN) {
+    const idx = parseInt(matchN[1], 10) - 1;
+    const negocios = allItems.filter((i) => i.category === "negocio" && !i.profession).sort((a, b) => a.price - b.price);
+    return negocios[idx];
+  }
+
+  const matchS = cleanCode.match(/^s(\d+)$/);
+  if (matchS) {
+    const num = parseInt(matchS[1], 10);
+    if (num === 0 && userProf) {
+      return allItems.find((i) => i.category === "negocio" && i.profession === userProf);
+    }
+    const sedes = allItems.filter((i) => i.category === "negocio" && i.profession).sort((a, b) => a.price - b.price);
+    return sedes[num - 1];
+  }
+
+  if ((cleanCode === "s" || cleanCode === "sede") && userProf) {
+    return allItems.find((i) => i.category === "negocio" && i.profession === userProf);
+  }
+
+  const matchT = cleanCode.match(/^t(\d+)$/);
+  if (matchT && userProf) {
+    const idx = parseInt(matchT[1], 10) - 1;
+    const tools = allItems
+      .filter((i) => i.category === "herramienta" && i.profession === userProf)
+      .sort((a, b) => a.price - b.price);
+    return tools[idx];
+  }
+
+  const matchR = cleanCode.match(/^r(\d+)$/);
+  if (matchR && userProf) {
+    const idx = parseInt(matchR[1], 10) - 1;
+    const relics = allItems
+      .filter((i) => i.uniqueProfessionItem && i.profession === userProf)
+      .sort((a, b) => a.price - b.price);
+    return relics[idx];
+  }
+
+  return undefined;
+}
+
+/**
+ * Busca un ítem en el catálogo por código corto, ID o alias insensible a mayúsculas/acentos.
+ */
+export function findShopItem(query: string, userProf?: string | null): ShopItem | undefined {
   if (!query) return undefined;
   const clean = query
     .toLowerCase()
     .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+  // Búsqueda por código corto (M1, B1, K1, V1, N1, S1, T1, R1)
+  const byCode = resolveByShortCode(clean, userProf);
+  if (byCode) return byCode;
 
   // Búsqueda directa por ID
   if (SHOP_ITEMS[clean]) return SHOP_ITEMS[clean];
@@ -61,7 +143,9 @@ export async function buyItem(
     };
   }
 
-  const item = findShopItem(itemQuery);
+  const user = await resolveOrRegisterUser(userJid);
+  const userProf = await getUserProfession(user.id);
+  const item = findShopItem(itemQuery, userProf);
   if (!item) {
     return {
       success: false,
@@ -91,7 +175,6 @@ export async function buyItem(
   }
 
   const totalCost = effectivePrice * qty;
-  const user = await resolveOrRegisterUser(userJid);
 
   return await withWriteLock(async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;

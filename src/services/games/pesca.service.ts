@@ -361,15 +361,39 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
 
 export async function buyFishingShopItem(
   userJid: string,
-  itemId: string
-): Promise<{ success: boolean; error?: string; item?: FishingShopItem; newBalance?: number }> {
-  const cleanId = itemId.toLowerCase().trim();
-  const shopItem = FISHING_SHOP[cleanId];
+  itemId: string,
+  rawQuantity: number = 1
+): Promise<{ success: boolean; error?: string; item?: FishingShopItem; quantity?: number; totalCost?: number; newBalance?: number }> {
+  const cleanId = itemId.toLowerCase().trim().replace(/^p(\d+)$/, "$1");
+  const shopItem =
+    FISHING_SHOP[cleanId] ||
+    Object.values(FISHING_SHOP).find((it) => it.code === cleanId);
 
   if (!shopItem) {
     return {
       success: false,
       error: `❌ No se encontró el artículo \`${itemId}\` en la tienda de pesca. Escribí \`!tiendapesca\` para ver el catálogo.`,
+    };
+  }
+
+  const quantity = Math.floor(rawQuantity);
+  if (!Number.isFinite(quantity) || quantity < 1 || quantity > 50) {
+    return {
+      success: false,
+      error: "⚠️ La cantidad debe ser un número entero entre *1* y *50*.",
+    };
+  }
+
+  const isSingleOnly =
+    shopItem.category === "cana" ||
+    shopItem.id === "conservadora" ||
+    shopItem.id === "permiso_pesca" ||
+    shopItem.id === "pote_lombrices";
+
+  if (quantity > 1 && isSingleOnly) {
+    return {
+      success: false,
+      error: `⚠️ *${shopItem.name}* solo se puede comprar de a *1* unidad.`,
     };
   }
 
@@ -397,32 +421,33 @@ export async function buyFishingShopItem(
     }
   }
 
+  const totalCost = shopItem.price * quantity;
   let newBalance = 0;
   let purchaseSuccess = false;
 
   await withWriteLock(async () => {
     const user = await resolveOrRegisterUser(userJid);
-    if (user.balance < shopItem.price) {
-      throw new Error(`Saldo insuficiente: necesitás $${shopItem.price} fichas (tenés $${user.balance}).`);
+    if (user.balance < totalCost) {
+      throw new Error(`Saldo insuficiente: necesitás $${totalCost} fichas (tenés $${user.balance}).`);
     }
 
     const updated = await prisma.userProfile.update({
       where: { jid: userJid },
       data: {
-        balance: { decrement: shopItem.price },
+        balance: { decrement: totalCost },
       },
       select: { balance: true },
     });
     newBalance = updated.balance;
     purchaseSuccess = true;
-  }).catch((err) => {
+  }).catch(() => {
     purchaseSuccess = false;
   });
 
   if (!purchaseSuccess) {
     return {
       success: false,
-      error: `❌ *Saldo insuficiente:* Este equipo cuesta *$${shopItem.price.toLocaleString("es-AR")}* fichas.`,
+      error: `❌ *Saldo insuficiente:* Esta compra cuesta *$${totalCost.toLocaleString("es-AR")}* fichas.`,
     };
   }
 
@@ -432,11 +457,11 @@ export async function buyFishingShopItem(
     const maxCharges = hasFibra ? FIBRA_MAX_CHARGES : BASE_MAX_CHARGES;
     state.charges = maxCharges;
   } else if (shopItem.id === "masa_vainilla") {
-    state.activeBuffs.tier2Uses = (state.activeBuffs.tier2Uses || 0) + (shopItem.buffDurationUses || 3);
+    state.activeBuffs.tier2Uses = (state.activeBuffs.tier2Uses || 0) + (shopItem.buffDurationUses || 3) * quantity;
   } else if (shopItem.id === "mojarra_viva") {
-    state.activeBuffs.tier3Uses = (state.activeBuffs.tier3Uses || 0) + (shopItem.buffDurationUses || 2);
+    state.activeBuffs.tier3Uses = (state.activeBuffs.tier3Uses || 0) + (shopItem.buffDurationUses || 2) * quantity;
   } else if (shopItem.id === "repelente_pesca") {
-    state.activeBuffs.antiBlooperUses = (state.activeBuffs.antiBlooperUses || 0) + (shopItem.buffDurationUses || 10);
+    state.activeBuffs.antiBlooperUses = (state.activeBuffs.antiBlooperUses || 0) + (shopItem.buffDurationUses || 10) * quantity;
   } else {
     state.ownedItems.push(shopItem.id);
   }
@@ -446,6 +471,8 @@ export async function buyFishingShopItem(
   return {
     success: true,
     item: shopItem,
+    quantity,
+    totalCost,
     newBalance,
   };
 }
