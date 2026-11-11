@@ -686,6 +686,16 @@ export async function processVisionMessage(
   return "No llego a ver bien la foto che, ¿me la mandás de nuevo?";
 }
 
+function supportsThinkingLevel(model: string): boolean {
+  return model.includes("gemini-3") || model.includes("gemma-4");
+}
+
+function classifyHttpCooldownMs(status: number): number | null {
+  if (status === 429 || status === 503) return 60 * 1000;
+  if (status === 404) return 5 * 60 * 1000;
+  return null;
+}
+
 export async function generateWithFlashLite(
   prompt: string,
   maxTokens = 300,
@@ -695,25 +705,33 @@ export async function generateWithFlashLite(
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
   if (!GEMINI_API_KEY) return null;
 
-  const models = [
-    process.env.GEMINI_FLASH_LITE_MODEL || "gemini-2.5-flash-lite",
-    "gemini-2.0-flash-lite",
-    "gemini-flash-lite-latest",
-    "gemma-4-26b-a4b-it",
-  ];
+  const configuredModel = process.env.GEMINI_FLASH_LITE_MODEL || "gemini-3.5-flash-lite";
+  const models = Array.from(
+    new Set([
+      configuredModel,
+      "gemini-3.1-flash-lite",
+      "gemini-flash-lite-latest",
+      "gemini-flash-latest",
+      "gemma-4-26b-a4b-it",
+    ])
+  );
 
   for (const model of models) {
-    if (!canUseModel(model, 30)) continue;
+    if (!canUseModel(model, 30, feature)) continue;
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const generationConfig: Record<string, any> = {
+        temperature,
+        maxOutputTokens: maxTokens,
+      };
+      if (supportsThinkingLevel(model)) {
+        generationConfig.thinkingConfig = { thinkingLevel: "minimal" };
+      }
+
       const payload: any = {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: maxTokens,
-          thinkingConfig: { thinkingLevel: "minimal" },
-        },
+        generationConfig,
       };
 
       const res = await fetch(url, {
@@ -723,10 +741,18 @@ export async function generateWithFlashLite(
           "x-goog-api-key": GEMINI_API_KEY,
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(15000),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => "");
+        console.warn(`[Flash-Lite Helper] HTTP ${res.status} con ${model}: ${errorBody.slice(0, 300)}`);
+        const cooldownMs = classifyHttpCooldownMs(res.status);
+        if (cooldownMs) {
+          setModelCooldown(model, cooldownMs);
+        }
+        continue;
+      }
       const data = await res.json();
       const parts = data.candidates?.[0]?.content?.parts || [];
       const text = parts
@@ -764,14 +790,14 @@ export async function generateWithGemini(
   temperature = 0.5,
   feature = "astrology"
 ): Promise<string | null> {
-  // 1. Prioridad: Gemini Flash Lite (Alta cuota, ultra rápido y mejor comprensión)
+  // 1. Prioridad: Gemini Flash Lite / Gemma vía REST (maneja thinkingConfig por modelo)
   const flashLiteRes = await generateWithFlashLite(prompt, maxTokens, temperature, feature);
   if (flashLiteRes) return flashLiteRes;
 
-  // 2. Familia Gemini Flash / Flash-Lite adicionales
+  // 2. Respaldo vía SDK @google/generative-ai con modelos vigentes no restringidos
   const candidates = [
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-flash-lite-latest",
     "gemini-flash-latest",
   ];
@@ -791,26 +817,43 @@ export async function generateWithGemini(
       const text = result.response.text();
       if (text) return text.trim();
     } catch (err: any) {
-      console.warn(`[Gemini Helper] Falló modelo ${cand}:`, err?.message || err);
-      setModelCooldown(cand, 30 * 1000);
+      const msg = err?.message || String(err);
+      console.warn(`[Gemini Helper] Falló modelo ${cand}:`, msg);
+      if (msg.includes("429") || msg.includes("503") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+        setModelCooldown(cand, 60 * 1000);
+      } else if (msg.includes("404") || msg.includes("not found")) {
+        setModelCooldown(cand, 5 * 60 * 1000);
+      } else {
+        setModelCooldown(cand, 30 * 1000);
+      }
     }
   }
 
-  // 3. Fallback con Groq
-  if (canUseModel("qwen/qwen3.8-27b", 30, feature) && !isNearGroqLimit()) {
-    try {
-      const completion = await groq.chat.completions.create({
-        model: "qwen/qwen3.8-27b",
-        messages: [{ role: "user", content: prompt }],
-        temperature,
-        max_tokens: maxTokens,
-      });
-      if (completion.usage) {
-        trackTokens("groq", "qwen/qwen3.8-27b", completion.usage.prompt_tokens || 0, completion.usage.completion_tokens || 0, feature);
+  // 3. Fallback con Groq (respetando cuota diaria)
+  if (process.env.GROQ_API_KEY && !isNearGroqLimit()) {
+    const groqFallbacks = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
+    for (const groqModel of groqFallbacks) {
+      if (!canUseModel(groqModel, 30, feature)) continue;
+      try {
+        const completion = await groq.chat.completions.create({
+          model: groqModel,
+          messages: [{ role: "user", content: prompt }],
+          temperature,
+          max_tokens: maxTokens,
+        });
+        if (completion.usage) {
+          trackTokens("groq", groqModel, completion.usage.prompt_tokens || 0, completion.usage.completion_tokens || 0, feature);
+        }
+        const content = completion.choices[0]?.message?.content?.trim();
+        if (content) return content;
+        console.warn(`[Gemini Helper] Groq ${groqModel} devolvió contenido vacío (finish_reason=${completion.choices[0]?.finish_reason || "unknown"}).`);
+      } catch (err: any) {
+        const msg = err?.message || String(err);
+        console.warn(`[Gemini Helper] Error en fallback de Groq (${groqModel}):`, msg);
+        if (msg.includes("429") || msg.includes("rate_limit") || msg.includes("503")) {
+          setModelCooldown(groqModel, 60 * 1000);
+        }
       }
-      return completion.choices[0]?.message?.content?.trim() || null;
-    } catch (err: any) {
-      console.warn("[Gemini Helper] Error en fallback de Groq:", err?.message || err);
     }
   }
 
@@ -823,15 +866,19 @@ export async function generateWithGroqReasoning(
   temperature = 0.5,
   feature = "reasoning"
 ): Promise<string | null> {
+  if (!process.env.GROQ_API_KEY) return null;
   const modelName = "openai/gpt-oss-120b";
   if (!canUseModel(modelName, 10, feature) || isNearGroqLimit()) return null;
+
+  // Garantizar margen mínimo para el bloque reasoning interno sin vaciar choice.content
+  const effectiveMaxTokens = Math.max(maxTokens, 900);
 
   try {
     const completion = await groq.chat.completions.create({
       model: modelName,
       messages: [{ role: "user", content: prompt }],
       temperature,
-      max_tokens: maxTokens,
+      max_tokens: effectiveMaxTokens,
     });
 
     if (completion.usage) {
@@ -844,15 +891,21 @@ export async function generateWithGroqReasoning(
       );
     }
 
-    const choice = completion.choices[0]?.message;
-    if (choice?.content) {
-      return choice.content.trim();
+    const choice = completion.choices[0];
+    const content = choice?.message?.content?.trim();
+    if (content) {
+      return content;
     }
+    console.warn(
+      `[Groq Reasoning] ${modelName} devolvió content vacío (feature=${feature}, finish_reason=${choice?.finish_reason || "unknown"}, max_tokens=${effectiveMaxTokens}).`
+    );
   } catch (err: any) {
     const msg = err?.message || String(err);
     console.warn(`[Groq Reasoning] Falló ${modelName}:`, msg);
     if (msg.includes("429") || msg.includes("rate_limit")) {
       setModelCooldown(modelName, 10 * 60 * 1000);
+    } else if (msg.includes("503")) {
+      setModelCooldown(modelName, 60 * 1000);
     }
   }
   return null;

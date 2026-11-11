@@ -118,11 +118,11 @@ export const arbitroCommand: Command = {
 
     // 3. Ejecutar: Probar modelo de razonamiento profundo Groq 120B primero (si hay cuota)
     const arbitroPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
-    verdictText = (await generateWithGroqReasoning(arbitroPrompt, 500, 0.4, "arbitro")) || "";
+    verdictText = (await generateWithGroqReasoning(arbitroPrompt, 1000, 0.4, "arbitro")) || "";
 
-    // Fallback transparente a la familia Gemini (Gemma 4 primero, Flash después)
+    // Fallback transparente a Flash-Lite / Gemma 4 / Flash / Groq
     if (!verdictText) {
-      verdictText = (await generateWithGemini(arbitroPrompt, 500, 0.4, "arbitro")) || "";
+      verdictText = (await generateWithGemini(arbitroPrompt, 800, 0.4, "arbitro")) || "";
     }
 
     if (!verdictText) {
