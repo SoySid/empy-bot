@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  document.documentElement.classList.add("js");
+
   const CATEGORIES = [
     "Todas",
     "Voces y Audio",
@@ -185,6 +187,7 @@
   const SCENARIOS = {
     memoria: {
       command: "@Empy ¿te acordás quién dijo que no tomaba más fernet?",
+      fact: "Recupera hechos guardados (UserFact) y recuerdos vectoriales con pgvector en Supabase sin inventar datos.",
       messages: [
         {
           out: true,
@@ -195,8 +198,6 @@
         {
           out: false,
           sender: "Empy-Bot",
-          quoteAuthor: "Colo",
-          quoteText: "@Empy ¿te acordás quién dijo que no tomaba más fernet?",
           text: "El archivo no miente. Fue *Tincho* el sábado 14 a las 04:12 AM:\n\n_\"Juro por mi viejo que hasta diciembre no toco un vaso de fernet\"_.\n\nSi querés que lo audite formalmente, tirale `!fiscal` respondiendo a su último mensaje.",
           time: "22:14",
         },
@@ -204,6 +205,7 @@
     },
     messi: {
       command: "!messi [enojado] Che, ¿cómo vas a llegar tarde al asado otra vez?",
+      fact: "Genera una nota de voz OGG Opus nativa mediante Fish Audio y FFmpeg aplicando la modulación [enojado].",
       messages: [
         {
           out: true,
@@ -216,7 +218,6 @@
           sender: "Empy-Bot",
           ptt: {
             tag: "[enojado] · Fish Audio PTT",
-            durationSec: 7,
             durationLabel: "0:07",
             transcript: "\"¿Otra vez tarde al asado, hermano? ¡El fuego ya está hecho hace cuarenta minutos! Traé hielo por lo menos.\"",
           },
@@ -226,6 +227,7 @@
     },
     laburar: {
       command: "!laburar",
+      fact: "Ejecuta transacciones atómicas en Prisma PostgreSQL combinando profesión, título universitario (+25%) y herramientas.",
       messages: [
         {
           out: true,
@@ -243,6 +245,7 @@
     },
     dolar: {
       command: "!dolar",
+      fact: "Consulta en tiempo real las cotizaciones argentinas vía DolarApi (Oficial, Blue, MEP, Tarjeta, CCL y Cripto).",
       messages: [
         {
           out: true,
@@ -260,6 +263,7 @@
     },
     impostor: {
       command: "!impostor",
+      fact: "Reparte la palabra secreta por mensaje privado a cada jugador, asigna 1 impostor y abre votación en el grupo.",
       messages: [
         {
           out: true,
@@ -277,53 +281,18 @@
     },
   };
 
-  const PIPELINE_LAYERS = {
-    "1": {
-      badge: "CAPA 1 · COSTO $0",
-      latency: "Latencia ~0 ms",
-      title: "Filtro heurístico local ($0)",
-      desc: "Evalúa cada mensaje entrante de Baileys en memoria local. Las menciones directas a @Empy o respuestas a sus mensajes tienen prioridad inmediata; las intervenciones espontáneas descartan risas sueltas (\"jaja\", \"xd\"), emojis aislados y spam respetando un cooldown dinámico.",
-      source: "src/services/pipeline/heuristic-filter.ts",
-      output: "Capa 2 (Triage) o descarte silencioso",
-    },
-    "2": {
-      badge: "CAPA 2 · TRIAGE RÁPIDO",
-      latency: "Latencia ~1 s",
-      title: "Triage rápido con Groq (qwen/qwen3.8-27b)",
-      desc: "Lee los últimos mensajes del grupo para clasificar la intención real del diálogo: broma, opinión, consejo, chicana, recuerdo o silencio. Si intervenir no suma valor genuino al hilo, el bot elige callar.",
-      source: "src/services/pipeline/triage.service.ts",
-      output: "Capa 3 (Hidratación RAG) o silencio",
-    },
-    "3": {
-      badge: "CAPA 3 · MEMORIA QUIRÚRGICA",
-      latency: "Caché 0 ms + pgvector",
-      title: "Hidratación RAG (RAM Cache + pgvector)",
-      desc: "Resuelve apodos y perfiles activos al instante desde caché en RAM (user-cache.ts), e inyecta desde Supabase hechos permanentes (UserFact), jerga comunitaria (GroupLexicon) y recuerdos vectoriales semánticos.",
-      source: "src/services/pipeline/rag-hydration.service.ts",
-      output: "Prompt hidratado hacia Capa 4",
-    },
-    "4": {
-      badge: "CAPA 4 · GENERACIÓN + FALLBACK",
-      latency: "Alta disponibilidad",
-      title: "Generación con respaldo automático",
-      desc: "Genera la respuesta natural con la familia Google Gemini / Gemma (gemma-4-26b-a4b-it, gemini-flash-lite-latest, gemini-3.1-flash-lite). Si se alcanza el límite de cuota, conmuta automáticamente a Groq (qwen/qwen3.8-27b).",
-      source: "src/services/pipeline/generator.service.ts",
-      output: "Respuesta final en texto o audio PTT",
-    },
-  };
+  const VOICES = [
+    "messi", "milei", "cristina", "momo", "clint", "xocas", "town", "farid", "tini",
+    "fernan", "scaloni", "dross", "gaspi", "mda", "rubius", "vegetta", "trump", "closs", "valentino",
+    "miku", "nana", "angela", "mlbb", "melissa", "paquito", "xborg", "layla", "esmeralda",
+    "martis", "claude", "edith", "light", "alonso", "hirara", "brainrot", "alice", "loquendo",
+  ];
 
-  const VOICES = {
-    famosos: [
-      "messi", "milei", "cristina", "momo", "clint", "xocas", "town", "farid", "tini",
-      "fernan", "scaloni", "dross", "gaspi", "mda", "rubius", "vegetta", "trump", "closs", "valentino",
-    ],
-    personajes: [
-      "miku", "nana", "angela", "mlbb", "melissa", "paquito", "xborg", "layla", "esmeralda",
-      "martis", "claude", "edith", "light", "alonso", "hirara", "brainrot", "alice", "loquendo",
-    ],
-  };
+  const MOD_TAGS = [
+    "[enojado]", "[cantando]", "[grito]", "[susurro]",
+    "[triste]", "[risa]", "[rapido]", "[lento]",
+  ];
 
-  // Helpers seguros
   function escapeHtml(text) {
     return String(text)
       .replace(/&/g, "&amp;")
@@ -382,13 +351,11 @@
     void button.offsetWidth;
     button.setAttribute(ok ? "data-copied" : "data-failed", "");
 
-    if (labelEl) {
-      labelEl.textContent = ok ? "Copiado" : "Error";
-    }
+    if (labelEl) labelEl.textContent = ok ? "Copiado" : "Error";
 
     const liveRegion = document.getElementById("copyLiveRegion");
     if (liveRegion) {
-      let msg = ok ? `Copiado ${text}` : "No se pudo copiar el comando";
+      let msg = ok ? `Copiado ${text}` : "No se pudo copiar";
       if (msg === lastAnnouncedCopy) msg += "\u00A0";
       lastAnnouncedCopy = msg;
       liveRegion.textContent = msg;
@@ -404,14 +371,32 @@
     );
   }
 
-  // 1. Estado real desde /health
+  // 1. Reveals suaves al hacer scroll
+  function initReveals() {
+    const targets = document.querySelectorAll("[data-reveal]");
+    if (!("IntersectionObserver" in window)) {
+      targets.forEach((el) => el.classList.add("is-in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.08 }
+    );
+    targets.forEach((el) => io.observe(el));
+  }
+
+  // 2. Estado vivo desde /health
   async function fetchServerHealth() {
-    const pill = document.getElementById("serverStatusPill");
     const textEl = document.getElementById("serverStatusText");
     const heroUptime = document.getElementById("heroUptime");
-    const simBotState = document.getElementById("simBotState");
-
-    if (!pill || !textEl) return;
+    if (!textEl) return;
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -422,613 +407,367 @@
       if (!res.ok) throw new Error("HTTP error");
       const data = await res.json();
 
-      pill.classList.remove("is-connected", "is-suspended", "is-demo");
-
       if (data.connected && !data.suspended) {
-        pill.classList.add("is-connected");
         textEl.textContent = `En línea · ${data.uptime || "0s"}`;
         if (heroUptime) heroUptime.textContent = data.uptime || "Activo";
-        if (simBotState) simBotState.textContent = "Empy-Bot · conectado en vivo";
       } else if (data.suspended) {
-        pill.classList.add("is-suspended");
-        textEl.textContent = "Bot suspendido";
-        if (heroUptime) heroUptime.textContent = data.uptime || "Pausado";
-        if (simBotState) simBotState.textContent = "Empy-Bot · suspendido";
+        textEl.textContent = "Suspendido";
+        if (heroUptime) heroUptime.textContent = "Pausado";
       } else {
-        pill.classList.add("is-demo");
-        textEl.textContent = "En espera de conexión";
-        if (heroUptime) heroUptime.textContent = data.uptime || "Esperando QR";
-        if (simBotState) simBotState.textContent = "Empy-Bot · demo interactiva";
+        textEl.textContent = "En espera de QR";
+        if (heroUptime) heroUptime.textContent = data.uptime || "Listo";
       }
     } catch {
       clearTimeout(timer);
-      pill.classList.remove("is-connected", "is-suspended");
-      pill.classList.add("is-demo");
-      textEl.textContent = "Demo interactiva";
+      textEl.textContent = "Demo local";
       if (heroUptime) heroUptime.textContent = "Modo demo";
-      if (simBotState) simBotState.textContent = "Empy-Bot · demo interactiva";
     }
   }
 
-  // 2. Simulador WhatsApp + Audio PTT
+  // 3. Menú móvil
+  function initMobileNav() {
+    const toggle = document.getElementById("menuToggle");
+    const nav = document.getElementById("mobileNav");
+    if (!toggle || !nav) return;
+
+    toggle.addEventListener("click", () => {
+      const isOpen = !nav.hidden;
+      nav.hidden = isOpen;
+      toggle.setAttribute("aria-expanded", String(!isOpen));
+    });
+
+    nav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        nav.hidden = true;
+        toggle.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  // 4. Simulador de WhatsApp
   function initSimulator() {
-    const tabs = Array.from(document.querySelectorAll(".scenario-chip[data-scenario]"));
-    const chatBody = document.getElementById("waChatBody");
-    const activeCmdEl = document.getElementById("waActiveCmd");
-    const replayBtn = document.getElementById("waReplayBtn");
-    const copyTrigger = document.getElementById("simCopyTrigger");
+    const buttons = Array.from(document.querySelectorAll(".scenario-btn[data-scenario]"));
+    const feed = document.getElementById("waChatFeed");
+    const cmdEl = document.getElementById("waActiveCmd");
+    const factEl = document.getElementById("scenarioFact");
+    const copyBtn = document.getElementById("simCopyTrigger");
     const copyLabel = document.getElementById("simCopyLabel");
 
-    if (!tabs.length || !chatBody) return;
+    if (!buttons.length || !feed) return;
+    let activeKey = "memoria";
 
-    let currentScenarioKey = "memoria";
-    let pttTimer = null;
-    let pttPlaying = false;
-
-    function stopPtt() {
-      if (pttTimer) {
-        clearInterval(pttTimer);
-        pttTimer = null;
-      }
-      pttPlaying = false;
-    }
-
-    function renderScenario(key, autoPlayPtt = false) {
-      stopPtt();
-      currentScenarioKey = key;
+    function renderScenario(key) {
       const scenario = SCENARIOS[key];
       if (!scenario) return;
+      activeKey = key;
 
-      tabs.forEach((tab) => {
-        const selected = tab.dataset.scenario === key;
-        tab.setAttribute("aria-selected", String(selected));
+      buttons.forEach((btn) => {
+        btn.setAttribute("aria-selected", String(btn.dataset.scenario === key));
       });
 
-      if (activeCmdEl) {
-        activeCmdEl.textContent = scenario.command;
-      }
+      if (cmdEl) cmdEl.textContent = scenario.command;
+      if (factEl) factEl.textContent = scenario.fact;
+      feed.innerHTML = "";
 
-      chatBody.innerHTML = "";
+      scenario.messages.forEach((msg) => {
+        const bubble = document.createElement("div");
+        bubble.className = `wa-bubble ${msg.out ? "wa-out" : "wa-in"}`;
 
-      scenario.messages.forEach((msg, index) => {
-        const article = document.createElement("article");
-        article.className = `wa-msg ${msg.out ? "wa-msg-out" : "wa-msg-in"} is-entering`;
-        article.style.animationDelay = `${index * 90}ms`;
-
-        const sender = document.createElement("div");
+        const sender = document.createElement("span");
         sender.className = "wa-sender";
         sender.textContent = msg.sender;
-        article.appendChild(sender);
-
-        if (msg.quoteAuthor) {
-          const quote = document.createElement("div");
-          quote.className = "wa-quote";
-          const qa = document.createElement("span");
-          qa.className = "wa-quote-author";
-          qa.textContent = msg.quoteAuthor;
-          const qt = document.createElement("span");
-          qt.textContent = msg.quoteText;
-          quote.append(qa, qt);
-          article.appendChild(quote);
-        }
+        bubble.appendChild(sender);
 
         if (msg.ptt) {
           const pttWrap = document.createElement("div");
-          pttWrap.className = "wa-ptt";
+          pttWrap.className = "wa-ptt-box";
 
-          const tag = document.createElement("span");
-          tag.className = "wa-ptt-tag";
-          tag.textContent = msg.ptt.tag;
-          pttWrap.appendChild(tag);
-
-          const player = document.createElement("div");
-          player.className = "wa-ptt-player";
+          const controls = document.createElement("div");
+          controls.className = "wa-ptt-controls";
 
           const playBtn = document.createElement("button");
           playBtn.type = "button";
-          playBtn.className = "wa-play-btn";
+          playBtn.className = "wa-ptt-play";
           playBtn.setAttribute("aria-label", "Reproducir nota de voz simulada");
+          playBtn.textContent = "Oír";
 
-          const playSvg =
-            '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
-          const pauseSvg =
-            '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-          playBtn.innerHTML = playSvg;
+          const track = document.createElement("div");
+          track.className = "wa-ptt-track";
+          const fill = document.createElement("div");
+          fill.className = "wa-ptt-fill";
+          track.appendChild(fill);
 
-          const barsWrap = document.createElement("div");
-          barsWrap.className = "wa-wave-bars";
-          barsWrap.setAttribute("aria-hidden", "true");
-          const barHeights = [35, 62, 48, 88, 72, 40, 95, 65, 52, 84, 70, 44, 92, 60, 76, 38, 86, 68, 50, 90, 56, 42];
-          const barEls = barHeights.map((h, i) => {
-            const b = document.createElement("span");
-            b.className = "wa-bar";
-            b.style.height = `${h}%`;
-            b.style.animationDelay = `${(i % 5) * 70}ms`;
-            barsWrap.appendChild(b);
-            return b;
+          const dur = document.createElement("span");
+          dur.className = "wa-time nums";
+          dur.textContent = msg.ptt.durationLabel;
+
+          controls.append(playBtn, track, dur);
+
+          const tag = document.createElement("span");
+          tag.className = "wa-time";
+          tag.textContent = msg.ptt.tag;
+
+          const transcript = document.createElement("p");
+          transcript.className = "wa-ptt-transcript";
+          transcript.textContent = msg.ptt.transcript;
+
+          playBtn.addEventListener("click", () => {
+            pttWrap.classList.remove("is-playing");
+            void pttWrap.offsetWidth;
+            pttWrap.classList.add("is-playing");
+            playBtn.textContent = "Pausa";
+            setTimeout(() => {
+              playBtn.textContent = "Oír";
+            }, 2200);
           });
 
-          const timeEl = document.createElement("span");
-          timeEl.className = "wa-ptt-time tabular";
-          timeEl.textContent = msg.ptt.durationLabel;
-
-          player.append(playBtn, barsWrap, timeEl);
-          pttWrap.appendChild(player);
-
-          const transcript = document.createElement("div");
-          transcript.className = "wa-transcript";
-          const tLabel = document.createElement("span");
-          tLabel.className = "wa-transcript-label";
-          tLabel.textContent = "Transcripción generada:";
-          const tBody = document.createElement("span");
-          tBody.textContent = msg.ptt.transcript;
-          transcript.append(tLabel, tBody);
-          pttWrap.appendChild(transcript);
-
-          let elapsed = 0;
-          const total = msg.ptt.durationSec;
-
-          function updateBars(progressRatio) {
-            const activeCount = Math.round(progressRatio * barEls.length);
-            barEls.forEach((b, idx) => {
-              b.classList.toggle("is-played", idx < activeCount);
-            });
-          }
-
-          function startPlayback() {
-            if (pttPlaying) {
-              stopPtt();
-              pttWrap.classList.remove("is-playing");
-              playBtn.innerHTML = playSvg;
-              playBtn.setAttribute("aria-label", "Reproducir nota de voz simulada");
-              return;
-            }
-            if (elapsed >= total) elapsed = 0;
-            pttPlaying = true;
-            pttWrap.classList.add("is-playing");
-            playBtn.innerHTML = pauseSvg;
-            playBtn.setAttribute("aria-label", "Pausar nota de voz simulada");
-
-            pttTimer = setInterval(() => {
-              elapsed += 0.25;
-              const ratio = Math.min(1, elapsed / total);
-              updateBars(ratio);
-              const sec = Math.min(total, Math.floor(elapsed));
-              timeEl.textContent = `0:0${sec}`;
-              if (elapsed >= total) {
-                stopPtt();
-                pttWrap.classList.remove("is-playing");
-                playBtn.innerHTML = playSvg;
-                playBtn.setAttribute("aria-label", "Reproducir nota de voz simulada");
-                timeEl.textContent = msg.ptt.durationLabel;
-              }
-            }, 250);
-          }
-
-          playBtn.addEventListener("click", startPlayback);
-          article.appendChild(pttWrap);
-
-          if (autoPlayPtt) {
-            setTimeout(() => startPlayback(), 220);
-          }
+          pttWrap.append(controls, tag, transcript);
+          bubble.appendChild(pttWrap);
         } else {
-          const textDiv = document.createElement("div");
-          textDiv.className = "wa-text";
-          textDiv.innerHTML = formatWhatsAppText(msg.text);
-          article.appendChild(textDiv);
+          const body = document.createElement("div");
+          body.innerHTML = formatWhatsAppText(msg.text);
+          bubble.appendChild(body);
         }
 
-        const meta = document.createElement("div");
-        meta.className = "wa-meta tabular";
-        const timeSpan = document.createElement("span");
-        timeSpan.textContent = msg.time;
-        meta.appendChild(timeSpan);
-        if (msg.out) {
-          const ticks = document.createElement("span");
-          ticks.className = "wa-ticks";
-          ticks.setAttribute("aria-label", "Leído");
-          ticks.innerHTML =
-            '<svg width="16" height="10" viewBox="0 0 18 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5.5 4.2 8.8 10.5 2"/><path d="M6.5 5.5 9.7 8.8 16 2"/></svg>';
-          meta.appendChild(ticks);
-        }
-        article.appendChild(meta);
-        chatBody.appendChild(article);
+        const time = document.createElement("span");
+        time.className = "wa-time nums";
+        time.textContent = msg.time;
+        bubble.appendChild(time);
+
+        feed.appendChild(bubble);
       });
     }
 
-    tabs.forEach((tab, idx) => {
-      tab.addEventListener("click", () => {
-        renderScenario(tab.dataset.scenario, tab.dataset.scenario === "messi");
-        tab.scrollIntoView({ block: "nearest", inline: "nearest" });
-      });
-
-      tab.addEventListener("keydown", (e) => {
-        let nextIdx = -1;
-        if (e.key === "ArrowRight") nextIdx = (idx + 1) % tabs.length;
-        else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + tabs.length) % tabs.length;
-        else if (e.key === "Home") nextIdx = 0;
-        else if (e.key === "End") nextIdx = tabs.length - 1;
-
-        if (nextIdx >= 0) {
-          e.preventDefault();
-          const nextTab = tabs[nextIdx];
-          nextTab.focus();
-          renderScenario(nextTab.dataset.scenario, false);
-          nextTab.scrollIntoView({ block: "nearest", inline: "nearest" });
-        }
-      });
-    });
-
-    if (replayBtn) {
-      replayBtn.addEventListener("click", () => {
-        renderScenario(currentScenarioKey, currentScenarioKey === "messi");
-      });
-    }
-
-    if (copyTrigger) {
-      copyTrigger.addEventListener("click", () => {
-        const cmd = SCENARIOS[currentScenarioKey]?.command || "";
-        if (cmd) copyTextWithFeedback(cmd, copyTrigger, copyLabel, "Copiar");
-      });
-    }
-
-    renderScenario("memoria", false);
-  }
-
-  // 3. Diagrama interactivo de 4 capas
-  function initPipeline() {
-    const stepBtns = Array.from(document.querySelectorAll(".pipeline-step[data-layer]"));
-    const badge = document.getElementById("layerBadge");
-    const latency = document.getElementById("layerLatency");
-    const title = document.getElementById("layerTitle");
-    const desc = document.getElementById("layerDesc");
-    const source = document.getElementById("layerSource");
-    const output = document.getElementById("layerOutput");
-
-    if (!stepBtns.length) return;
-
-    function selectLayer(layerKey) {
-      const data = PIPELINE_LAYERS[layerKey];
-      if (!data) return;
-
-      stepBtns.forEach((btn) => {
-        const active = btn.dataset.layer === layerKey;
-        btn.classList.toggle("is-active", active);
-        btn.setAttribute("aria-selected", String(active));
-      });
-
-      if (badge) badge.textContent = data.badge;
-      if (latency) latency.textContent = data.latency;
-      if (title) title.textContent = data.title;
-      if (desc) desc.textContent = data.desc;
-      if (source) source.textContent = data.source;
-      if (output) output.textContent = data.output;
-    }
-
-    stepBtns.forEach((btn, idx) => {
-      btn.addEventListener("click", () => selectLayer(btn.dataset.layer));
-      btn.addEventListener("keydown", (e) => {
-        let next = -1;
-        if (e.key === "ArrowDown" || e.key === "ArrowRight") next = (idx + 1) % stepBtns.length;
-        else if (e.key === "ArrowUp" || e.key === "ArrowLeft") next = (idx - 1 + stepBtns.length) % stepBtns.length;
-        if (next >= 0) {
-          e.preventDefault();
-          stepBtns[next].focus();
-          selectLayer(stepBtns[next].dataset.layer);
-        }
-      });
-    });
-  }
-
-  // 4. Constructor de Voces & Modulación
-  function initVoiceComposer() {
-    const groupTabs = Array.from(document.querySelectorAll(".vg-tab[data-voice-group]"));
-    const chipsContainer = document.getElementById("voiceChipsContainer");
-    const modChips = Array.from(document.querySelectorAll(".mod-chip[data-mod]"));
-    const previewEl = document.getElementById("composedVoicePreview");
-    const copyBtn = document.getElementById("copyComposedVoice");
-    const copyLabel = document.getElementById("composedVoiceLabel");
-
-    if (!chipsContainer || !previewEl) return;
-
-    let activeGroup = "famosos";
-    let selectedVoice = "messi";
-    let selectedMod = "[enojado]";
-
-    function updatePreview() {
-      const modPart = selectedMod ? ` ${selectedMod}` : "";
-      previewEl.textContent = `!${selectedVoice}${modPart} Che, ¿viste lo que puso el fiscal recién?`;
-    }
-
-    function renderVoices() {
-      const list = VOICES[activeGroup] || [];
-      chipsContainer.innerHTML = "";
-      list.forEach((v) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `voice-chip${v === selectedVoice ? " is-selected" : ""}`;
-        btn.textContent = `!${v}`;
-        btn.addEventListener("click", () => {
-          selectedVoice = v;
-          renderVoices();
-          updatePreview();
-        });
-        chipsContainer.appendChild(btn);
-      });
-    }
-
-    groupTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        activeGroup = tab.dataset.voiceGroup;
-        groupTabs.forEach((t) => {
-          const isAct = t === tab;
-          t.classList.toggle("is-active", isAct);
-          t.setAttribute("aria-selected", String(isAct));
-        });
-        if (!(VOICES[activeGroup] || []).includes(selectedVoice)) {
-          selectedVoice = VOICES[activeGroup][0];
-        }
-        renderVoices();
-        updatePreview();
-      });
-    });
-
-    modChips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        const tag = chip.dataset.mod;
-        selectedMod = selectedMod === tag ? "" : tag;
-        modChips.forEach((c) => c.classList.toggle("is-selected", c.dataset.mod === selectedMod));
-        updatePreview();
-      });
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => renderScenario(btn.dataset.scenario));
     });
 
     if (copyBtn) {
       copyBtn.addEventListener("click", () => {
-        copyTextWithFeedback(previewEl.textContent.trim(), copyBtn, copyLabel, "Copiar comando");
+        const scenario = SCENARIOS[activeKey];
+        if (scenario) copyTextWithFeedback(scenario.command, copyBtn, copyLabel, "Copiar");
       });
     }
 
-    renderVoices();
+    renderScenario("memoria");
+  }
+
+  // 5. Acordeón de Pipeline de 4 Capas
+  function initAccordion() {
+    const panels = Array.from(document.querySelectorAll("#pipelineAccordion .acc-panel"));
+    if (!panels.length) return;
+
+    panels.forEach((panel) => {
+      const trigger = panel.querySelector(".acc-trigger");
+      if (!trigger) return;
+
+      trigger.addEventListener("click", () => {
+        panels.forEach((p) => {
+          const active = p === panel;
+          p.classList.toggle("is-open", active);
+          const btn = p.querySelector(".acc-trigger");
+          if (btn) btn.setAttribute("aria-expanded", String(active));
+        });
+      });
+    });
+  }
+
+  // 6. Armador de comando de voz
+  function initVoiceBuilder() {
+    const voiceList = document.getElementById("voiceList");
+    const modList = document.getElementById("modTagList");
+    const preview = document.getElementById("voiceCommandPreview");
+    const copyBtn = document.getElementById("copyVoiceCmd");
+    const copyLabel = document.getElementById("copyVoiceLabel");
+
+    if (!voiceList || !modList || !preview) return;
+
+    let selectedVoice = "messi";
+    let selectedTag = "[enojado]";
+    const sampleText = "Che, ¿a qué hora caen al asado?";
+
+    function updatePreview() {
+      const parts = [`!${selectedVoice}`];
+      if (selectedTag) parts.push(selectedTag);
+      parts.push(sampleText);
+      preview.textContent = parts.join(" ");
+    }
+
+    VOICES.forEach((voice) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip-btn";
+      btn.textContent = `!${voice}`;
+      btn.setAttribute("aria-pressed", String(voice === selectedVoice));
+      btn.addEventListener("click", () => {
+        selectedVoice = voice;
+        voiceList.querySelectorAll(".chip-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+        updatePreview();
+      });
+      voiceList.appendChild(btn);
+    });
+
+    MOD_TAGS.forEach((tag) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip-btn";
+      btn.textContent = tag;
+      btn.setAttribute("aria-pressed", String(tag === selectedTag));
+      btn.addEventListener("click", () => {
+        const next = selectedTag === tag ? "" : tag;
+        selectedTag = next;
+        modList.querySelectorAll(".chip-btn").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b.textContent === selectedTag));
+        });
+        updatePreview();
+      });
+      modList.appendChild(btn);
+    });
+
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        copyTextWithFeedback(preview.textContent || "", copyBtn, copyLabel, "Copiar comando");
+      });
+    }
+
     updatePreview();
   }
 
-  // 5. Explorador del Catálogo de 145 Comandos
-  function initCommandCatalog() {
-    const searchInput = document.getElementById("commandSearch");
-    const clearBtn = document.getElementById("searchClear");
-    const tablist = document.getElementById("categoryTablist");
+  // 7. Explorador de los 145 comandos
+  function initCatalog() {
+    const tabsContainer = document.getElementById("categoryTabs");
+    const searchInput = document.getElementById("cmdSearch");
     const grid = document.getElementById("commandsGrid");
-    const summary = document.getElementById("catalogSummary");
+    const countEl = document.getElementById("catalogCount");
     const footer = document.getElementById("catalogFooter");
-    const toggleAllBtn = document.getElementById("toggleAllBtn");
+    const toggleBtn = document.getElementById("toggleAllBtn");
 
-    if (!tablist || !grid || !searchInput) return;
+    if (!tabsContainer || !grid) return;
 
-    const DEFAULT_LIMIT = 18;
-    let activeCat = "Todas";
-    let showAllInTodas = false;
-    let query = "";
+    let activeCategory = "Todas";
+    let showAll = false;
+    const INITIAL_LIMIT = 18;
 
-    function getCategoryCount(cat) {
-      if (cat === "Todas") return COMMANDS.length;
-      return COMMANDS.filter((c) => c.cat === cat).length;
-    }
-
-    function renderTabs() {
-      tablist.innerHTML = "";
-      CATEGORIES.forEach((cat, idx) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "cat-tab";
-        btn.setAttribute("role", "tab");
-        btn.setAttribute("aria-selected", String(cat === activeCat));
-        btn.dataset.cat = cat;
-
-        const labelSpan = document.createElement("span");
-        labelSpan.textContent = cat;
-        const countSpan = document.createElement("span");
-        countSpan.className = "cat-count tabular";
-        countSpan.textContent = String(getCategoryCount(cat));
-
-        btn.append(labelSpan, countSpan);
-
-        btn.addEventListener("click", () => {
-          activeCat = cat;
-          renderTabs();
-          renderCommands();
-          const activeEl = tablist.querySelector('[aria-selected="true"]');
-          if (activeEl) {
-            activeEl.scrollIntoView({ block: "nearest", inline: "nearest" });
-          }
+    CATEGORIES.forEach((cat) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cat-tab";
+      btn.role = "tab";
+      btn.textContent = cat;
+      btn.setAttribute("aria-selected", String(cat === activeCategory));
+      btn.addEventListener("click", () => {
+        activeCategory = cat;
+        showAll = false;
+        tabsContainer.querySelectorAll(".cat-tab").forEach((t) => {
+          t.setAttribute("aria-selected", String(t.textContent === cat));
         });
-
-        btn.addEventListener("keydown", (e) => {
-          const allTabs = Array.from(tablist.querySelectorAll(".cat-tab"));
-          let nextIdx = -1;
-          if (e.key === "ArrowRight") nextIdx = (idx + 1) % allTabs.length;
-          else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + allTabs.length) % allTabs.length;
-          else if (e.key === "Home") nextIdx = 0;
-          else if (e.key === "End") nextIdx = allTabs.length - 1;
-
-          if (nextIdx >= 0) {
-            e.preventDefault();
-            activeCat = CATEGORIES[nextIdx];
-            renderTabs();
-            renderCommands();
-            const focused = tablist.querySelectorAll(".cat-tab")[nextIdx];
-            if (focused) {
-              focused.focus();
-              focused.scrollIntoView({ block: "nearest", inline: "nearest" });
-            }
-          }
-        });
-
-        tablist.appendChild(btn);
+        btn.scrollIntoView({ block: "nearest", inline: "nearest" });
+        render();
       });
-    }
+      tabsContainer.appendChild(btn);
+    });
 
-    function normalizeStr(s) {
-      return s
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function renderCommands() {
-      const q = normalizeStr(query.trim());
-      if (clearBtn) clearBtn.hidden = q.length === 0;
-
-      const filtered = COMMANDS.filter((cmd) => {
-        const matchesCat = activeCat === "Todas" || cmd.cat === activeCat;
-        if (!matchesCat) return false;
-        if (!q) return true;
-        const haystack = normalizeStr(`${cmd.name} ${cmd.aliases} ${cmd.desc} ${cmd.cat}`);
-        return haystack.includes(q);
+    function render() {
+      const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+      const filtered = COMMANDS.filter((c) => {
+        const matchCat = activeCategory === "Todas" || c.cat === activeCategory;
+        if (!matchCat) return false;
+        if (!query) return true;
+        return (
+          c.name.toLowerCase().includes(query) ||
+          c.aliases.toLowerCase().includes(query) ||
+          c.desc.toLowerCase().includes(query) ||
+          c.cat.toLowerCase().includes(query)
+        );
       });
 
-      const shouldLimit = activeCat === "Todas" && !q && !showAllInTodas;
-      const visible = shouldLimit ? filtered.slice(0, DEFAULT_LIMIT) : filtered;
+      const isDefaultUnfiltered = activeCategory === "Todas" && !query && !showAll;
+      const visible = isDefaultUnfiltered ? filtered.slice(0, INITIAL_LIMIT) : filtered;
 
-      if (summary) {
-        if (filtered.length === 0) {
-          summary.textContent = "0 resultados";
-        } else if (shouldLimit) {
-          summary.textContent = `Mostrando ${visible.length} de ${COMMANDS.length} comandos`;
-        } else {
-          summary.textContent = `${filtered.length} ${filtered.length === 1 ? "comando" : "comandos"}${activeCat !== "Todas" ? ` en ${activeCat}` : ""}`;
-        }
+      if (countEl) {
+        countEl.textContent =
+          filtered.length === COMMANDS.length && isDefaultUnfiltered
+            ? `Mostrando ${visible.length} de ${COMMANDS.length} comandos`
+            : `${filtered.length} ${filtered.length === 1 ? "comando" : "comandos"}`;
       }
 
-      if (footer && toggleAllBtn) {
-        const showFooter = activeCat === "Todas" && !q && filtered.length > DEFAULT_LIMIT;
-        footer.hidden = !showFooter;
-        toggleAllBtn.textContent = showAllInTodas
-          ? "Contraer catálogo"
+      if (footer) {
+        footer.hidden = !(activeCategory === "Todas" && !query && filtered.length > INITIAL_LIMIT);
+      }
+      if (toggleBtn) {
+        toggleBtn.textContent = showAll
+          ? "Mostrar resumen inicial"
           : `Ver los ${COMMANDS.length} comandos completos`;
       }
 
       grid.innerHTML = "";
-
-      if (visible.length === 0) {
+      if (!visible.length) {
         const empty = document.createElement("div");
         empty.className = "commands-empty";
-        empty.textContent = `No encontramos comandos que coincidan con "${query}". Probá con otra palabra o limpiá el filtro.`;
+        empty.textContent = "No hay comandos que coincidan con esa búsqueda.";
         grid.appendChild(empty);
         return;
       }
 
-      const fragment = document.createDocumentFragment();
-
+      const frag = document.createDocumentFragment();
       visible.forEach((cmd) => {
-        const card = document.createElement("article");
-        card.className = "cmd-card";
+        const row = document.createElement("article");
+        row.className = "cmd-row";
 
         const top = document.createElement("div");
         top.className = "cmd-top";
 
-        const code = document.createElement("code");
-        code.className = "cmd-name";
-        code.textContent = cmd.name;
+        const nameEl = document.createElement("code");
+        nameEl.className = "cmd-name";
+        nameEl.textContent = cmd.name;
 
         const copyBtn = document.createElement("button");
         copyBtn.type = "button";
         copyBtn.className = "cmd-copy";
-        copyBtn.setAttribute("aria-label", `Copiar comando ${cmd.name}`);
-
         const copyText = document.createElement("span");
         copyText.textContent = "Copiar";
         copyBtn.appendChild(copyText);
-
         copyBtn.addEventListener("click", () => {
           copyTextWithFeedback(cmd.name, copyBtn, copyText, "Copiar");
         });
 
-        top.append(code, copyBtn);
+        top.append(nameEl, copyBtn);
 
-        const desc = document.createElement("p");
-        desc.className = "cmd-desc";
-        desc.textContent = cmd.desc;
+        const descEl = document.createElement("p");
+        descEl.className = "cmd-desc";
+        descEl.textContent = cmd.desc;
 
-        const meta = document.createElement("div");
-        meta.className = "cmd-meta";
+        const metaEl = document.createElement("span");
+        metaEl.className = "cmd-meta";
+        metaEl.textContent = cmd.aliases ? `${cmd.cat} · Alias: ${cmd.aliases}` : cmd.cat;
 
-        const aliases = document.createElement("span");
-        aliases.className = "cmd-aliases";
-        aliases.textContent = !cmd.aliases ? "Sin alias" : `Alias: ${cmd.aliases}`;
-
-        const catTag = document.createElement("span");
-        catTag.className = "cmd-cat-tag";
-        catTag.textContent = cmd.cat;
-
-        meta.append(aliases, catTag);
-        card.append(top, desc, meta);
-        fragment.appendChild(card);
+        row.append(top, descEl, metaEl);
+        frag.appendChild(row);
       });
 
-      grid.appendChild(fragment);
+      grid.appendChild(frag);
     }
 
-    searchInput.addEventListener("input", () => {
-      query = searchInput.value;
-      renderCommands();
-    });
+    if (searchInput) {
+      searchInput.addEventListener("input", render);
+    }
 
-    if (clearBtn) {
-      clearBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        query = "";
-        searchInput.focus();
-        renderCommands();
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        showAll = !showAll;
+        render();
       });
     }
 
-    if (toggleAllBtn) {
-      toggleAllBtn.addEventListener("click", () => {
-        showAllInTodas = !showAllInTodas;
-        renderCommands();
-      });
-    }
-
-    renderTabs();
-    renderCommands();
+    render();
   }
 
-  // 6. Menú móvil accesible
-  function initMobileMenu() {
-    const toggle = document.getElementById("menuToggle");
-    const drawer = document.getElementById("mobileNav");
-    if (!toggle || !drawer) return;
-
-    function setOpen(open) {
-      drawer.hidden = !open;
-      toggle.setAttribute("aria-expanded", String(open));
-      toggle.setAttribute("aria-label", open ? "Cerrar menú de navegación" : "Abrir menú de navegación");
-    }
-
-    toggle.addEventListener("click", () => {
-      const isOpen = toggle.getAttribute("aria-expanded") === "true";
-      setOpen(!isOpen);
-    });
-
-    drawer.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => setOpen(false));
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
-        setOpen(false);
-        toggle.focus();
-      }
-    });
-  }
-
-  // Inicialización
-  document.addEventListener("DOMContentLoaded", () => {
-    initMobileMenu();
-    initSimulator();
-    initPipeline();
-    initVoiceComposer();
-    initCommandCatalog();
-    fetchServerHealth();
-  });
+  initReveals();
+  fetchServerHealth();
+  initMobileNav();
+  initSimulator();
+  initAccordion();
+  initVoiceBuilder();
+  initCatalog();
 })();

@@ -1,634 +1,540 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0B1016" />
-  <meta name="color-scheme" content="dark" />
-  <title>Empy-Bot: Bot para WhatsApp con Memoria Real, Clonación de Voz y Economía</title>
-  <meta name="description" content="Bot para WhatsApp en TypeScript sobre Baileys y Supabase pgvector. Memoria semántica de 4 capas, +35 voces clonadas, economía urbana, minijuegos, descargas y utilidades grupales." />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f9f8">
+  <meta name="description" content="Empy-Bot: bot de WhatsApp en TypeScript con memoria semántica pgvector, más de 35 voces clonadas, economía urbana, 14+ minijuegos y utilidades en tiempo real.">
+  <title>Empy-Bot — Bot con memoria real y voz propia para WhatsApp</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-  <!-- Navbar sticky translúcida -->
-  <header class="site-header" id="top">
-    <div class="container header-inner">
-      <a href="#top" class="brand" aria-label="Empy-Bot inicio">
-        <svg class="brand-logo" width="32" height="32" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <rect width="64" height="64" rx="16" fill="#121923"/>
-          <rect x="2" y="2" width="60" height="60" rx="14" stroke="#25D366" stroke-opacity="0.4" stroke-width="2"/>
-          <path d="M16 22C16 17.5817 19.5817 14 24 14H40C44.4183 14 48 17.5817 48 22V36C48 40.4183 44.4183 44 40 44H27L18 51V42.4C16.75 40.8 16 38.5 16 36V22Z" fill="#0B1016" stroke="#25D366" stroke-width="2.5" stroke-linejoin="round"/>
-          <rect x="24" y="26" width="3.5" height="6" rx="1.75" fill="#25D366"/>
-          <rect x="30.25" y="22" width="3.5" height="14" rx="1.75" fill="#25D366"/>
-          <rect x="36.5" y="25" width="3.5" height="8" rx="1.75" fill="#10B981"/>
-        </svg>
-        <span class="brand-name">Empy-Bot</span>
+  <!-- Barra superior limpia -->
+  <header class="topbar wrap">
+    <div class="topbar-inner">
+      <a href="#top" class="wordmark">
+        <span class="motif-dot" aria-hidden="true"></span>
+        <span>Empy-Bot</span>
       </a>
 
       <nav class="nav-links" aria-label="Navegación principal">
-        <a href="#capacidades" class="nav-link">Capacidades</a>
-        <a href="#pipeline" class="nav-link">Pipeline IA</a>
-        <a href="#economia-voces" class="nav-link">Voces &amp; Economía</a>
-        <a href="#comandos" class="nav-link">Comandos</a>
+        <a href="#simulador" class="link">Simulador</a>
+        <a href="#capacidades" class="link">Capacidades</a>
+        <a href="#pipeline" class="link">Pipeline IA</a>
+        <a href="#comandos" class="link">Comandos</a>
       </nav>
 
-      <div class="header-actions">
-        <div class="status-pill" id="serverStatusPill" role="status" aria-live="polite" title="Estado de conexión del bot en vivo">
-          <span class="status-dot" id="serverStatusDot" aria-hidden="true"></span>
-          <span class="status-text" id="serverStatusText">Consultando estado…</span>
-        </div>
-        <a href="/admin" class="admin-link">Admin</a>
-        <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú de navegación">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <line x1="4" y1="7" x2="20" y2="7" />
-            <line x1="4" y1="12" x2="20" y2="12" />
-            <line x1="4" y1="17" x2="20" y2="17" />
-          </svg>
+      <div class="topbar-actions">
+        <span class="live-state small muted" id="serverStatusText" role="status" aria-live="polite">Demo local</span>
+        <a href="/admin" class="button button-sm">Admin</a>
+        <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Abrir menú">
+          <span></span><span></span>
         </button>
       </div>
     </div>
 
-    <!-- Drawer móvil -->
     <div class="mobile-nav" id="mobileNav" hidden>
-      <div class="mobile-nav-inner">
-        <a href="#capacidades" class="mobile-nav-link">Capacidades</a>
-        <a href="#pipeline" class="mobile-nav-link">Pipeline IA</a>
-        <a href="#economia-voces" class="mobile-nav-link">Voces &amp; Economía</a>
-        <a href="#comandos" class="mobile-nav-link">Comandos</a>
-        <div class="mobile-nav-footer">
-          <a href="/admin" class="btn btn-secondary">Panel Admin</a>
-          <a href="/qr" class="btn btn-ghost">Visor QR</a>
-        </div>
-      </div>
+      <a href="#simulador" class="mobile-link">Simulador</a>
+      <a href="#capacidades" class="mobile-link">Capacidades</a>
+      <a href="#pipeline" class="mobile-link">Pipeline IA</a>
+      <a href="#economia-voces" class="mobile-link">Voces y economía</a>
+      <a href="#comandos" class="mobile-link">145 comandos</a>
+      <a href="/admin" class="button">Panel Admin</a>
     </div>
   </header>
 
-  <main id="contenido-principal">
-    <!-- Hero Asimétrico + Simulador Interactivo WhatsApp -->
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="container hero-grid">
+  <main id="contenido">
+    <!-- 1. HERO: Giant cropped speech-bubble motif -->
+    <section class="hero wrap" id="top">
+      <div class="hero-motif" aria-hidden="true">
+        <svg viewBox="0 0 800 860" preserveAspectRatio="none" fill="none">
+          <path d="M90 0H800V860H180L0 740V110C0 49.2 49.2 0 110 0H90Z" fill="#06525c"/>
+        </svg>
+      </div>
+
+      <div class="grid hero-grid">
         <div class="hero-copy">
-          <h1 id="hero-title" class="hero-title">Un bot con memoria real y voz propia para tu grupo de WhatsApp.</h1>
-          <p class="hero-subtitle">
-            Empy-Bot corre en TypeScript sobre Baileys y Supabase. Se acuerda de lo que dijo cada integrante, clona voces en nota de voz, arbitra discusiones con el archivo del chat, descarga videos y maneja una economía completa con minijuegos sin salir del grupo.
+          <h1 class="display lines">
+            <span class="line"><span data-line style="--i:0">Tu grupo, con</span></span>
+            <span class="line"><span data-line style="--i:1">memoria y voz.</span></span>
+          </h1>
+          <p class="lead" data-rise style="--i:1">
+            Corre en TypeScript sobre Baileys y Supabase: recuerda lo que dijo cada integrante, clona más de 35 voces en nota de voz, arbitra discusiones y maneja una economía urbana dentro de WhatsApp.
           </p>
-
-          <div class="hero-ctas">
-            <a href="#comandos" class="btn btn-primary">
-              Explorar comandos
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
-            </a>
-            <a href="#pipeline" class="btn btn-secondary">Ver arquitectura</a>
+          <div class="hero-actions" data-rise style="--i:2">
+            <a href="#comandos" class="button">Explorar 145 comandos</a>
+            <a href="#simulador" class="link-plain">Probar en el chat</a>
           </div>
-
-          <dl class="hero-metrics" aria-label="Métricas del sistema">
-            <div class="metric-item">
-              <dt>Catálogo real</dt>
-              <dd class="tabular">145 comandos</dd>
+          <dl class="hero-facts nums" data-rise style="--i:3">
+            <div>
+              <dt>Comandos</dt>
+              <dd>145 reales</dd>
             </div>
-            <div class="metric-item">
-              <dt>Síntesis neuronal</dt>
-              <dd class="tabular">+35 voces</dd>
+            <div>
+              <dt>Voces</dt>
+              <dd>+35 Fish Audio</dd>
             </div>
-            <div class="metric-item">
-              <dt>Chat en vivo</dt>
-              <dd class="tabular">4 capas IA</dd>
-            </div>
-            <div class="metric-item">
-              <dt>Uptime servidor</dt>
-              <dd class="tabular" id="heroUptime">Demo</dd>
+            <div>
+              <dt>Estado</dt>
+              <dd id="heroUptime">Listo en Render</dd>
             </div>
           </dl>
         </div>
 
-        <!-- Simulador Interactivo WhatsApp -->
-        <div class="simulator-wrap" data-ui="whatsapp-simulator">
-          <div class="wa-shell" aria-label="Simulador interactivo de grupo de WhatsApp">
-            <div class="wa-topbar">
-              <div class="wa-group-info">
-                <div class="wa-avatar" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
-                    <path d="M16 22C16 17.5817 19.5817 14 24 14H40C44.4183 14 48 17.5817 48 22V36C48 40.4183 44.4183 44 40 44H27L18 51V42.4C16.75 40.8 16 38.5 16 36V22Z" fill="#0B1016" stroke="#25D366" stroke-width="3.5" stroke-linejoin="round"/>
-                    <rect x="25" y="25" width="3.5" height="7" rx="1.75" fill="#25D366"/>
-                    <rect x="30.5" y="21" width="3.5" height="15" rx="1.75" fill="#25D366"/>
-                    <rect x="36" y="24" width="3.5" height="9" rx="1.75" fill="#10B981"/>
-                  </svg>
-                </div>
-                <div class="wa-group-meta">
-                  <div class="wa-group-name">La Banda del Archivo</div>
-                  <div class="wa-group-sub" id="simBotState">Empy-Bot · en línea</div>
-                </div>
+        <div class="hero-stage" data-rise style="--i:2">
+          <div class="wa-preview" data-ui>
+            <div class="wa-preview-head">
+              <div class="wa-avatar" aria-hidden="true">E</div>
+              <div>
+                <p class="wa-title">La Banda del Asado</p>
+                <p class="wa-sub">Memoria pgvector · 4 capas activas</p>
               </div>
-              <button type="button" class="wa-copy-btn" id="simCopyTrigger" aria-label="Copiar comando del escenario actual">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="9" y="9" width="13" height="13" rx="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
+              <span class="wa-tag nums">GROUP_JID</span>
+            </div>
+            <div class="wa-preview-feed">
+              <div class="wa-bubble wa-out">
+                <span class="wa-sender">Colo</span>
+                <p>@Empy ¿te acordás quién juró que no tomaba más fernet?</p>
+                <span class="wa-time nums">22:14</span>
+              </div>
+              <div class="wa-bubble wa-in">
+                <span class="wa-sender">Empy-Bot</span>
+                <p>El archivo no miente. Fue <strong>Tincho</strong> el sábado 14 a las 04:12 AM: <em>"Juro que hasta diciembre no toco un vaso"</em>. Tirale <code class="cmd-inline">!fiscal</code> para auditarlo.</p>
+                <span class="wa-time nums">22:14</span>
+              </div>
+              <div class="wa-bubble wa-out">
+                <span class="wa-sender">Santi</span>
+                <p>!messi [enojado] Traé hielo por lo menos</p>
+                <span class="wa-time nums">22:16</span>
+              </div>
+              <div class="wa-bubble wa-in wa-ptt-mini">
+                <span class="wa-sender">Empy-Bot · Fish Audio PTT</span>
+                <div class="wa-wave-mini" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <span class="wa-time nums">0:07 · OGG Opus</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SHOWCASE: Simulador Interactivo -->
+    <section class="section wrap showcase" id="simulador">
+      <div class="grid showcase-grid">
+        <div class="showcase-nav" data-reveal>
+          <h2 class="head muted">Probá cómo responde</h2>
+          <ul class="scenario-list" role="tablist" aria-label="Escenarios del bot en WhatsApp">
+            <li>
+              <button type="button" class="scenario-btn" role="tab" aria-selected="true" data-scenario="memoria">
+                @Empy · Memoria grupal
+              </button>
+            </li>
+            <li>
+              <button type="button" class="scenario-btn" role="tab" aria-selected="false" data-scenario="messi">
+                !messi [enojado] · Audio PTT
+              </button>
+            </li>
+            <li>
+              <button type="button" class="scenario-btn" role="tab" aria-selected="false" data-scenario="laburar">
+                !laburar · Economía urbana
+              </button>
+            </li>
+            <li>
+              <button type="button" class="scenario-btn" role="tab" aria-selected="false" data-scenario="dolar">
+                !dolar · Tiempo real
+              </button>
+            </li>
+            <li>
+              <button type="button" class="scenario-btn" role="tab" aria-selected="false" data-scenario="impostor">
+                !impostor · Deducción social
+              </button>
+            </li>
+          </ul>
+          <p class="scenario-fact" id="scenarioFact">
+            Recupera hechos guardados (UserFact) y recuerdos vectoriales con pgvector en Supabase sin inventar datos.
+          </p>
+        </div>
+
+        <div class="showcase-stage" data-reveal>
+          <div class="wa-live-shell" data-ui>
+            <div class="wa-live-bar">
+              <div>
+                <p class="wa-live-room">Grupo privado · Simulación en vivo</p>
+                <p class="wa-live-cmd"><code id="waActiveCmd">@Empy ¿te acordás quién dijo que no tomaba más fernet?</code></p>
+              </div>
+              <button type="button" class="wa-copy-btn" id="simCopyTrigger">
                 <span id="simCopyLabel">Copiar</span>
               </button>
             </div>
-
-            <!-- Selector de 5 escenarios -->
-            <div class="wa-scenarios" role="tablist" aria-label="Escenarios interactivos del grupo">
-              <button type="button" class="scenario-chip" role="tab" aria-selected="true" data-scenario="memoria">
-                @Empy (Memoria del grupo)
-              </button>
-              <button type="button" class="scenario-chip" role="tab" aria-selected="false" data-scenario="messi">
-                !messi [enojado]
-              </button>
-              <button type="button" class="scenario-chip" role="tab" aria-selected="false" data-scenario="laburar">
-                !laburar (Economía)
-              </button>
-              <button type="button" class="scenario-chip" role="tab" aria-selected="false" data-scenario="dolar">
-                !dolar (Tiempo real)
-              </button>
-              <button type="button" class="scenario-chip" role="tab" aria-selected="false" data-scenario="impostor">
-                !impostor (Deducción social)
-              </button>
-            </div>
-
-            <!-- Ventana de chat -->
-            <div class="wa-chat-body" id="waChatBody" role="tabpanel" aria-live="polite">
-              <!-- Renderizado dinámico por app.js -->
-            </div>
-
-            <div class="wa-composer-bar">
-              <div class="wa-input-preview">
-                <span class="wa-prompt-label">Comando activo:</span>
-                <code class="wa-active-cmd" id="waActiveCmd">@Empy ¿te acordás quién dijo que no tomaba más fernet?</code>
-              </div>
-              <button type="button" class="wa-replay-btn" id="waReplayBtn" aria-label="Repetir animación de respuesta">
-                Probar
-              </button>
-            </div>
+            <div class="wa-live-messages" id="waChatFeed" aria-live="polite"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Bento Grid Asimétrico de Capacidades Core -->
-    <section class="section" id="capacidades" aria-labelledby="capacidades-title">
-      <div class="container">
-        <div class="section-head">
-          <h2 id="capacidades-title" class="section-title">Capacidades pensadas para la dinámica real de un grupo</h2>
-          <p class="section-lead">Cada módulo resuelve una parte concreta del chat: recordar historia, hablar con voz propia, sostener una economía persistente o armar partidas sin instalar apps externas.</p>
+    <!-- 3. FEATURES: Specimens on colour tiles (3 filas balanceadas: 1+2, 2+1, 1+2) -->
+    <section class="section wrap features" id="capacidades">
+      <div class="grid features-grid">
+        <div class="features-intro" data-reveal>
+          <h2 class="head">Seis motores</h2>
+          <p>
+            Todo corre dentro del grupo de WhatsApp: desde búsqueda vectorial de viejas promesas hasta un casino con fichas propias y placas rojas al instante.
+          </p>
         </div>
 
-        <div class="bento-grid">
-          <!-- Bloque 1 (7 cols) -->
-          <article class="bento-card bento-span-7">
-            <div class="bento-head">
-              <h3>Memoria semántica y pipeline de 4 capas</h3>
-              <span class="bento-tag mono">pgvector + RAM Cache</span>
-            </div>
-            <p class="bento-desc">
-              Distingue spam y risas sueltas sin gastar API, evalúa relevancia en ~1 segundo, hidrata apodos en 0ms desde memoria y recupera declaraciones pasadas con embeddings en Supabase para responder, arbitrar con <code>!arbitro</code> o pasar factura con <code>!fiscal</code>.
-            </p>
-            <div class="bento-sample" aria-label="Ejemplo de hidratación de memoria">
-              <div class="sample-row">
-                <span class="sample-key mono">UserFact</span>
-                <span class="sample-val">signo: "escorpio" · apodo: "El Colo"</span>
-              </div>
-              <div class="sample-row">
-                <span class="sample-key mono">GroupLexicon</span>
-                <span class="sample-val">jerga comunitaria aprendida automáticamente</span>
-              </div>
-              <div class="sample-row">
-                <span class="sample-key mono">pgvector</span>
-                <span class="sample-val">búsqueda semántica en historial del grupo</span>
+        <div class="specimens-grid">
+          <!-- 1 (span 1) -->
+          <article class="specimen" data-reveal>
+            <div class="tile tile-a">
+              <div class="specimen-ui" data-ui>
+                <p class="ui-label">pgvector · similitud 0.91</p>
+                <p class="ui-quote">"Tincho juró el sábado no tomar más fernet"</p>
+                <div class="ui-meta nums">
+                  <span>UserFact #418</span>
+                  <span>RAM Cache 0 ms</span>
+                </div>
               </div>
             </div>
+            <h3>Memoria semántica y RAG</h3>
+            <p>Guarda apodos, jerga del grupo y hechos por usuario en PostgreSQL para citar el historial real con <code class="cmd-inline">!fiscal</code> o <code class="cmd-inline">!arbitro</code>.</p>
           </article>
 
-          <!-- Bloque 2 (5 cols) -->
-          <article class="bento-card bento-span-5">
-            <div class="bento-head">
-              <h3>Clonación de voz con Fish Audio y Edge-TTS</h3>
-              <span class="bento-tag mono">OGG Opus PTT</span>
+          <!-- 2 (span 2) -->
+          <article class="specimen specimen-wide" data-reveal>
+            <div class="tile tile-accent">
+              <div class="specimen-ui specimen-ui-voice" data-ui>
+                <div class="voice-ui-top">
+                  <span>!messi [enojado]</span>
+                  <span class="nums">OGG Opus · 48 kHz</span>
+                </div>
+                <div class="voice-ui-bars" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="voice-ui-tags">
+                  <span>[cantando]</span>
+                  <span>[grito]</span>
+                  <span>[susurro]</span>
+                  <span>!decir</span>
+                  <span>!tomas</span>
+                </div>
+              </div>
             </div>
-            <p class="bento-desc">
-              Más de 35 voces clonadas con modulación por etiquetas (<code>[enojado]</code>, <code>[cantando]</code>, <code>[susurro]</code>), voz gratuita Edge-TTS (<code>!decir</code>), ElevenLabs v4 (<code>!tomas</code>) y transcripción de notas de voz con Whisper Large v3 (<code>!audio</code>).
-            </p>
-            <div class="bento-wave" aria-hidden="true">
-              <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-            </div>
+            <h3>Clonación de voz con Fish Audio, Edge-TTS y ElevenLabs</h3>
+            <p>Más de 35 voces clonadas de famosos y personajes, ocho etiquetas de entonación y transcripción automática de notas de voz con Whisper Large v3.</p>
           </article>
 
-          <!-- Bloque 3 (5 cols) -->
-          <article class="bento-card bento-span-5 bento-amber">
-            <div class="bento-head">
-              <h3>Economía urbana con oficios y rentas</h3>
-              <span class="bento-tag mono">12 oficios · 5 tiers</span>
+          <!-- 3 (span 2) -->
+          <article class="specimen specimen-wide" data-reveal>
+            <div class="tile tile-b">
+              <div class="specimen-ui" data-ui>
+                <p class="ui-label">!billetera · Mecánico</p>
+                <p class="ui-big nums">$18.920</p>
+                <div class="ui-meta nums">
+                  <span>Tier 5 (+35%)</span>
+                  <span>Universidad (+25%)</span>
+                  <span>Kiosco +$500/día</span>
+                </div>
+              </div>
             </div>
-            <p class="bento-desc">
-              Elegí oficio con <code>!profesion</code>, cursá <code>!universidad</code> para un +25% salarial permanente, comprá herramientas persistentes de Tier 1 a 5, invertí en negocios pasivos para tu <code>!diario</code>, defendé tu billetera con <code>!escudo</code> o apostá en <code>!21</code> y <code>!ruleta</code>.
-            </p>
-            <div class="bento-inline-stat tabular">
-              <span>Base diario <strong>$250</strong></span>
-              <span>Rig minería <strong>+$6.500/día</strong></span>
-            </div>
+            <h3>Economía urbana y oficios</h3>
+            <p>Doce profesiones, título universitario (+25%), herramientas afilables en 5 tiers, negocios pasivos, robos con escudo y casino.</p>
           </article>
 
-          <!-- Bloque 4 (7 cols) -->
-          <article class="bento-card bento-span-7">
-            <div class="bento-head">
-              <h3>14+ minijuegos grupales y de colección</h3>
-              <span class="bento-tag mono">22 comandos</span>
+          <!-- 4 (span 1) -->
+          <article class="specimen" data-reveal>
+            <div class="tile tile-a">
+              <div class="specimen-ui" data-ui>
+                <p class="ui-label">!wordle · Intento 3/6</p>
+                <div class="wordle-mini" aria-hidden="true">
+                  <span class="w-hit">A</span><span class="w-near">S</span><span>A</span><span class="w-hit">D</span><span class="w-hit">O</span>
+                </div>
+                <div class="ui-meta nums">
+                  <span>14+ juegos</span>
+                  <span>Pozo activo</span>
+                </div>
+              </div>
             </div>
-            <p class="bento-desc">
-              Partidas coordinadas en el chat y por privado sin salir de WhatsApp: deducción social con <code>!impostor</code> y <code>!ciego</code>, tableros compartidos de <code>!wordle</code>, <code>!tuttifrutti</code> y <code>!campominado</code>, jefe cooperativo <code>!boss</code>, más álbumes de <code>!pescar</code>, <code>!pokemon</code>, <code>!superheroe</code> y <code>!mlbbquiz</code>.
-            </p>
-            <div class="bento-pills">
-              <span class="mini-cmd mono">!impostor</span>
-              <span class="mini-cmd mono">!wordle</span>
-              <span class="mini-cmd mono">!campominado</span>
-              <span class="mini-cmd mono">!tuttifrutti</span>
-              <span class="mini-cmd mono">!pescar</span>
-              <span class="mini-cmd mono">!pokemon</span>
-              <span class="mini-cmd mono">!boss</span>
-              <span class="mini-cmd mono">!ciego</span>
-            </div>
+            <h3>Minijuegos grupales</h3>
+            <p>El Impostor con palabra por privado, Tutti Frutti, Campo Minado, Ruleta Rusa, pesca, Pokémon por silueta y jefes cooperativos.</p>
           </article>
 
-          <!-- Bloque 5 (6 cols) -->
-          <article class="bento-card bento-span-6">
-            <div class="bento-head">
-              <h3>Cotizaciones en vivo, clima y astrología</h3>
-              <span class="bento-tag mono">APIs + astronomy-engine</span>
+          <!-- 5 (span 1) -->
+          <article class="specimen" data-reveal>
+            <div class="tile tile-b">
+              <div class="specimen-ui" data-ui>
+                <p class="ui-label">DolarApi · Open-Meteo</p>
+                <p class="ui-big nums">Blue $1.230</p>
+                <div class="ui-meta nums">
+                  <span>MEP $1.186</span>
+                  <span>Carta natal</span>
+                </div>
+              </div>
             </div>
-            <p class="bento-desc">
-              Consultá el dólar argentino al instante con <code>!dolar</code> (Oficial, Blue, MEP, Tarjeta, CCL y Cripto), clima con Open-Meteo, efemérides de Wikimedia, fichas TMDB con <code>!peli</code>, búsqueda web con <code>!buscar</code> y cálculo astronómico real para <code>!cartaastral</code>, <code>!sinastria</code> y <code>!tarot</code>.
-            </p>
+            <h3>Tiempo real y astrología</h3>
+            <p>Cotizaciones del dólar argentino, clima, efemérides, fichas TMDB de cine, horóscopo, tarot, sinastría y carta natal astronómica.</p>
           </article>
 
-          <!-- Bloque 6 (6 cols) -->
-          <article class="bento-card bento-span-6">
-            <div class="bento-head">
-              <h3>Stickers, descargas y generadores al vuelo</h3>
-              <span class="bento-tag mono">Sharp + yt-dlp</span>
+          <!-- 6 (span 2) -->
+          <article class="specimen specimen-wide" data-reveal>
+            <div class="tile tile-a">
+              <div class="specimen-ui" data-ui>
+                <p class="ui-label">Sharp WebP · yt-dlp · placas en servidor</p>
+                <p class="ui-quote">CRÓNICA TV · ÚLTIMO MOMENTO EN EL GRUPO</p>
+                <div class="ui-meta">
+                  <span>!tweet · !dni · !cronica</span>
+                  <span>!descargar · !mp3 · !s</span>
+                </div>
+              </div>
             </div>
-            <p class="bento-desc">
-              Bajá videos de TikTok, X, Instagram, Facebook y YouTube con <code>!descargar</code> o audio con <code>!mp3</code>. Convertí fotos y clips a sticker WebP o viceversa con <code>!s</code>, armá rotación por triggers con <code>!sticker</code> y generá placas de <code>!cronica</code>, <code>!tweet</code> y <code>!dni</code>.
-            </p>
+            <h3>Stickers, descargas y placas</h3>
+            <p>Baja videos de TikTok, X, Instagram y Facebook, arma stickers animados, identifica temas con <code class="cmd-inline">!shazam</code> y genera memes en el servidor.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- Arquitectura del Pipeline de 4 Capas -->
-    <section class="section section-surface" id="pipeline" aria-labelledby="pipeline-title">
-      <div class="container">
-        <div class="section-head">
-          <h2 id="pipeline-title" class="section-title">Pipeline conversacional de 4 capas</h2>
-          <p class="section-lead">Cuando alguien menciona <code>@Empy</code>, responde a un mensaje suyo o conversa en el grupo, el flujo filtra ruido antes de hidratar memoria o consumir generación.</p>
-        </div>
-
-        <div class="pipeline-layout">
-          <ol class="pipeline-steps" role="tablist" aria-label="Capas del pipeline de IA">
-            <li class="pipeline-step-item">
-              <button type="button" class="pipeline-step is-active" role="tab" aria-selected="true" data-layer="1">
-                <span class="step-num mono tabular">CAPA 1</span>
-                <span class="step-name">Filtro heurístico local ($0)</span>
-                <span class="step-meta mono">TypeScript · 0 ms</span>
-              </button>
-            </li>
-            <li class="pipeline-step-item">
-              <button type="button" class="pipeline-step" role="tab" aria-selected="false" data-layer="2">
-                <span class="step-num mono tabular">CAPA 2</span>
-                <span class="step-name">Triage rápido</span>
-                <span class="step-meta mono">Groq qwen/qwen3.8-27b</span>
-              </button>
-            </li>
-            <li class="pipeline-step-item">
-              <button type="button" class="pipeline-step" role="tab" aria-selected="false" data-layer="3">
-                <span class="step-num mono tabular">CAPA 3</span>
-                <span class="step-name">Hidratación RAG</span>
-                <span class="step-meta mono">RAM Cache + pgvector</span>
-              </button>
-            </li>
-            <li class="pipeline-step-item">
-              <button type="button" class="pipeline-step" role="tab" aria-selected="false" data-layer="4">
-                <span class="step-num mono tabular">CAPA 4</span>
-                <span class="step-name">Generación con respaldo automático</span>
-                <span class="step-meta mono">Gemma / Gemini + Groq</span>
-              </button>
-            </li>
-          </ol>
-
-          <div class="pipeline-inspector" id="pipelineInspector" role="tabpanel" aria-live="polite">
-            <!-- Actualizado dinámicamente por app.js -->
-            <div class="inspector-top">
-              <span class="inspector-badge mono" id="layerBadge">CAPA 1 · COSTO $0</span>
-              <span class="inspector-latency mono tabular" id="layerLatency">Latencia ~0 ms</span>
-            </div>
-            <h3 class="inspector-title" id="layerTitle">Filtro heurístico local ($0)</h3>
-            <p class="inspector-desc" id="layerDesc">
-              Evalúa cada mensaje entrante de Baileys en memoria local. Las menciones directas a <code>@Empy</code> o respuestas a sus mensajes tienen prioridad inmediata; las intervenciones espontáneas descartan risas sueltas ("jaja", "xd"), emojis aislados y spam respetando un cooldown dinámico.
-            </p>
-            <div class="inspector-grid">
-              <div class="inspector-cell">
-                <span class="cell-label">Módulo fuente</span>
-                <code class="cell-value" id="layerSource">src/services/pipeline/heuristic-filter.ts</code>
-              </div>
-              <div class="inspector-cell">
-                <span class="cell-label">Salida hacia</span>
-                <span class="cell-value" id="layerOutput">Capa 2 (Triage) o descarte silencioso</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stack-strip" aria-label="Stack tecnológico real">
-          <span class="stack-label">Stack técnico</span>
-          <ul class="stack-badges">
-            <li class="stack-badge mono">Node.js 20+ ESM</li>
-            <li class="stack-badge mono">TypeScript</li>
-            <li class="stack-badge mono">@whiskeysockets/baileys</li>
-            <li class="stack-badge mono">Prisma + Supabase pgvector</li>
-            <li class="stack-badge mono">Fish Audio + Edge-TTS + ElevenLabs v4</li>
-            <li class="stack-badge mono">FFmpeg OGG Opus</li>
-            <li class="stack-badge mono">Sharp WebP</li>
-            <li class="stack-badge mono">yt-dlp</li>
-            <li class="stack-badge mono">Whisper Large v3</li>
-          </ul>
-        </div>
+    <!-- 4. HOW IT WORKS: Accordion of tinted panels -->
+    <section class="section wrap pipeline" id="pipeline">
+      <div class="grid pipeline-intro" data-reveal>
+        <h2 class="head">Cómo decide cuándo hablar</h2>
+        <p>
+          Para no saturar el chat, cada mensaje pasa por cuatro filtros en serie. Las menciones a <code class="cmd-inline">@Empy</code> entran directo; el resto solo interviene si suma valor real.
+        </p>
       </div>
-    </section>
 
-    <!-- Deep Dive: Voces, Modulación & Economía Urbana -->
-    <section class="section" id="economia-voces" aria-labelledby="deepdive-title">
-      <div class="container">
-        <div class="section-head">
-          <h2 id="deepdive-title" class="section-title">Motor de voces clonadas y economía urbana persistente</h2>
-          <p class="section-lead">Probá combinaciones de voz y etiquetas de modulación o revisá la progresión completa de oficios, universidad, herramientas e inversiones pasivas.</p>
-        </div>
-
-        <div class="deepdive-grid">
-          <!-- Panel de Voces & Modulación -->
-          <article class="deep-panel" aria-labelledby="voces-heading">
-            <div class="deep-panel-header">
-              <h3 id="voces-heading">Voces &amp; Modulación</h3>
-              <span class="deep-counter mono tabular">+35 voces · 8 tags</span>
-            </div>
-
-            <div class="engines-list">
-              <div class="engine-item">
-                <div class="engine-title">
-                  <code class="mono">!decir &lt;texto&gt;</code>
-                  <span class="engine-badge">Gratuito</span>
-                </div>
-                <p>Motor Edge-TTS con voz neural argentina <code>es-AR-TomasNeural</code>, sin consumo de cuota paga.</p>
-              </div>
-              <div class="engine-item">
-                <div class="engine-title">
-                  <code class="mono">!tomas &lt;texto&gt;</code>
-                  <span class="engine-badge">ElevenLabs v4</span>
-                </div>
-                <p>Voz neuronal expresiva compatible con etiquetas en inglés como <code>[happy]</code>, <code>[chuckles]</code> y <code>[whispering]</code>.</p>
-              </div>
-              <div class="engine-item">
-                <div class="engine-title">
-                  <code class="mono">!&lt;nombre_voz&gt;</code>
-                  <span class="engine-badge">Fish Audio</span>
-                </div>
-                <p>Voces clonadas configurables vía <code>FISH_VOICE_&lt;NOMBRE&gt;</code> o <code>!guardarvoz</code>, transcodificadas a OGG Opus PTT.</p>
-              </div>
-            </div>
-
-            <!-- Compositor interactivo de voz + modulación -->
-            <div class="voice-composer" data-ui="voice-composer">
-              <div class="composer-header">
-                <span class="composer-label">Constructor rápido</span>
-                <button type="button" class="btn-mini-copy" id="copyComposedVoice">
-                  <span id="composedVoiceLabel">Copiar comando</span>
-                </button>
-              </div>
-              <code class="composer-output" id="composedVoicePreview">!messi [enojado] Che, ¿viste lo que puso el fiscal recién?</code>
-            </div>
-
-            <div class="voice-groups">
-              <div class="voice-group-tabs" role="tablist" aria-label="Categorías de voces Fish Audio">
-                <button type="button" class="vg-tab is-active" role="tab" aria-selected="true" data-voice-group="famosos">Famosos y creadores (19)</button>
-                <button type="button" class="vg-tab" role="tab" aria-selected="false" data-voice-group="personajes">Personajes y juegos (18)</button>
-              </div>
-              <div class="voice-chips" id="voiceChipsContainer" role="tabpanel">
-                <!-- Poblado por app.js -->
-              </div>
-            </div>
-
-            <div class="modulation-block">
-              <div class="subblock-label">8 etiquetas de modulación Fish Audio</div>
-              <div class="mod-chips" id="modulationChips">
-                <button type="button" class="mod-chip mono" data-mod="[cantando]">[cantando]</button>
-                <button type="button" class="mod-chip mono is-selected" data-mod="[enojado]">[enojado] / [furia]</button>
-                <button type="button" class="mod-chip mono" data-mod="[grito]">[grito]</button>
-                <button type="button" class="mod-chip mono" data-mod="[susurro]">[susurro]</button>
-                <button type="button" class="mod-chip mono" data-mod="[triste]">[triste] / [llorando]</button>
-                <button type="button" class="mod-chip mono" data-mod="[risa]">[risa]</button>
-                <button type="button" class="mod-chip mono" data-mod="[rapido]">[rapido]</button>
-                <button type="button" class="mod-chip mono" data-mod="[lento]">[lento]</button>
-              </div>
-            </div>
-          </article>
-
-          <!-- Panel de Economía Urbana -->
-          <article class="deep-panel deep-panel-amber" aria-labelledby="eco-heading">
-            <div class="deep-panel-header">
-              <h3 id="eco-heading">Economía Urbana</h3>
-              <span class="deep-counter mono tabular">12 oficios · 5 tiers · 4 rentas</span>
-            </div>
-
-            <div class="eco-block">
-              <div class="subblock-label">12 profesiones + aleatorio (<code>!profesion</code>)</div>
-              <div class="professions-grid">
-                <span class="prof-chip mono">mecanico</span>
-                <span class="prof-chip mono">enfermero</span>
-                <span class="prof-chip mono">modelo</span>
-                <span class="prof-chip mono">programador</span>
-                <span class="prof-chip mono">albanil</span>
-                <span class="prof-chip mono">preventista</span>
-                <span class="prof-chip mono">recepcionista</span>
-                <span class="prof-chip mono">espia</span>
-                <span class="prof-chip mono">manicura</span>
-                <span class="prof-chip mono">tatuadora</span>
-                <span class="prof-chip mono">macumbero</span>
-                <span class="prof-chip mono">profesora_especial</span>
-                <span class="prof-chip prof-random mono">aleatorio</span>
-              </div>
-              <div class="uni-callout">
-                <code class="mono">!universidad</code>
-                <span>Título universitario: <strong>+25% de salario permanente</strong> en tu oficio.</span>
-              </div>
-            </div>
-
-            <div class="eco-block">
-              <div class="subblock-label">5 Tiers de herramientas ($1.200 a $18.000 · persisten si cambiás de oficio)</div>
-              <ul class="tiers-list tabular">
-                <li>
-                  <span class="tier-name mono">Tier 1</span>
-                  <span class="tier-effect">+10% cobro permanente</span>
-                </li>
-                <li>
-                  <span class="tier-name mono">Tier 2</span>
-                  <span class="tier-effect">-15% consumo de energía</span>
-                </li>
-                <li>
-                  <span class="tier-name mono">Tier 3</span>
-                  <span class="tier-effect">+20% cobro permanente</span>
-                </li>
-                <li>
-                  <span class="tier-name mono">Tier 4</span>
-                  <span class="tier-effect">-15s cooldown al laburar</span>
-                </li>
-                <li>
-                  <span class="tier-name mono">Tier 5</span>
-                  <span class="tier-effect">+35% cobro y -15s cooldown</span>
-                </li>
-              </ul>
-            </div>
-
-            <div class="eco-block">
-              <div class="subblock-label">4 Inversiones Pasivas (<code>!tienda negocios</code> · suman a <code>!diario</code>)</div>
-              <div class="investments-table tabular">
-                <div class="inv-row">
-                  <span class="inv-name">Kiosco 24hs</span>
-                  <span class="inv-cost mono">$25.000</span>
-                  <span class="inv-yield mono">+$500/día</span>
-                </div>
-                <div class="inv-row">
-                  <span class="inv-name">Remís Renault Duna</span>
-                  <span class="inv-cost mono">$50.000</span>
-                  <span class="inv-yield mono">+$1.200/día</span>
-                </div>
-                <div class="inv-row">
-                  <span class="inv-name">Monoambiente en alquiler</span>
-                  <span class="inv-cost mono">$100.000</span>
-                  <span class="inv-yield mono">+$2.800/día</span>
-                </div>
-                <div class="inv-row">
-                  <span class="inv-name">Rig de minería</span>
-                  <span class="inv-cost mono">$200.000</span>
-                  <span class="inv-yield mono">+$6.500/día</span>
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Explorador Interactivo del Catálogo Completo de Comandos -->
-    <section class="section section-surface" id="comandos" aria-labelledby="comandos-title">
-      <div class="container">
-        <div class="section-head">
-          <h2 id="comandos-title" class="section-title">Catálogo completo de comandos</h2>
-          <p class="section-lead">Buscá al instante por nombre, alias o descripción entre los 145 comandos verificados de las 10 categorías y copialos con un clic.</p>
-        </div>
-
-        <div class="catalog-controls">
-          <div class="search-wrap">
-            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <label for="commandSearch" class="sr-only">Buscar comando por nombre, alias o descripción</label>
-            <input
-              type="search"
-              id="commandSearch"
-              class="command-search"
-              placeholder="Buscar comando, alias o función (ej. !impostor, dólar, sticker, robar)…"
-              autocomplete="off"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              enterkeyhint="search"
-            />
-            <button type="button" class="search-clear" id="searchClear" hidden aria-label="Limpiar búsqueda">Limpiar</button>
-          </div>
-
-          <div class="catalog-summary tabular" id="catalogSummary" aria-live="polite">
-            Mostrando 18 de 145 comandos
-          </div>
-        </div>
-
-        <!-- Tabs horizontales con scroll suave -->
-        <div class="category-tablist-wrap">
-          <div class="category-tablist" id="categoryTablist" role="tablist" aria-label="Filtrar comandos por categoría">
-            <!-- Generado dinámicamente por app.js -->
-          </div>
-        </div>
-
-        <!-- Grid de resultados -->
-        <div class="commands-grid" id="commandsGrid" role="tabpanel">
-          <!-- Generado dinámicamente por app.js -->
-        </div>
-
-        <div class="catalog-footer" id="catalogFooter">
-          <button type="button" class="btn btn-secondary" id="toggleAllBtn">
-            Ver los 145 comandos completos
+      <div class="accordion" id="pipelineAccordion" data-reveal>
+        <div class="acc-panel is-open" data-layer="1">
+          <button type="button" class="acc-trigger" aria-expanded="true">
+            <span class="acc-sliver-label">Filtro heurístico local</span>
           </button>
+          <div class="acc-body">
+            <h3>Filtro heurístico local</h3>
+            <p>Evalúa el mensaje en memoria a costo cero. Prioriza menciones y respuestas directas; descarta risas sueltas, emojis aislados y spam aplicando cooldown dinámico.</p>
+            <p class="acc-meta nums">Costo $0 · 0 ms · heuristic-filter.ts</p>
+          </div>
         </div>
 
-        <!-- Live region accesible para notificaciones de copiado -->
-        <div class="sr-only" id="copyLiveRegion" role="status" aria-live="polite"></div>
+        <div class="acc-panel" data-layer="2">
+          <button type="button" class="acc-trigger" aria-expanded="false">
+            <span class="acc-sliver-label">Triage rápido Groq</span>
+          </button>
+          <div class="acc-body">
+            <h3>Triage rápido con Groq</h3>
+            <p>Lee el hilo reciente en alrededor de un segundo usando qwen/qwen3.8-27b y clasifica la intención: broma, opinión, consejo, chicana, recuerdo o silencio.</p>
+            <p class="acc-meta nums">~1 s · triage.service.ts</p>
+          </div>
+        </div>
+
+        <div class="acc-panel" data-layer="3">
+          <button type="button" class="acc-trigger" aria-expanded="false">
+            <span class="acc-sliver-label">Hidratación RAG</span>
+          </button>
+          <div class="acc-body">
+            <h3>Hidratación RAG quirúrgica</h3>
+            <p>Resuelve apodos en 0 ms desde caché en RAM e inyecta solo los hechos del usuario, términos de jerga grupal y recuerdos vectoriales de Supabase pgvector.</p>
+            <p class="acc-meta nums">RAM + Supabase · rag-hydration.service.ts</p>
+          </div>
+        </div>
+
+        <div class="acc-panel" data-layer="4">
+          <button type="button" class="acc-trigger" aria-expanded="false">
+            <span class="acc-sliver-label">Generación y fallback</span>
+          </button>
+          <div class="acc-body">
+            <h3>Generación con respaldo automático</h3>
+            <p>Redacta la respuesta con Google Gemma y Gemini Flash (gemma-4-26b-a4b-it, gemini-flash-lite-latest). Si se agota la cuota, conmuta a Groq sin caídas.</p>
+            <p class="acc-meta nums">Gemini / Gemma / Groq · generator.service.ts</p>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Disponibilidad & Hoja de Ruta -->
-    <section class="section roadmap-section" aria-labelledby="roadmap-title">
-      <div class="container">
-        <div class="roadmap-panel">
-          <div class="roadmap-current">
-            <h2 id="roadmap-title" class="roadmap-heading">Disponibilidad actual: arquitectura fail-closed</h2>
-            <p class="roadmap-text">
-              Por diseño de seguridad, Empy-Bot opera actualmente conectado a una comunidad privada principal configurada vía <code>GROUP_JID</code>. Los mensajes directos y grupos externos no autorizados se ignoran de forma silenciosa para proteger la memoria del grupo y las cuotas de API.
-            </p>
-            <div class="roadmap-actions">
-              <a href="/admin" class="btn btn-primary">Ir al Panel Admin</a>
-              <a href="/health" class="btn btn-secondary">Ver JSON /health</a>
-            </div>
-          </div>
+    <!-- 5. ECONOMÍA Y VOCES + FOTOGRAFÍA ARCHIVO / BUENOS AIRES -->
+    <section class="section wrap deep-list" id="economia-voces">
+      <div class="grid deep-grid">
+        <div class="deep-photo-col" data-reveal>
+          <figure class="photo-frame shutter">
+            <img
+              src="/assets/el-ateneo-bookshop-8081428886.jpg"
+              width="1920"
+              height="1275"
+              alt="Interior de la librería El Ateneo Grand Splendid en Buenos Aires con estanterías de libros y balcones iluminados"
+              loading="lazy"
+              decoding="async"
+            >
+          </figure>
+          <figcaption class="small muted">Archivo vivo de grupo y cultura porteña para memoria RAG, efemérides y economía local.</figcaption>
+        </div>
 
-          <div class="roadmap-next">
-            <h3 class="roadmap-sub">Próximamente en hoja de ruta</h3>
-            <ul class="roadmap-list">
-              <li>
-                <strong>Soporte multi-grupo</strong>
-                <span>Instalación simultánea en múltiples grupos de WhatsApp con balances económicos, hechos en base de datos y léxicos independientes.</span>
-              </li>
-              <li>
-                <strong>Atención por mensaje directo (DM)</strong>
-                <span>Interacción uno a uno por privado con memoria contextual personal y acceso directo a herramientas y utilidades.</span>
-              </li>
+        <div class="deep-content-col">
+          <section class="list-group" data-reveal>
+            <h2 class="head-sm">Progresión de economía urbana</h2>
+            <p class="list-lead muted">Doce oficios disponibles, título universitario (+25% permanente) y herramientas que conservás aunque cambies de trabajo.</p>
+
+            <ul class="two-ended-list nums">
+              <li><span>Herramientas Tier 1</span><span>+10% cobro · $1.200</span></li>
+              <li><span>Herramientas Tier 2</span><span>-15% energía · $3.000</span></li>
+              <li><span>Herramientas Tier 3</span><span>+20% cobro · $6.500</span></li>
+              <li><span>Herramientas Tier 4</span><span>-15s cooldown · $11.000</span></li>
+              <li><span>Herramientas Tier 5</span><span>+35% cobro y -15s · $18.000</span></li>
             </ul>
+          </section>
+
+          <section class="list-group" data-reveal>
+            <h2 class="head-sm">Inversiones pasivas</h2>
+            <p class="list-lead muted">Suman rendimientos automáticos cada 20 horas al cobrar <code class="cmd-inline">!diario</code>.</p>
+            <ul class="two-ended-list nums">
+              <li><span>Kiosco 24hs ($25.000)</span><span>+$500 / día</span></li>
+              <li><span>Remís Renault Duna ($50.000)</span><span>+$1.200 / día</span></li>
+              <li><span>Monoambiente en alquiler ($100.000)</span><span>+$2.800 / día</span></li>
+              <li><span>Rig de minería ($200.000)</span><span>+$6.500 / día</span></li>
+            </ul>
+          </section>
+
+          <section class="list-group voice-builder" id="voiceBuilder" data-reveal>
+            <h2 class="head-sm">Armador de comando de voz</h2>
+            <p class="list-lead muted">Elegí una voz de Fish Audio y una etiqueta de tono para copiar el comando listo.</p>
+
+            <div class="voice-controls">
+              <div class="voice-chips" id="voiceList" role="group" aria-label="Voces disponibles"></div>
+              <div class="mod-chips" id="modTagList" role="group" aria-label="Etiquetas de modulación"></div>
+            </div>
+
+            <div class="voice-output" data-ui>
+              <code id="voiceCommandPreview">!messi [enojado] Che, ¿a qué hora caen al asado?</code>
+              <button type="button" class="button button-sm" id="copyVoiceCmd">
+                <span id="copyVoiceLabel">Copiar comando</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. CATALOGO COMPLETO (145 comandos sin cajas repetidas) -->
+    <section class="section wrap catalog-section" id="comandos">
+      <div class="catalog-header" data-reveal>
+        <div>
+          <h2 class="head">Catálogo de 145 comandos</h2>
+          <p class="muted">Prefijo por defecto <code class="cmd-inline">!</code> configurable con BOT_PREFIX. Tocá cualquier comando para copiarlo.</p>
+        </div>
+        <div class="catalog-search-wrap">
+          <label for="cmdSearch" class="sr-only">Buscar comando, alias o función</label>
+          <input type="search" id="cmdSearch" class="field" placeholder="Buscar comando, alias o función (ej. !impostor, dolar, messi)..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="category-bar" id="categoryTabs" role="tablist" aria-label="Categorías de comandos"></div>
+
+      <p class="catalog-count small muted nums" id="catalogCount">Mostrando 18 de 145 comandos</p>
+
+      <div class="commands-directory" id="commandsGrid"></div>
+
+      <div class="catalog-footer" id="catalogFooter">
+        <button type="button" class="button" id="toggleAllBtn">Ver los 145 comandos completos</button>
+      </div>
+
+      <div id="copyLiveRegion" class="sr-only" role="status" aria-live="polite"></div>
+    </section>
+
+    <!-- 7. ABOUT / ROADMAP: Inset panel + shaped Buenos Aires street photo -->
+    <section class="section wrap roadmap-wrap" id="roadmap">
+      <div class="inset-panel" data-reveal>
+        <div class="inset-left">
+          <h2 class="head">Acceso privado</h2>
+          <figure class="inset-photo shutter">
+            <img
+              src="/assets/architecture-buenos-aires-4729465406.jpg"
+              width="1920"
+              height="2891"
+              alt="Esquina porteña de Avenida Córdoba en Buenos Aires con kiosco 24hs y taxis circulando"
+              loading="lazy"
+              decoding="async"
+            >
+          </figure>
+        </div>
+        <div class="inset-right">
+          <div class="roadmap-item">
+            <h3>Operación fail-closed</h3>
+            <p>Por seguridad, el dispatcher responde únicamente a una comunidad privada autorizada mediante la variable de entorno <code class="cmd-inline">GROUP_JID</code>, ignorando chats externos.</p>
+          </div>
+          <div class="roadmap-item">
+            <h3>Próximamente</h3>
+            <p>Soporte multi-grupo con billeteras e historial aislados por chat, más atención por mensaje directo (DM) con memoria personal y utilidades rápidas.</p>
+          </div>
+          <div class="roadmap-actions">
+            <a href="/admin" class="button button-inverted">Abrir Panel Admin y QR</a>
           </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <div class="footer-brand">
-        <span class="brand-name">Empy-Bot</span>
-        <span class="footer-note">TypeScript · Baileys · Supabase pgvector · Licencia ISC</span>
+  <!-- 8. FOOTER: The mark, built large -->
+  <footer class="site-footer wrap">
+    <div class="footer-mark" aria-hidden="true">
+      <svg viewBox="0 0 1200 220" preserveAspectRatio="xMidYMax meet" fill="none">
+        <rect x="0" y="20" width="128" height="200" fill="#06525c"/>
+        <path d="M36 68H96V90H62V110H90V132H62V154H98V176H36V68Z" fill="#f7f9f8"/>
+
+        <rect x="134" y="0" width="144" height="220" fill="#06525c"/>
+        <path d="M164 68H188L206 122L224 68H248V176H226V108L212 150H200L186 108V176H164V68Z" fill="#f7f9f8"/>
+
+        <rect x="284" y="38" width="128" height="182" fill="#06525c"/>
+        <path d="M318 78H360C378 78 390 90 390 108C390 126 378 138 360 138H342V176H318V78ZM342 98V118H356C363 118 368 114 368 108C368 102 363 98 356 98H342Z" fill="#f7f9f8"/>
+
+        <rect x="418" y="54" width="128" height="166" fill="#06525c"/>
+        <path d="M446 86H472L486 122L500 86H526L496 150V184H474V150L446 86Z" fill="#f7f9f8"/>
+
+        <rect x="552" y="96" width="64" height="124" fill="#2f737d"/>
+        <rect x="570" y="148" width="28" height="14" fill="#f7f9f8"/>
+
+        <rect x="622" y="12" width="136" height="208" fill="#06525c"/>
+        <path d="M652 68H698C716 68 728 78 728 94C728 106 720 114 710 118C722 122 732 132 732 146C732 164 718 176 698 176H652V68ZM676 88V110H694C701 110 706 106 706 99C706 92 701 88 694 88H676ZM676 130V156H696C704 156 709 151 709 143C709 135 704 130 696 130H676Z" fill="#f7f9f8"/>
+
+        <rect x="764" y="44" width="144" height="176" fill="#06525c"/>
+        <circle cx="836" cy="132" r="44" stroke="#f7f9f8" stroke-width="22"/>
+
+        <rect x="914" y="24" width="136" height="196" fill="#06525c"/>
+        <path d="M936 74H1028V96H994V176H970V96H936V74Z" fill="#f7f9f8"/>
+
+        <path d="M1056 64H1200V188H1104L1056 220V64Z" fill="#2f737d"/>
+        <rect x="1104" y="108" width="10" height="30" fill="#f7f9f8"/>
+        <rect x="1124" y="96" width="10" height="54" fill="#f7f9f8"/>
+        <rect x="1144" y="104" width="10" height="38" fill="#f7f9f8"/>
+      </svg>
+    </div>
+
+    <div class="grid footer-meta">
+      <div class="footer-col">
+        <a href="#simulador" class="link">Simulador</a>
+        <a href="#capacidades" class="link">Capacidades</a>
+        <a href="#pipeline" class="link">Pipeline IA</a>
       </div>
-      <nav class="footer-links" aria-label="Enlaces técnicos">
-        <a href="/admin">Panel Admin</a>
-        <a href="/qr">Visor QR</a>
-        <a href="/health">/health</a>
-        <a href="#top">Volver arriba</a>
-      </nav>
+      <div class="footer-col">
+        <a href="#economia-voces" class="link">Economía y voces</a>
+        <a href="#comandos" class="link">145 comandos</a>
+        <a href="#roadmap" class="link">Hoja de ruta</a>
+      </div>
+      <div class="footer-col">
+        <a href="/admin" class="link">Panel Admin</a>
+        <a href="/qr" class="link">Visor QR</a>
+        <a href="/health" class="link">Endpoint /health</a>
+      </div>
+      <div class="footer-col footer-right">
+        <p class="small muted">TypeScript ESM · Baileys · Prisma + Supabase pgvector · Licencia ISC</p>
+        <p class="small muted">Fotos: "Architecture - Buenos Aires (4729465406)" y "El Ateneo bookshop (8081428886)" por Jorge Láscar, CC BY 2.0, Wikimedia Commons.</p>
+        <a href="#top" class="button button-sm">Volver arriba</a>
+      </div>
     </div>
   </footer>
 </body>
