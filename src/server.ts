@@ -1,5 +1,7 @@
 import http from "node:http";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { clearAuthFromDb } from "./services/db/auth-sync.service.js";
@@ -194,12 +196,113 @@ function isIpRateLimited(ip: string, maxRequests = 60, windowMs = 60000): boolea
   return entry.count > maxRequests;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PUBLIC_DIR = path.resolve(__dirname, "..", "public");
+
+const STATIC_MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".webp": "image/webp",
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".ico": "image/x-icon",
+};
+
 function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
   res.setHeader("Content-Type", contentType);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Content-Security-Policy", "default-src 'self' https: data: 'unsafe-inline';");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self' https: data: 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com https: 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https: data:;"
+  );
+}
+
+/**
+ * Sirve de forma segura un archivo estático dentro de `PUBLIC_DIR` validando traversal, symlinks y whitelist MIME.
+ */
+async function tryServePublicFile(
+  res: http.ServerResponse,
+  method: string | undefined,
+  pathname: string
+): Promise<boolean> {
+  if (method !== "GET" && method !== "HEAD") {
+    return false;
+  }
+
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    return false;
+  }
+
+  if (decodedPath.includes("\0") || decodedPath.includes("\\")) {
+    return false;
+  }
+
+  const safeRelPath = decodedPath === "/" ? "index.html" : decodedPath.replace(/^\/+/, "");
+  if (!safeRelPath) {
+    return false;
+  }
+
+  const segments = safeRelPath.split("/");
+  if (segments.some((seg) => seg === "" || seg === "." || seg === "..")) {
+    return false;
+  }
+
+  const resolvedPath = path.resolve(PUBLIC_DIR, safeRelPath);
+  const publicPrefix = PUBLIC_DIR.endsWith(path.sep) ? PUBLIC_DIR : `${PUBLIC_DIR}${path.sep}`;
+  if (!resolvedPath.startsWith(publicPrefix)) {
+    return false;
+  }
+
+  const ext = path.extname(resolvedPath).toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(STATIC_MIME_TYPES, ext)) {
+    return false;
+  }
+  const mimeType = STATIC_MIME_TYPES[ext];
+
+  let realPublicDir: string;
+  let realFilePath: string;
+  let lstat: fs.Stats;
+  try {
+    realPublicDir = fs.realpathSync(PUBLIC_DIR);
+    lstat = fs.lstatSync(resolvedPath);
+    if (lstat.isSymbolicLink() || !lstat.isFile()) {
+      return false;
+    }
+    realFilePath = fs.realpathSync(resolvedPath);
+  } catch {
+    return false;
+  }
+
+  const realPrefix = realPublicDir.endsWith(path.sep) ? realPublicDir : `${realPublicDir}${path.sep}`;
+  if (!realFilePath.startsWith(realPrefix)) {
+    return false;
+  }
+
+  let content: Buffer | null = null;
+  if (method === "GET") {
+    try {
+      content = await fs.promises.readFile(realFilePath);
+    } catch {
+      return false;
+    }
+  }
+
+  setSecurityHeaders(res, mimeType);
+  res.setHeader("Cache-Control", ext === ".html" ? "no-cache" : "public, max-age=300");
+  res.setHeader("Content-Length", String(content ? content.byteLength : lstat.size));
+  res.writeHead(200);
+  res.end(content ?? undefined);
+  return true;
 }
 
 /**
@@ -392,7 +495,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     }
 
     // 8. Panel de Control Web y Visor de QR
-    if (pathname === "/" || pathname === "/qr") {
+    if (pathname === "/admin" || pathname === "/qr") {
       setSecurityHeaders(res, "text/html; charset=utf-8");
       res.writeHead(200);
 
@@ -407,6 +510,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Empy Bot - Acceso Administrador</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -569,6 +673,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Empy Bot - Panel de Control</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -941,6 +1046,25 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 </body>
 </html>`;
       res.end(html);
+      return;
+    }
+
+    // 9. Landing page pública y archivos estáticos desde public/
+    if (await tryServePublicFile(res, req.method, pathname)) {
+      return;
+    }
+
+    if ((req.method === "GET" || req.method === "HEAD") && pathname === "/") {
+      setSecurityHeaders(res, "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
+      res.writeHead(404);
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
+      res.end(
+        '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Empy Bot - 404</title></head><body style="font-family:sans-serif;background:#090d16;color:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h1>404</h1><p>Landing page no disponible todav&iacute;a.</p></div></body></html>'
+      );
       return;
     }
 
