@@ -53,6 +53,10 @@ export const juegosCommand: Command = {
       `• Números del 1 al 99 al privado de cada jugador (el tuyo es secreto).\n` +
       `• Debate libre sin interrupciones del bot y deducción con tolerancia ±3.\n` +
       `• *Premios escalonados:* Desde *$10.000* hasta *$50.000* fichas.\n\n` +
+      `🕵️ *13. El Impostor* (\`!impostor\` | \`!unirme\` | \`!votar\` | \`!terminarimpostor\`)\n` +
+      `• Todos reciben la palabra secreta por privado, menos 1 Impostor que solo sabe la categoría.\n` +
+      `• Debate sin límite de tiempo, votación grupal o robo de palabra.\n` +
+      `• *Premios:* *$15.000* fichas por inocente o *$35.000* fichas al Impostor.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

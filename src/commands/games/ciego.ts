@@ -8,6 +8,10 @@ import {
   isCiegoGameActive,
   getActiveCiegoGame,
 } from "../../services/games/ciego.service.js";
+import {
+  isImpostorGameActive,
+  joinImpostorGame,
+} from "../../services/games/impostor.service.js";
 
 export const ciegoCommand: Command = {
   name: "ciego",
@@ -103,15 +107,30 @@ export const ciegoCommand: Command = {
 export const unirmeCommand: Command = {
   name: "unirme",
   aliases: ["unir", "join", "entrar", "anotarme"],
-  description: "Se une a la convocatoria activa de El Número Ciego (!unirme).",
+  description: "Se une a la convocatoria activa de El Número Ciego o El Impostor (!unirme).",
   execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
     const senderJid = senderProfile?.jid || msg.key?.participant || remoteJid;
     const senderName = senderProfile?.primaryName || "Jugador";
 
+    if (isImpostorGameActive(remoteJid) && !isCiegoGameActive(remoteJid)) {
+      const res = joinImpostorGame(remoteJid, senderJid, senderName);
+      if (!res.success) {
+        await sock.sendMessage(remoteJid, { text: res.error || "No se pudo unir a la partida." }, { quoted: msg as any });
+        return;
+      }
+
+      await sock.sendMessage(
+        remoteJid,
+        { text: `✅ *${senderName}* se unió a El Impostor. (${res.totalPlayers} jugadores anotados).` },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     if (!isCiegoGameActive(remoteJid)) {
       await sock.sendMessage(
         remoteJid,
-        { text: "⚠️ No hay ninguna convocatoria activa en este grupo. Podés iniciar una con `!ciego`." },
+        { text: "⚠️ No hay ninguna convocatoria activa en este grupo. Podés iniciar una con `!ciego` o `!impostor`." },
         { quoted: msg as any }
       );
       return;
