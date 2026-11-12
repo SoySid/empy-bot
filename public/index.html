@@ -181,124 +181,87 @@
       </div>
     </section>
 
-    <!-- 3. FEATURES: Specimens on colour tiles (3 filas balanceadas: 1+2, 2+1, 1+2) -->
+    <!-- 3. FEATURES: Seis motores ordenados en grilla limpia 3x2 -->
     <section class="section wrap features" id="capacidades">
-      <div class="grid features-grid">
-        <div class="features-intro" data-reveal>
-          <h2 class="head">Seis motores</h2>
-          <p>
-            Todo corre dentro del grupo de WhatsApp: desde búsqueda vectorial de viejas promesas hasta un casino con fichas propias y placas rojas al instante.
-          </p>
-        </div>
+      <div class="grid features-intro-row" data-reveal>
+        <h2 class="head">Seis motores</h2>
+        <p>
+          Todo lo que hace Empy-Bot sin salir de WhatsApp: memoria del grupo, voces clonadas, economía urbana, minijuegos, datos al instante y multimedia.
+        </p>
+      </div>
 
-        <div class="specimens-grid">
-          <!-- 1 (span 1) -->
-          <article class="specimen" data-reveal>
-            <div class="tile tile-a">
-              <div class="specimen-ui" data-ui>
-                <p class="ui-label">pgvector · similitud 0.91</p>
-                <p class="ui-quote">"Tincho juró el sábado no tomar más fernet"</p>
-                <div class="ui-meta nums">
-                  <span>UserFact #418</span>
-                  <span>RAM Cache 0 ms</span>
-                </div>
-              </div>
+      <div class="engines-grid">
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">@Empy · !fiscal · !arbitro</code>
+              <span class="nums">pgvector · 0 ms RAM</span>
             </div>
-            <h3>Memoria semántica y RAG</h3>
-            <p>Guarda apodos, jerga del grupo y hechos por usuario en PostgreSQL para citar el historial real con <code class="cmd-inline">!fiscal</code> o <code class="cmd-inline">!arbitro</code>.</p>
-          </article>
+            <p class="engine-sample-preview">"Tincho juró el sábado no tomar más fernet" — coincidencia 0.91 en el archivo del chat.</p>
+          </div>
+          <h3>Memoria semántica y arbitraje</h3>
+          <p>Guarda apodos, hechos por usuario y jerga del grupo en PostgreSQL para citar promesas pasadas o resolver discusiones.</p>
+        </article>
 
-          <!-- 2 (span 2) -->
-          <article class="specimen specimen-wide" data-reveal>
-            <div class="tile tile-accent">
-              <div class="specimen-ui specimen-ui-voice" data-ui>
-                <div class="voice-ui-top">
-                  <span>!messi [enojado]</span>
-                  <span class="nums">OGG Opus · 48 kHz</span>
-                </div>
-                <div class="voice-ui-bars" aria-hidden="true">
-                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                </div>
-                <div class="voice-ui-tags">
-                  <span>[cantando]</span>
-                  <span>[grito]</span>
-                  <span>[susurro]</span>
-                  <span>!decir</span>
-                  <span>!tomas</span>
-                </div>
-              </div>
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample engine-sample-dark" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">!messi [enojado] · !decir · !tomas</code>
+              <span class="nums">OGG Opus · PTT</span>
             </div>
-            <h3>Clonación de voz con Fish Audio, Edge-TTS y ElevenLabs</h3>
-            <p>Más de 35 voces clonadas de famosos y personajes, ocho etiquetas de entonación y transcripción automática de notas de voz con Whisper Large v3.</p>
-          </article>
+            <p class="engine-sample-preview">+35 voces clonadas, 8 etiquetas de tono y transcripción de audios con Whisper Large v3.</p>
+          </div>
+          <h3>Clonación y notas de voz</h3>
+          <p>Combina Fish Audio, Edge-TTS y ElevenLabs v4 para responder con notas de voz moduladas y resumir audios largos.</p>
+        </article>
 
-          <!-- 3 (span 2) -->
-          <article class="specimen specimen-wide" data-reveal>
-            <div class="tile tile-b">
-              <div class="specimen-ui" data-ui>
-                <p class="ui-label">!billetera · Mecánico</p>
-                <p class="ui-big nums">$18.920</p>
-                <div class="ui-meta nums">
-                  <span>Tier 5 (+35%)</span>
-                  <span>Universidad (+25%)</span>
-                  <span>Kiosco +$500/día</span>
-                </div>
-              </div>
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">!laburar · !billetera · !21</code>
+              <span class="nums">12 oficios · 5 tiers</span>
             </div>
-            <h3>Economía urbana y oficios</h3>
-            <p>Doce profesiones, título universitario (+25%), herramientas afilables en 5 tiers, negocios pasivos, robos con escudo y casino.</p>
-          </article>
+            <p class="engine-sample-preview">Mecánico · Universidad (+25%) · Kiosco 24hs (+$500/día) · Saldo $18.920 fichas.</p>
+          </div>
+          <h3>Economía urbana y casino</h3>
+          <p>Oficios, herramientas que se afilan, inversiones pasivas diarias, robos con escudo, Blackjack, ruleta y tragamonedas.</p>
+        </article>
 
-          <!-- 4 (span 1) -->
-          <article class="specimen" data-reveal>
-            <div class="tile tile-a">
-              <div class="specimen-ui" data-ui>
-                <p class="ui-label">!wordle · Intento 3/6</p>
-                <div class="wordle-mini" aria-hidden="true">
-                  <span class="w-hit">A</span><span class="w-near">S</span><span>A</span><span class="w-hit">D</span><span class="w-hit">O</span>
-                </div>
-                <div class="ui-meta nums">
-                  <span>14+ juegos</span>
-                  <span>Pozo activo</span>
-                </div>
-              </div>
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">!impostor · !wordle · !pescar</code>
+              <span class="nums">14+ minijuegos</span>
             </div>
-            <h3>Minijuegos grupales</h3>
-            <p>El Impostor con palabra por privado, Tutti Frutti, Campo Minado, Ruleta Rusa, pesca, Pokémon por silueta y jefes cooperativos.</p>
-          </article>
+            <p class="engine-sample-preview">Palabra secreta por privado en El Impostor, Tutti Frutti de 7 categorías, Pokémon y Campo Minado.</p>
+          </div>
+          <h3>Minijuegos multijugador</h3>
+          <p>Partidas grupales con pozos en fichas, colecciones personales (Pokédex, acuario, héroes) y jefes cooperativos.</p>
+        </article>
 
-          <!-- 5 (span 1) -->
-          <article class="specimen" data-reveal>
-            <div class="tile tile-b">
-              <div class="specimen-ui" data-ui>
-                <p class="ui-label">DolarApi · Open-Meteo</p>
-                <p class="ui-big nums">Blue $1.230</p>
-                <div class="ui-meta nums">
-                  <span>MEP $1.186</span>
-                  <span>Carta natal</span>
-                </div>
-              </div>
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">!dolar · !clima · !cartaastral</code>
+              <span class="nums">En tiempo real</span>
             </div>
-            <h3>Tiempo real y astrología</h3>
-            <p>Cotizaciones del dólar argentino, clima, efemérides, fichas TMDB de cine, horóscopo, tarot, sinastría y carta natal astronómica.</p>
-          </article>
+            <p class="engine-sample-preview">Dólar Oficial, Blue, MEP y Cripto al minuto, pronóstico Open-Meteo, fichas TMDB, tarot y sinastría.</p>
+          </div>
+          <h3>Información en vivo y astrología</h3>
+          <p>Consulta cotizaciones argentinas, clima, efemérides de Wikimedia, películas y carta natal exacta por fecha y hora.</p>
+        </article>
 
-          <!-- 6 (span 2) -->
-          <article class="specimen specimen-wide" data-reveal>
-            <div class="tile tile-a">
-              <div class="specimen-ui" data-ui>
-                <p class="ui-label">Sharp WebP · yt-dlp · placas en servidor</p>
-                <p class="ui-quote">CRÓNICA TV · ÚLTIMO MOMENTO EN EL GRUPO</p>
-                <div class="ui-meta">
-                  <span>!tweet · !dni · !cronica</span>
-                  <span>!descargar · !mp3 · !s</span>
-                </div>
-              </div>
+        <article class="engine-item" data-reveal>
+          <div class="engine-sample" data-ui>
+            <div class="engine-sample-head">
+              <code class="cmd-inline">!descargar · !s · !cronica · !dni</code>
+              <span class="nums">yt-dlp · Sharp</span>
             </div>
-            <h3>Stickers, descargas y placas</h3>
-            <p>Baja videos de TikTok, X, Instagram y Facebook, arma stickers animados, identifica temas con <code class="cmd-inline">!shazam</code> y genera memes en el servidor.</p>
-          </article>
-        </div>
+            <p class="engine-sample-preview">Baja reels de TikTok/IG/X, convierte clips en stickers WebP, identifica temas (!shazam) y arma placas.</p>
+          </div>
+          <h3>Descargas, stickers y placas</h3>
+          <p>Procesa video y audio en el servidor, guarda stickers por categoría con triggers automáticos y genera memes al instante.</p>
+        </article>
       </div>
     </section>
 
@@ -358,21 +321,28 @@
       </div>
     </section>
 
-    <!-- 5. ECONOMÍA Y VOCES + FOTOGRAFÍA ARCHIVO / BUENOS AIRES -->
+    <!-- 5. ECONOMÍA Y VOCES + FRAGMENTO REAL DE BILLETERA [data-ui] -->
     <section class="section wrap deep-list" id="economia-voces">
       <div class="grid deep-grid">
         <div class="deep-photo-col" data-reveal>
-          <figure class="photo-frame shutter">
-            <img
-              src="/assets/el-ateneo-bookshop-8081428886.jpg"
-              width="1920"
-              height="1275"
-              alt="Interior de la librería El Ateneo Grand Splendid en Buenos Aires con estanterías de libros y balcones iluminados"
-              loading="lazy"
-              decoding="async"
-            >
-          </figure>
-          <figcaption class="small muted">Archivo vivo de grupo y cultura porteña para memoria RAG, efemérides y economía local.</figcaption>
+          <div class="wallet-ui-card" data-ui>
+            <div class="wallet-ui-head">
+              <div>
+                <p class="wallet-ui-title">Ejemplo en el grupo · !billetera</p>
+                <p class="wallet-ui-sub">Transacción atómica en Prisma PostgreSQL</p>
+              </div>
+              <span class="wallet-ui-badge nums">Energía 84%</span>
+            </div>
+            <div class="wallet-ui-body">
+              <p class="wallet-ui-balance nums">$18.920 fichas</p>
+              <dl class="wallet-ui-specs nums">
+                <div><dt>Oficio actual</dt><dd>Mecánico (+25% Universidad)</dd></div>
+                <div><dt>Herramientas</dt><dd>Tier 3 (+20% cobro)</dd></div>
+                <div><dt>Rentas pasivas</dt><dd>Kiosco 24hs (+$500/día)</dd></div>
+                <div><dt>Protección</dt><dd>Escudo anti-robo activo</dd></div>
+              </dl>
+            </div>
+          </div>
         </div>
 
         <div class="deep-content-col">
@@ -446,21 +416,20 @@
       <div id="copyLiveRegion" class="sr-only" role="status" aria-live="polite"></div>
     </section>
 
-    <!-- 7. ABOUT / ROADMAP: Inset panel + shaped Buenos Aires street photo -->
+    <!-- 7. ABOUT / ROADMAP: Inset panel con esquema real de seguridad del bot -->
     <section class="section wrap roadmap-wrap" id="roadmap">
       <div class="inset-panel" data-reveal>
         <div class="inset-left">
           <h2 class="head">Acceso privado</h2>
-          <figure class="inset-photo shutter">
-            <img
-              src="/assets/architecture-buenos-aires-4729465406.jpg"
-              width="1920"
-              height="2891"
-              alt="Esquina porteña de Avenida Córdoba en Buenos Aires con kiosco 24hs y taxis circulando"
-              loading="lazy"
-              decoding="async"
-            >
-          </figure>
+          <div class="security-ui-card" data-ui>
+            <p class="security-ui-title">Dispatcher · Filtro de entrada</p>
+            <ul class="security-ui-list">
+              <li><span>Grupo autorizado (GROUP_JID)</span><span>Permitido</span></li>
+              <li><span>Grupos externos no listados</span><span>Ignorados</span></li>
+              <li><span>Panel Web (/admin y /qr)</span><span>Fail-closed</span></li>
+              <li><span>Comandos de Creador (!ban, !apagar)</span><span>Solo OWNER_JID</span></li>
+            </ul>
+          </div>
         </div>
         <div class="inset-right">
           <div class="roadmap-item">
@@ -532,7 +501,6 @@
       </div>
       <div class="footer-col footer-right">
         <p class="small muted">TypeScript ESM · Baileys · Prisma + Supabase pgvector · Licencia ISC</p>
-        <p class="small muted">Fotos: "Architecture - Buenos Aires (4729465406)" y "El Ateneo bookshop (8081428886)" por Jorge Láscar, CC BY 2.0, Wikimedia Commons.</p>
         <a href="#top" class="button button-sm">Volver arriba</a>
       </div>
     </div>
