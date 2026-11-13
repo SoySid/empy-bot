@@ -1746,15 +1746,15 @@ export function normalizeInstagramUrl(rawUrl: string): string {
   }
 
   // 2. Normalizar reels plural
-  const reelsMatch = url.match(/(?:instagram\.com|instagr\.am)\/reels\/([a-zA-Z0-9_-]+)/i);
+  const reelsMatch = url.match(/(?:instagram\.com|instagr\.am)\/(?:[a-zA-Z0-9._]+\/)?reels\/([a-zA-Z0-9_-]+)/i);
   if (reelsMatch) {
     return `https://www.instagram.com/reel/${reelsMatch[1]}/`;
   }
 
   // 3. Normalizar reel singular, post o tv
-  const standardMatch = url.match(/(?:instagram\.com|instagr\.am)\/(reel|p|tv)\/([a-zA-Z0-9_-]+)/i);
+  const standardMatch = url.match(/(?:instagram\.com|instagr\.am)\/(?:[a-zA-Z0-9._]+\/)?(reel|p|tv)\/([a-zA-Z0-9_-]+)/i);
   if (standardMatch) {
-    return `https://www.instagram.com/${standardMatch[1]}/${standardMatch[2]}/`;
+    return `https://www.instagram.com/${standardMatch[1].toLowerCase()}/${standardMatch[2]}/`;
   }
 
   // 4. Limpiar query params de tracking si es instagram
@@ -1771,10 +1771,131 @@ export function normalizeInstagramUrl(rawUrl: string): string {
   return url;
 }
 
+const DEFAULT_BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (raw, dec) => {
+      const code = Number(dec);
+      return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : raw;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (raw, hex) => {
+      const code = parseInt(hex, 16);
+      return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : raw;
+    });
+}
+
+async function fetchSafeBuffer(
+  targetUrl: string,
+  maxBytes: number,
+  timeoutMs: number,
+  expectedContentTypePrefix?: string
+): Promise<Buffer | null> {
+  if (!isSafePublicUrl(targetUrl)) return null;
+  try {
+    const res = await axios.get(targetUrl, {
+      responseType: "arraybuffer",
+      timeout: timeoutMs,
+      maxContentLength: maxBytes,
+      maxBodyLength: maxBytes,
+      maxRedirects: 5,
+      beforeRedirect: (options: any) => {
+        const nextUrl = options?.href || (options?.host ? `${options.protocol || "https:"}//${options.host}${options.path || ""}` : "");
+        if (nextUrl && !isSafePublicUrl(nextUrl)) {
+          throw new Error("Redirección bloqueada por política SSRF.");
+        }
+      },
+      headers: {
+        "User-Agent": DEFAULT_BROWSER_UA,
+      },
+    });
+
+    if (expectedContentTypePrefix) {
+      const contentType = String(res.headers?.["content-type"] || "").toLowerCase();
+      if (!contentType.startsWith(expectedContentTypePrefix)) {
+        return null;
+      }
+    }
+
+    const buffer = Buffer.from(res.data);
+    return buffer.length > 0 ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractInstagramEmbedImage(html: string): { imageUrl: string; caption?: string } | null {
+  const imgTag = html.match(/<img[^>]*class=["'][^"']*EmbeddedMediaImage[^"']*["'][^>]*>/i)?.[0];
+  if (!imgTag) return null;
+
+  let bestUrl = "";
+  let bestWidth = 0;
+
+  const srcsetRaw = imgTag.match(/\ssrcset=["']([^"']+)["']/i)?.[1];
+  if (srcsetRaw) {
+    const decodedSrcset = decodeHtmlEntities(srcsetRaw);
+    for (const match of decodedSrcset.matchAll(/(https?:\/\/[^\s,"']+)\s+(\d+)w/gi)) {
+      const width = Number(match[2]) || 0;
+      if (width > bestWidth) {
+        bestWidth = width;
+        bestUrl = match[1];
+      }
+    }
+  }
+
+  if (!bestUrl) {
+    const srcRaw = imgTag.match(/\ssrc=["']([^"']+)["']/i)?.[1];
+    if (srcRaw) {
+      bestUrl = decodeHtmlEntities(srcRaw);
+    }
+  }
+
+  if (!bestUrl || !isSafePublicUrl(bestUrl)) return null;
+
+  let caption: string | undefined;
+  const captionMatch = html.match(/<div class=["']Caption["'][^>]*>([\s\S]*?)<div class=["']CaptionComments["']/i);
+  const rawCaption = captionMatch?.[1];
+  if (rawCaption) {
+    const cleaned = decodeHtmlEntities(
+      rawCaption
+        .replace(/<a class=["']CaptionUsername["'][^>]*>([^<]*)<\/a>/i, "@$1: ")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+    )
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+    if (cleaned) caption = cleaned;
+  }
+
+  return { imageUrl: bestUrl, caption };
+}
+
 export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResult | null> {
   if (!isSafePublicUrl(url)) return null;
-  try {
-    const res = await axios.get(url, {
+
+  const postMatch = url.match(/(?:instagram\.com|instagr\.am)\/(reel|p|tv)\/([a-zA-Z0-9_-]+)/i);
+  const embedUrl = postMatch
+    ? `https://www.instagram.com/${postMatch[1].toLowerCase()}/${postMatch[2]}/embed/captioned/`
+    : null;
+
+  const redirectGuard = (options: any) => {
+    const nextUrl = options?.href || (options?.host ? `${options.protocol || "https:"}//${options.host}${options.path || ""}` : "");
+    if (nextUrl && !isSafePublicUrl(nextUrl)) {
+      throw new Error("Redirección bloqueada por política SSRF.");
+    }
+  };
+
+  const [ogRes, embedRes] = await Promise.allSettled([
+    axios.get(url, {
       headers: {
         "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
         "Accept-Language": "en-US,en;q=0.9",
@@ -1782,75 +1903,97 @@ export async function scrapeInstagramOg(url: string): Promise<MediaDownloadResul
       },
       timeout: 15000,
       maxContentLength: 5 * 1024 * 1024,
-    });
+      maxRedirects: 5,
+      beforeRedirect: redirectGuard,
+    }),
+    embedUrl && isSafePublicUrl(embedUrl)
+      ? axios.get(embedUrl, {
+          headers: {
+            "User-Agent": "WhatsApp/2.23.20.0",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
+          timeout: 15000,
+          maxContentLength: 5 * 1024 * 1024,
+          maxRedirects: 5,
+          beforeRedirect: redirectGuard,
+        })
+      : Promise.resolve(null),
+  ]);
 
-    const html = res.data;
-    if (typeof html !== "string") return null;
+  const html = ogRes.status === "fulfilled" && typeof ogRes.value.data === "string" ? ogRes.value.data : "";
+  const embedHtml =
+    embedRes.status === "fulfilled" && embedRes.value && typeof embedRes.value.data === "string"
+      ? embedRes.value.data
+      : "";
 
-    // Buscar og:video si existe
-    const videoMatch =
-      html.match(/<meta\s+(?:property|name)=["']og:video(?::secure_url)?["']\s+content=["']([^"']+)["']/i) ||
-      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:video(?::secure_url)?["']/i);
+  const descMatch = html
+    ? html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i) ||
+      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:description["']/i)
+    : null;
+  const ogCaption = descMatch ? decodeHtmlEntities(descMatch[1]).trim() : undefined;
 
-    // Buscar og:image
-    const imageMatch =
-      html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i) ||
-      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:image["']/i);
+  // 1. Priorizar video si el post tiene og:video
+  const videoMatch = html
+    ? html.match(/<meta\s+(?:property|name)=["']og:video(?::secure_url)?["']\s+content=["']([^"']+)["']/i) ||
+      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:video(?::secure_url)?["']/i)
+    : null;
 
-    // Buscar descripción
-    const descMatch =
-      html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i) ||
-      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:description["']/i);
-
-    const caption = descMatch
-      ? descMatch[1]
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .trim()
-      : undefined;
-
-    if (videoMatch && videoMatch[1]) {
-      const videoUrl = videoMatch[1].replace(/&amp;/g, "&");
-      if (!isSafePublicUrl(videoUrl)) return null;
-      const videoRes = await axios.get(videoUrl, {
-        responseType: "arraybuffer",
-        timeout: 30000,
-        maxContentLength: MAX_WHATSAPP_BYTES,
-        maxBodyLength: MAX_WHATSAPP_BYTES,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        },
-      });
+  if (videoMatch?.[1]) {
+    const videoUrl = decodeHtmlEntities(videoMatch[1]);
+    const videoBuffer = await fetchSafeBuffer(videoUrl, MAX_WHATSAPP_BYTES, 30000);
+    if (videoBuffer) {
       return {
-        buffer: Buffer.from(videoRes.data),
+        buffer: videoBuffer,
         type: "video",
-        caption: caption || "Acá tenés el video de Instagram",
+        caption: ogCaption || "Acá tenés el video de Instagram",
       };
     }
+  }
 
-    if (imageMatch && imageMatch[1]) {
-      const imageUrl = imageMatch[1].replace(/&amp;/g, "&");
-      if (!isSafePublicUrl(imageUrl)) return null;
-      const imgRes = await axios.get(imageUrl, {
-        responseType: "arraybuffer",
-        timeout: 20000,
-        maxContentLength: 20 * 1024 * 1024,
-        maxBodyLength: 20 * 1024 * 1024,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        },
-      });
+  // 2. Para fotos, usar embed/captioned para obtener la imagen completa sin recorte 1:1 de og:image
+  if (embedHtml) {
+    const embedMedia = extractInstagramEmbedImage(embedHtml);
+    if (embedMedia) {
+      const imgBuffer = await fetchSafeBuffer(embedMedia.imageUrl, 20 * 1024 * 1024, 20000, "image/");
+      if (imgBuffer) {
+        return {
+          buffer: imgBuffer,
+          type: "image",
+          caption: embedMedia.caption || ogCaption || "Acá tenés la imagen de Instagram",
+        };
+      }
+    }
+  }
+
+  // 3. Segundo intento sin recorte via /media/?size=l (para /p/ y /tv/)
+  if (postMatch && postMatch[1].toLowerCase() !== "reel") {
+    const mediaEndpoint = `https://www.instagram.com/p/${postMatch[2]}/media/?size=l`;
+    const mediaBuffer = await fetchSafeBuffer(mediaEndpoint, 20 * 1024 * 1024, 20000, "image/");
+    if (mediaBuffer) {
       return {
-        buffer: Buffer.from(imgRes.data),
+        buffer: mediaBuffer,
         type: "image",
-        caption: caption || "Acá tenés la imagen de Instagram",
+        caption: ogCaption || "Acá tenés la imagen de Instagram",
       };
     }
-  } catch {
-    // Continuar al siguiente fallback
+  }
+
+  // 4. Fallback final con og:image si los endpoints anteriores fallaron
+  const imageMatch = html
+    ? html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+      html.match(/content=["']([^"']+)["']\s+(?:property|name)=["']og:image["']/i)
+    : null;
+
+  if (imageMatch?.[1]) {
+    const imageUrl = decodeHtmlEntities(imageMatch[1]);
+    const imgBuffer = await fetchSafeBuffer(imageUrl, 20 * 1024 * 1024, 20000, "image/");
+    if (imgBuffer) {
+      return {
+        buffer: imgBuffer,
+        type: "image",
+        caption: ogCaption || "Acá tenés la imagen de Instagram",
+      };
+    }
   }
 
   return null;
