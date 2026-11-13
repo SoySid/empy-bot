@@ -5,7 +5,7 @@ import dns from "dns";
 import fs from "fs";
 import path from "path";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
-import { Ytdl, createPoTokenProvider, Quality } from "@distube/ytdl-core";
+import { Ytdl, createPoTokenProvider, Quality, Client } from "@distube/ytdl-core";
 
 try {
   dns.setDefaultResultOrder("ipv4first");
@@ -244,10 +244,18 @@ export function ensureCookiesFile(): string {
     } catch {}
   }
 
+  const decodeCookieEnv = (rawVal: string): string => {
+    const trimmed = rawVal.trim();
+    const decoded = trimmed.startsWith("base64:")
+      ? Buffer.from(trimmed.slice(7), "base64").toString("utf-8")
+      : trimmed;
+    return decoded.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+  };
+
   const entries: string[] = [];
 
   if (process.env.YOUTUBE_COOKIES) {
-    const raw = process.env.YOUTUBE_COOKIES.trim().replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    const raw = decodeCookieEnv(process.env.YOUTUBE_COOKIES);
     if (raw.includes("\t")) {
       entries.push(raw);
     } else {
@@ -264,7 +272,7 @@ export function ensureCookiesFile(): string {
   }
 
   if (process.env.INSTAGRAM_COOKIES) {
-    const raw = process.env.INSTAGRAM_COOKIES.trim().replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    const raw = decodeCookieEnv(process.env.INSTAGRAM_COOKIES);
     if (raw.includes("\t")) {
       entries.push(raw);
     } else {
@@ -288,13 +296,16 @@ export function ensureCookiesFile(): string {
   const cleanLines = ["# Netscape HTTP Cookie File"];
   for (const rawLine of combined.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const parts = line.split("\t");
+    const isHttpOnly = line.startsWith("#HttpOnly_");
+    if (!line || (line.startsWith("#") && !isHttpOnly)) continue;
+    const normalizedLine = isHttpOnly ? line.slice("#HttpOnly_".length) : line;
+    const parts = normalizedLine.split("\t");
     if (parts.length >= 7) {
       const key = `${parts[0]}\t${parts[2]}\t${parts[5]}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      cleanLines.push(parts.slice(0, 7).join("\t"));
+      const outDomain = isHttpOnly ? `#HttpOnly_${parts[0]}` : parts[0];
+      cleanLines.push([outDomain, ...parts.slice(1, 7)].join("\t"));
     }
   }
 
@@ -308,16 +319,20 @@ export function ensureCookiesFile(): string {
 }
 
 function hasUsableYouTubeCookies(cookiesPath: string): boolean {
-  if (!process.env.COOKIES_TXT && !process.env.YOUTUBE_COOKIES && !fs.existsSync("/etc/secrets/cookies.txt")) {
-    return false;
-  }
   try {
     if (!fs.existsSync(cookiesPath)) return false;
     const content = fs.readFileSync(cookiesPath, "utf-8");
-    return content.includes(".youtube.com") && (content.includes("SAPISID") || content.includes("PSID"));
+    return (
+      /youtube\.com/i.test(content) &&
+      /(SAPISID|__Secure-3PAPISID|PSID|LOGIN_INFO)/i.test(content)
+    );
   } catch {
     return false;
   }
+}
+
+function hasYtdlAuthCookies(content: string): boolean {
+  return /(?:^|\t|;|\s)(?:SAPISID|__Secure-3PAPISID)(?:\t|=)/m.test(content);
 }
 
 export async function downloadWithYtDlp(
@@ -524,7 +539,7 @@ async function convertBufferToMp3(inputBuffer: Buffer, ext = "m4a"): Promise<Buf
   if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
   }
-  const safeExt = ext === "webm" ? "webm" : "m4a";
+  const safeExt = ext === "webm" ? "webm" : ext === "mp4" ? "mp4" : "m4a";
   const id = `aud_conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const inPath = path.join(TEMP_DIR, `${id}.${safeExt}`);
   const outPath = path.join(TEMP_DIR, `${id}_out.m4a`);
@@ -620,14 +635,14 @@ async function downloadYouTubeInnerTube(
   const clients = [
     {
       name: "VISIONOS",
-      ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
       context: {
         clientName: "VISIONOS",
-        clientVersion: "0.1",
+        clientVersion: "1.02",
         deviceMake: "Apple",
-        deviceModel: "RealityDevice14,1",
+        deviceModel: "RealityDevice17,1",
         osName: "visionOS",
-        osVersion: "1.3.21O771",
+        osVersion: "26.5.23O471",
         hl: "en",
         timeZone: "UTC",
         utcOffsetMinutes: 0,
@@ -636,14 +651,14 @@ async function downloadYouTubeInnerTube(
     },
     {
       name: "VISIONOS_NO_VD",
-      ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
       context: {
         clientName: "VISIONOS",
-        clientVersion: "0.1",
+        clientVersion: "1.02",
         deviceMake: "Apple",
-        deviceModel: "RealityDevice14,1",
+        deviceModel: "RealityDevice17,1",
         osName: "visionOS",
-        osVersion: "1.3.21O771",
+        osVersion: "26.5.23O471",
         hl: "en",
         timeZone: "UTC",
         utcOffsetMinutes: 0,
@@ -876,12 +891,142 @@ async function downloadYouTubeInnerTube(
   return null;
 }
 
+const PIPED_INSTANCES = [
+  "https://pipedapi.ducks.party",
+  "https://api.piped.private.coffee",
+];
+
+async function downloadYouTubePiped(
+  videoId: string,
+  audioOnly: boolean,
+  defaultCaption?: string
+): Promise<MediaDownloadResult | null> {
+  const mediaType = audioOnly ? "audio" : "video";
+  const mediaName = audioOnly ? "El audio" : "El video";
+  const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+  for (const inst of PIPED_INSTANCES) {
+    try {
+      const res = await axios.get(`${inst}/streams/${videoId}`, {
+        timeout: 10000,
+        headers: { "User-Agent": ua },
+      });
+
+      const title: string = res.data?.title || defaultCaption || "YouTube Media";
+      const videoStreams: any[] = res.data?.videoStreams || [];
+      const audioStreams: any[] = res.data?.audioStreams || [];
+
+      if (audioOnly) {
+        const audioCandidate =
+          audioStreams.find(
+            (a) => a.url && isSafePublicUrl(a.url) && (a.mimeType?.includes("audio/mp4") || a.format === "M4A")
+          ) ||
+          audioStreams.find((a) => a.url && isSafePublicUrl(a.url));
+
+        if (audioCandidate?.url) {
+          const aLen = parseInt(audioCandidate.contentLength || "0", 10);
+          if (aLen > MAX_WHATSAPP_BYTES) {
+            return {
+              type: "audio",
+              errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+            };
+          }
+          const rawAudio = await downloadStreamChunked(audioCandidate.url, aLen > 0 ? aLen : 0, ua);
+          const ext = audioCandidate.mimeType?.includes("webm") ? "webm" : "m4a";
+          const mp3Buffer = await convertBufferToMp3(rawAudio, ext);
+          if (mp3Buffer.length > MAX_WHATSAPP_BYTES) {
+            return {
+              type: "audio",
+              errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+            };
+          }
+          return {
+            buffer: mp3Buffer,
+            type: "audio",
+            title,
+            caption: defaultCaption || title || "Audio de YouTube",
+          };
+        }
+
+        const muxedForAudio = videoStreams
+          .filter(
+            (v) =>
+              v.url &&
+              !v.videoOnly &&
+              isSafePublicUrl(v.url) &&
+              (v.format === "MPEG_4" || v.mimeType?.includes("video/mp4"))
+          )
+          .sort((a, b) => (parseInt(a.quality, 10) || 999) - (parseInt(b.quality, 10) || 999))[0];
+
+        if (muxedForAudio?.url) {
+          const vLen = parseInt(muxedForAudio.contentLength || "0", 10);
+          if (vLen > MAX_WHATSAPP_BYTES) {
+            return {
+              type: "audio",
+              errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+            };
+          }
+          const mp4Buf = await downloadStreamChunked(muxedForAudio.url, vLen > 0 ? vLen : 0, ua);
+          const mp3Buffer = await convertBufferToMp3(mp4Buf, "mp4");
+          if (mp3Buffer.length > MAX_WHATSAPP_BYTES) {
+            return {
+              type: "audio",
+              errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+            };
+          }
+          return {
+            buffer: mp3Buffer,
+            type: "audio",
+            title,
+            caption: defaultCaption || title || "Audio de YouTube",
+          };
+        }
+        continue;
+      }
+
+      const muxedCandidates = videoStreams
+        .filter(
+          (v) =>
+            v.url &&
+            !v.videoOnly &&
+            isSafePublicUrl(v.url) &&
+            (v.format === "MPEG_4" || v.mimeType?.includes("video/mp4")) &&
+            (!parseInt(v.quality, 10) || parseInt(v.quality, 10) <= 720)
+        )
+        .sort((a, b) => (parseInt(b.quality, 10) || 0) - (parseInt(a.quality, 10) || 0));
+
+      for (const candidate of muxedCandidates) {
+        const cLen = parseInt(candidate.contentLength || "0", 10);
+        if (cLen > MAX_WHATSAPP_BYTES) continue;
+        try {
+          const mp4Buffer = await downloadStreamChunked(candidate.url, cLen > 0 ? cLen : 0, ua);
+          if (mp4Buffer.length > MAX_WHATSAPP_BYTES) continue;
+          return {
+            buffer: mp4Buffer,
+            type: "video",
+            title,
+            caption: defaultCaption || title || "Acá tenés el video de YouTube",
+          };
+        } catch (dlErr: any) {
+          if (dlErr?.message === "MAX_FILESIZE_EXCEEDED") continue;
+        }
+      }
+    } catch (err: any) {
+      if (err?.message === "MAX_FILESIZE_EXCEEDED") {
+        return {
+          type: mediaType,
+          errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+        };
+      }
+      console.warn(`[Media Service] Piped (${inst}) falló para ${videoId}:`, err?.response?.status || err?.message);
+    }
+  }
+
+  return null;
+}
+
 const INVIDIOUS_INSTANCES = [
   "https://yt.chocolatemoo53.com",
-  "https://invidious.nerdvpn.de",
-  "https://inv.tux.pizza",
-  "https://invidious.jing.rocks",
-  "https://invidious.privacydev.net",
 ];
 
 async function downloadYouTubeInvidious(
@@ -983,7 +1128,7 @@ async function downloadYouTubeInvidious(
       }
 
       // Si formatStreams no tiene MP4 multiplexado, intentar multiplexar video H264 + audio AAC de adaptive
-      const h264Video = adaptive
+      const h264Candidates = adaptive
         .filter(
           (f) =>
             f.url &&
@@ -993,7 +1138,7 @@ async function downloadYouTubeInvidious(
             f.type.includes("avc1") &&
             (!f.resolution || parseInt(f.resolution, 10) <= 720)
         )
-        .sort((a, b) => (parseInt(b.resolution, 10) || 0) - (parseInt(a.resolution, 10) || 0))[0];
+        .sort((a, b) => (parseInt(b.resolution, 10) || 0) - (parseInt(a.resolution, 10) || 0));
 
       const aacAudio = adaptive.find(
         (f) =>
@@ -1003,24 +1148,36 @@ async function downloadYouTubeInvidious(
           (f.type.includes("audio/mp4") || f.itag === "140" || f.itag === 140)
       );
 
-      if (h264Video?.url && aacAudio?.url) {
-        const vLen = parseInt(h264Video.clen || h264Video.contentLength || "0", 10);
+      if (h264Candidates.length > 0 && aacAudio?.url) {
         const aLen = parseInt(aacAudio.clen || aacAudio.contentLength || "0", 10);
+        const validPairs = h264Candidates.filter((v) => {
+          const vLen = parseInt(v.clen || v.contentLength || "0", 10);
+          return vLen > 0 && vLen + aLen <= MAX_WHATSAPP_BYTES;
+        });
 
-        if (vLen + aLen > MAX_WHATSAPP_BYTES) {
+        if (validPairs.length === 0 && h264Candidates.some((v) => parseInt(v.clen || v.contentLength || "0", 10) > 0)) {
           return {
             type: "video",
             errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
           };
         }
 
+        const chosenVideo = validPairs[0] || h264Candidates[h264Candidates.length - 1];
+        const vLen = parseInt(chosenVideo.clen || chosenVideo.contentLength || "0", 10);
+
         const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
         const [vBuf, aBuf] = await Promise.all([
-          downloadStreamChunked(h264Video.url, vLen, ua),
+          downloadStreamChunked(chosenVideo.url, vLen, ua),
           downloadStreamChunked(aacAudio.url, aLen, ua),
         ]);
 
         const mp4Buffer = await muxVideoAndAudioToMp4(vBuf, aBuf);
+        if (mp4Buffer.length > MAX_WHATSAPP_BYTES) {
+          return {
+            type: "video",
+            errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+          };
+        }
         return {
           buffer: mp4Buffer,
           type: "video",
@@ -1035,40 +1192,83 @@ async function downloadYouTubeInvidious(
           errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
         };
       }
+      console.warn(`[Media Service] Invidious (${inst}) falló para ${videoId}:`, err?.response?.status || err?.message);
     }
   }
 
   return null;
 }
 
-let ytdlClientPromise: Promise<Ytdl> | null = null;
+type PoTokenFn = Awaited<ReturnType<typeof createPoTokenProvider>>;
+let sharedPoTokenProviderPromise: Promise<PoTokenFn | null> | null = null;
+let ytdlAuthClientPromise: Promise<Ytdl> | null = null;
+let ytdlAnonClientPromise: Promise<Ytdl> | null = null;
 
-async function getYtdlClient(): Promise<Ytdl> {
-  if (!ytdlClientPromise) {
-    ytdlClientPromise = (async () => {
-      const cookiesPath = ensureCookiesFile();
-      const hasCookies = hasUsableYouTubeCookies(cookiesPath);
-      let cookies: string | undefined = undefined;
-      if (hasCookies) {
-        try {
-          cookies = fs.readFileSync(cookiesPath, "utf-8");
-        } catch {}
-      }
-      try {
-        const poTokenProvider = await createPoTokenProvider();
-        return new Ytdl({
-          getPoToken: poTokenProvider,
-          ...(cookies ? { cookie: cookies } : {}),
-        });
-      } catch (err: any) {
-        console.warn("[Media Service] Falló inicialización de PO token provider:", err?.message || err);
-        return new Ytdl({
-          ...(cookies ? { cookie: cookies } : {}),
-        });
-      }
-    })();
+async function getSharedPoTokenProvider(): Promise<PoTokenFn | null> {
+  if (!sharedPoTokenProviderPromise) {
+    sharedPoTokenProviderPromise = createPoTokenProvider({ timeoutMs: 45000 }).catch((err: any) => {
+      console.warn("[Media Service] Falló inicialización de PO token provider:", err?.message || err);
+      sharedPoTokenProviderPromise = null;
+      return null;
+    });
   }
-  return ytdlClientPromise;
+  return sharedPoTokenProviderPromise;
+}
+
+async function mintPoTokenForVideo(videoId: string): Promise<string | null> {
+  try {
+    const provider = await getSharedPoTokenProvider();
+    if (!provider) return null;
+    return await provider({
+      contentBinding: videoId,
+      client: Client.Mweb,
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function getYtdlClient(useCookies = true): Promise<Ytdl> {
+  if (useCookies) {
+    const cookiesPath = ensureCookiesFile();
+    let cookies: string | undefined = undefined;
+    if (hasUsableYouTubeCookies(cookiesPath)) {
+      try {
+        const raw = fs.readFileSync(cookiesPath, "utf-8");
+        if (hasYtdlAuthCookies(raw)) {
+          cookies = raw;
+        }
+      } catch {}
+    }
+
+    if (cookies) {
+      if (!ytdlAuthClientPromise) {
+        ytdlAuthClientPromise = (async () => {
+          const poTokenProvider = await getSharedPoTokenProvider();
+          return new Ytdl({
+            ...(poTokenProvider ? { getPoToken: poTokenProvider } : {}),
+            cookie: cookies,
+          });
+        })().catch((err) => {
+          ytdlAuthClientPromise = null;
+          throw err;
+        });
+      }
+      return ytdlAuthClientPromise;
+    }
+  }
+
+  if (!ytdlAnonClientPromise) {
+    ytdlAnonClientPromise = (async () => {
+      const poTokenProvider = await getSharedPoTokenProvider();
+      return new Ytdl(poTokenProvider ? { getPoToken: poTokenProvider } : {});
+    })().catch((err) => {
+      ytdlAnonClientPromise = null;
+      throw err;
+    });
+  }
+  return ytdlAnonClientPromise;
 }
 
 async function downloadYouTubeWithYtdlCore(
@@ -1080,8 +1280,7 @@ async function downloadYouTubeWithYtdlCore(
   const mediaName = audioOnly ? "El audio" : "El video";
   const targetUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  try {
-    const yt = await getYtdlClient();
+  const attemptWithClient = async (yt: Ytdl) => {
     const info = await yt.getInfo(targetUrl);
     const title = info.videoDetails.title || defaultCaption || "YouTube Media";
 
@@ -1095,21 +1294,19 @@ async function downloadYouTubeWithYtdlCore(
 
       if (mp3Buffer.length > MAX_WHATSAPP_BYTES) {
         return {
-          type: "audio",
+          type: "audio" as const,
           errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
         };
       }
 
       return {
         buffer: mp3Buffer,
-        type: "audio",
+        type: "audio" as const,
         title,
         caption: defaultCaption || title || "Audio de YouTube",
       };
     }
 
-    // Modo Video:
-    // 1. Si existe formato multiplexado (audio + video) mp4 <= 720p y <= 50MB
     const muxedCandidate = info.formats.find(
       (f: any) =>
         f.hasAudio &&
@@ -1126,13 +1323,12 @@ async function downloadYouTubeWithYtdlCore(
       const buffer = await streamToBuffer(vStream, MAX_WHATSAPP_BYTES);
       return {
         buffer,
-        type: "video",
+        type: "video" as const,
         title,
         caption: defaultCaption || title || "Acá tenés el video de YouTube",
       };
     }
 
-    // 2. Si no hay multiplexado directo (Shorts o videos 720p adaptive):
     const aStream = yt.download(info, {
       quality: Quality.HighestAudio,
       filter: { hasAudio: true, hasVideo: false },
@@ -1150,26 +1346,140 @@ async function downloadYouTubeWithYtdlCore(
     const mp4Buffer = await muxVideoAndAudioToMp4(vBuf, aBuf);
     if (mp4Buffer.length > MAX_WHATSAPP_BYTES) {
       return {
-        type: "video",
+        type: "video" as const,
         errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
       };
     }
 
     return {
       buffer: mp4Buffer,
-      type: "video",
+      type: "video" as const,
       title,
       caption: defaultCaption || title || "Acá tenés el video de YouTube",
     };
+  };
+
+  try {
+    const yt = await getYtdlClient(true);
+    return await attemptWithClient(yt);
   } catch (err: any) {
+    if (err?.code === "AUTH_FAILED" || err?.code === "INVALID_ARGUMENT") {
+      ytdlAuthClientPromise = null;
+      try {
+        const anonYt = await getYtdlClient(false);
+        return await attemptWithClient(anonYt);
+      } catch (anonErr: any) {
+        console.warn(`[Media Service] ytdl-core anónimo falló para ${videoId}:`, anonErr?.message || anonErr);
+        return null;
+      }
+    }
     if (err?.message?.includes("supera el límite de seguridad") || err?.message === "MAX_FILESIZE_EXCEEDED") {
       return {
         type: mediaType,
         errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
       };
     }
-    console.warn(`[Media Service] ytdl-core no pudo procesar ${videoId}:`, err.message);
+    console.warn(`[Media Service] ytdl-core no pudo procesar ${videoId}:`, err?.message || err);
     return null;
+  }
+}
+
+async function runYtDlpYouTubeAttempt(options: {
+  binaryPath: string;
+  target: string;
+  audioOnly: boolean;
+  cookiesPath?: string;
+  poToken?: string | null;
+  defaultCaption?: string;
+}): Promise<{ result?: MediaDownloadResult; stderr?: string; error?: any }> {
+  const { binaryPath, target, audioOnly, cookiesPath, poToken, defaultCaption } = options;
+  const filePrefix = `yt_${audioOnly ? "aud" : "vid"}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const outPattern = path.join(TEMP_DIR, `${filePrefix}.%(ext)s`);
+
+  const formatArgs = audioOnly
+    ? [
+        "-f", "ba[ext=m4a]/ba[acodec^=mp4a]/ba/b[height<=480]",
+        "-x", "--audio-format", "m4a",
+      ]
+    : [
+        "-f", "bv*[vcodec^=avc1][height<=720]+ba[acodec^=mp4a]/b[vcodec^=avc1][height<=720]/bv*[height<=720]+ba/b[height<=720]",
+        "--merge-output-format", "mp4",
+        "--postprocessor-args", "Merger:-c copy -movflags +faststart -threads 0",
+      ];
+
+  const extractorArgs = cookiesPath
+    ? "youtube:player_client=tv,web,mweb"
+    : poToken
+      ? `youtube:player_client=mweb,web_safari,ios,android;po_token=mweb.gvs+${poToken}`
+      : "youtube:player_client=mweb,web_safari,ios,android";
+
+  const args = [
+    "-4",
+    "--no-playlist",
+    "--no-warnings",
+    "--max-filesize", "50M",
+    ...formatArgs,
+    "-N", "4",
+    "--http-chunk-size", "5M",
+    "--buffer-size", "16M",
+    "--js-runtimes", "node",
+    "--remote-components", "ejs:github",
+    "--extractor-args", extractorArgs,
+    "--print", "after_move:%(title)s",
+    "-o", outPattern,
+  ];
+
+  if (FFMPEG_PATH && fs.existsSync(FFMPEG_PATH)) {
+    if (process.platform !== "win32") {
+      try { fs.chmodSync(FFMPEG_PATH, 0o755); } catch {}
+    }
+    args.push("--ffmpeg-location", FFMPEG_PATH);
+  }
+
+  if (cookiesPath) {
+    args.push("--cookies", cookiesPath);
+  }
+
+  args.push("--", target);
+
+  try {
+    const { stdout } = await execFileAsync(binaryPath, args, { timeout: 90000 });
+    const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
+    if (files.length === 0) return {};
+
+    const downloadedPath = path.join(TEMP_DIR, files[0]);
+    const stat = fs.statSync(downloadedPath);
+    if (stat.size > MAX_WHATSAPP_BYTES) {
+      throw new Error("MAX_FILESIZE_EXCEEDED");
+    }
+    const buffer = fs.readFileSync(downloadedPath);
+    try {
+      for (const f of files) {
+        fs.unlinkSync(path.join(TEMP_DIR, f));
+      }
+    } catch {}
+
+    const title = stdout ? stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)[0] : undefined;
+    const mediaType = audioOnly ? "audio" : "video";
+    const defaultText = audioOnly ? "Audio de YouTube" : "Acá tenés el video de YouTube";
+
+    return {
+      result: {
+        buffer,
+        type: mediaType,
+        title: title || defaultCaption,
+        caption: title || defaultCaption || defaultText,
+      },
+    };
+  } catch (error: any) {
+    try {
+      const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
+      for (const f of files) fs.unlinkSync(path.join(TEMP_DIR, f));
+    } catch {}
+    return {
+      error,
+      stderr: (error?.stderr || error?.message || "").toString(),
+    };
   }
 }
 
@@ -1186,12 +1496,22 @@ async function downloadYouTubeWithYtDlp(
     ytId = await searchYouTubeVideoId(trimmed);
   }
 
+  if (isUrl && !isSafePublicUrl(trimmed)) {
+    return {
+      type: audioOnly ? "audio" : "video",
+      errorNotice: "❌ URL no permitida por razones de seguridad.",
+    };
+  }
+
   if (ytId) {
     const ytdlResult = await downloadYouTubeWithYtdlCore(ytId, audioOnly, defaultCaption);
     if (ytdlResult) return ytdlResult;
 
     const fastResult = await downloadYouTubeInnerTube(ytId, audioOnly, defaultCaption);
     if (fastResult) return fastResult;
+
+    const pipedResult = await downloadYouTubePiped(ytId, audioOnly, defaultCaption);
+    if (pipedResult) return pipedResult;
 
     const invidiousResult = await downloadYouTubeInvidious(ytId, audioOnly, defaultCaption);
     if (invidiousResult) return invidiousResult;
@@ -1214,133 +1534,71 @@ async function downloadYouTubeWithYtDlp(
   }
 
   const target = ytId ? `https://www.youtube.com/watch?v=${ytId}` : isUrl ? trimmed : `ytsearch1:${trimmed}`;
-  const filePrefix = `yt_${audioOnly ? "aud" : "vid"}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const outPattern = path.join(TEMP_DIR, `${filePrefix}.%(ext)s`);
   const cookiesPath = ensureCookiesFile();
   const useCookies = hasUsableYouTubeCookies(cookiesPath);
 
-  const formatArgs = audioOnly
-    ? [
-        "-f", "ba[ext=m4a]/ba[acodec^=mp4a]/ba/b[height<=480]",
-        "-x", "--audio-format", "m4a",
-      ]
-    : [
-        "-f", "bv*[vcodec^=avc1][height<=720]+ba[acodec^=mp4a]/b[vcodec^=avc1][height<=720]/bv*[height<=720]+ba/b[height<=720]",
-        "--merge-output-format", "mp4",
-        "--postprocessor-args", "Merger:-c copy -movflags +faststart -threads 0",
-      ];
+  let attempt = await runYtDlpYouTubeAttempt({
+    binaryPath,
+    target,
+    audioOnly,
+    cookiesPath: useCookies ? cookiesPath : undefined,
+    poToken: useCookies || !ytId ? null : await mintPoTokenForVideo(ytId),
+    defaultCaption,
+  });
 
-  const extractorArgs = useCookies
-    ? "youtube:player_client=tv,web,mweb"
-    : "youtube:player_client=visionos,ios,android;player_skip=webpage,configs";
+  if (attempt.result) return attempt.result;
 
-  const args = [
-    "-4",
-    "--no-playlist",
-    "--no-warnings",
-    "--max-filesize", "50M",
-    ...formatArgs,
-    "-N", "4",
-    "--http-chunk-size", "5M",
-    "--buffer-size", "16M",
-    "--js-runtimes", "node",
-    "--extractor-args", extractorArgs,
-    "--print", "after_move:%(title)s",
-    "-o", outPattern,
-  ];
-
-  if (FFMPEG_PATH && fs.existsSync(FFMPEG_PATH)) {
-    if (process.platform !== "win32") {
-      try { fs.chmodSync(FFMPEG_PATH, 0o755); } catch {}
-    }
-    args.push("--ffmpeg-location", FFMPEG_PATH);
-  }
-
-  if (useCookies) {
-    args.push("--cookies", cookiesPath);
-  }
-
-  if (isUrl && !isSafePublicUrl(trimmed)) {
-    return {
-      type: audioOnly ? "audio" : "video",
-      errorNotice: "❌ URL no permitida por razones de seguridad.",
-    };
-  }
-
-  args.push("--", target);
-
-  try {
-    const { stdout } = await execFileAsync(binaryPath, args, { timeout: 90000 });
-    const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
-    if (files.length === 0) return null;
-
-    const downloadedPath = path.join(TEMP_DIR, files[0]);
-    const stat = fs.statSync(downloadedPath);
-    if (stat.size > MAX_WHATSAPP_BYTES) {
-      throw new Error("MAX_FILESIZE_EXCEEDED");
-    }
-    const buffer = fs.readFileSync(downloadedPath);
-    try {
-      for (const f of files) {
-        fs.unlinkSync(path.join(TEMP_DIR, f));
-      }
-    } catch {}
-
-    const title = stdout ? stdout.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)[0] : undefined;
-    const mediaType = audioOnly ? "audio" : "video";
-    const defaultText = audioOnly ? "Audio de YouTube" : "Acá tenés el video de YouTube";
-
-    return {
-      buffer,
-      type: mediaType,
-      title: title || defaultCaption,
-      caption: title || defaultCaption || defaultText,
-    };
-  } catch (error: any) {
-    const stderr = (error?.stderr || error?.message || "").toString();
-    try {
-      const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
-      for (const f of files) fs.unlinkSync(path.join(TEMP_DIR, f));
-    } catch {}
-
-    const mediaType = audioOnly ? "audio" : "video";
-    const mediaName = audioOnly ? "El audio" : "El video";
-
-    if (stderr.includes("larger than max-filesize") || stderr.includes("File is larger than")) {
-      return {
-        type: mediaType,
-        errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
-      };
-    }
-
-    if (/Private video|This video is private/i.test(stderr)) {
-      return {
-        type: mediaType,
-        errorNotice: "❌ El video es privado y no se puede descargar.",
-      };
-    }
-
-    if (/Video unavailable|This video is unavailable|has been removed/i.test(stderr)) {
-      return {
-        type: mediaType,
-        errorNotice: "❌ El video no está disponible o fue eliminado de YouTube.",
-      };
-    }
-
-    if (stderr.includes("Sign in to confirm") || stderr.includes("bot")) {
-      return {
-        type: mediaType,
-        errorNotice:
-          "⚠️ *Bloqueo de YouTube en el servidor:*\nYouTube requiere verificación para descargas desde la IP del servidor. Podés configurar la variable `COOKIES_TXT` o `YOUTUBE_COOKIES` en las variables de entorno de Render para desbloquearlo.",
-      };
-    }
-
-    console.error(`[Media Service] Error al descargar ${mediaType} de YouTube:`, {
-      message: error?.message,
-      stderr,
+  const firstStderr = attempt.stderr || "";
+  if (useCookies && (firstStderr.includes("Sign in to confirm") || firstStderr.includes("bot"))) {
+    console.warn("[Media Service] yt-dlp con cookies falló por verificación; reintentando sin cookies con PO token...");
+    attempt = await runYtDlpYouTubeAttempt({
+      binaryPath,
+      target,
+      audioOnly,
+      poToken: ytId ? await mintPoTokenForVideo(ytId) : null,
+      defaultCaption,
     });
-    return null;
+    if (attempt.result) return attempt.result;
   }
+
+  const stderr = attempt.stderr || "";
+  const mediaType = audioOnly ? "audio" : "video";
+  const mediaName = audioOnly ? "El audio" : "El video";
+
+  if (stderr.includes("larger than max-filesize") || stderr.includes("File is larger than")) {
+    return {
+      type: mediaType,
+      errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
+    };
+  }
+
+  if (/Private video|This video is private/i.test(stderr)) {
+    return {
+      type: mediaType,
+      errorNotice: "❌ El video es privado y no se puede descargar.",
+    };
+  }
+
+  if (/Video unavailable|This video is unavailable|has been removed/i.test(stderr)) {
+    return {
+      type: mediaType,
+      errorNotice: "❌ El video no está disponible o fue eliminado de YouTube.",
+    };
+  }
+
+  if (stderr.includes("Sign in to confirm") || stderr.includes("bot")) {
+    return {
+      type: mediaType,
+      errorNotice:
+        "⚠️ *Bloqueo de YouTube en el servidor:*\nYouTube requiere verificación para descargas desde la IP del servidor. Podés configurar la variable `COOKIES_TXT` o `YOUTUBE_COOKIES` en las variables de entorno de Render para desbloquearlo.",
+    };
+  }
+
+  console.error(`[Media Service] Error al descargar ${mediaType} de YouTube:`, {
+    message: attempt.error?.message,
+    stderr,
+  });
+  return null;
 }
 
 export async function downloadYouTubeVideo(
