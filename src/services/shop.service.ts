@@ -1,4 +1,4 @@
-import { prisma, withWriteLock } from "./db/prisma.js";
+import { prisma, withKeyLock, withUserPairLock } from "./db/prisma.js";
 import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { SHOP_ITEMS, ShopItem } from "../config/shop.config.js";
 import { buyShield, getUserProfession } from "./economy.service.js";
@@ -176,7 +176,7 @@ export async function buyItem(
 
   const totalCost = effectivePrice * qty;
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
 
     // Restricción de oficio: herramientas, reliquias y sedes sólo las puede comprar quien tenga ese oficio activo
@@ -323,7 +323,7 @@ export async function useItem(
 
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const invItem = await (prisma as any).userInventoryItem.findUnique({
       where: {
         userJid_itemId: {
@@ -602,7 +602,7 @@ export async function consumeOrAutoBuy(
   const item = resolved.item;
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const curUser = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
     const curHunger = typeof (curUser as any).hunger === "number" ? (curUser as any).hunger : 85;
 
@@ -784,7 +784,7 @@ export async function feedOtherUser(
     };
   }
 
-  return await withWriteLock(async () => {
+  return await withUserPairLock(giver.id, target.id, async () => {
     const curTarget = (await prisma.userProfile.findUnique({ where: { id: target.id } })) || target;
     const oldHunger = typeof (curTarget as any).hunger === "number" ? (curTarget as any).hunger : 85;
 

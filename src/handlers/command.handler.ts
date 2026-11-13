@@ -9,6 +9,13 @@ const HEAVY_COMMANDS = new Set(["descargar", "d", "mp3", "s", "sticker", "audio"
 const GENERAL_COMMAND_COOLDOWN_MS = 1200;
 const HEAVY_COMMAND_COOLDOWN_MS = 6000;
 
+function pruneCooldownMap(map: Map<string, number>, maxAgeMs: number, now: number): void {
+  if (map.size <= 300) return;
+  for (const [k, ts] of map.entries()) {
+    if (now - ts >= maxAgeMs) map.delete(k);
+  }
+}
+
 const PREFIX: string = process.env.BOT_PREFIX || "!";
 
 /**
@@ -67,8 +74,10 @@ export async function handlePrefixCommand(ctx: MessageContext): Promise<boolean>
         ).catch(() => {});
         return true;
       }
+      pruneCooldownMap(userLastHeavyCommandTime, HEAVY_COMMAND_COOLDOWN_MS, now);
       userLastHeavyCommandTime.set(userJid, now);
     }
+    pruneCooldownMap(userLastCommandTime, GENERAL_COMMAND_COOLDOWN_MS, now);
     userLastCommandTime.set(userJid, now);
 
     if (isUserCommandBanned(userJid, normalizedCommandName, command.name)) {

@@ -220,7 +220,7 @@ function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self' https: data: 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com https: 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https: data:;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
   );
 }
 

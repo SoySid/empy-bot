@@ -1,5 +1,5 @@
 import { WASocket } from "@whiskeysockets/baileys";
-import { prisma, withWriteLock } from "./db/prisma.js";
+import { prisma, withKeyLock } from "./db/prisma.js";
 import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { formatNativeMention, isBotJid, findGroupParticipant } from "./whatsapp-identity.js";
 import { isBotAdminInGroup } from "./admin-powers.service.js";
@@ -270,7 +270,7 @@ export async function feedUser(
 }> {
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
     const oldHunger = typeof (current as any).hunger === "number" ? (current as any).hunger : 85;
     const newHunger = Math.min(100, Math.max(0, oldHunger + restoreAmount));

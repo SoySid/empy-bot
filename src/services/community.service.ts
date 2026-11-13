@@ -1,6 +1,6 @@
 import type { WASocket } from "@whiskeysockets/baileys";
 import { prisma, withKeyLock } from "./db/prisma.js";
-import { resolveOrRegisterUser, formatUserName } from "./db/user.service.js";
+import { resolveOrRegisterUser, formatUserName, updateCachedUser } from "./db/user.service.js";
 import { modifyBalance, getUserProfession, getUserProfessionBuffs } from "./economy.service.js";
 import { ProfessionType, PROFESSIONS } from "../config/economy.config.js";
 import { isUserEconomyFrozen } from "./admin-economy.service.js";
@@ -392,19 +392,22 @@ export async function assistCommunityEmergency(
 
     // Descontar turno de comida si lo usó
     if (hadFoodBuff) {
-      await prisma.userProfile.update({
+      const updatedHelper = await prisma.userProfile.update({
         where: { id: helperUser.id },
         data: { jobBuffTurns: { decrement: 1 } },
       });
+      updateCachedUser(helperUser.jid, { jobBuffTurns: updatedHelper.jobBuffTurns });
     }
 
     // 2. Otorgar buff de laburo a la víctima (+2 turnos)
-    await prisma.userProfile.update({
-      where: { jid: emergency.victimJid },
+    const victimUser = await resolveOrRegisterUser(emergency.victimJid);
+    const updatedVictim = await prisma.userProfile.update({
+      where: { id: victimUser.id },
       data: {
         jobBuffTurns: { increment: emergency.rewardBuffTurns },
       },
     });
+    updateCachedUser(victimUser.jid, { jobBuffTurns: updatedVictim.jobBuffTurns });
 
     return {
       success: true,

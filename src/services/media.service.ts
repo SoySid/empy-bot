@@ -300,7 +300,7 @@ export function ensureCookiesFile(): string {
 
   if (cleanLines.length > 1) {
     try {
-      fs.writeFileSync(runtimeCookiesPath, `${cleanLines.join("\n")}\n`, "utf-8");
+      fs.writeFileSync(runtimeCookiesPath, `${cleanLines.join("\n")}\n`, { encoding: "utf-8", mode: 0o600 });
     } catch {}
   }
 

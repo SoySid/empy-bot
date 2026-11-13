@@ -1,6 +1,6 @@
 import { WASocket } from "@whiskeysockets/baileys";
-import { prisma, withWriteLock } from "./db/prisma.js";
-import { resolveOrRegisterUser } from "./db/user.service.js";
+import { prisma, withKeyLock } from "./db/prisma.js";
+import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import {
   isBotJid,
   findGroupParticipant,
@@ -94,7 +94,7 @@ export async function muteGroupForCash(
 
   const user = await resolveOrRegisterUser(requesterJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
 
     if (current.balance < cost) {
@@ -109,6 +109,7 @@ export async function muteGroupForCash(
       where: { id: user.id },
       data: { balance: { decrement: cost } },
     });
+    updateCachedUser(user.jid, { balance: updated.balance });
 
     try {
       // Poner solo administradores
@@ -142,10 +143,11 @@ export async function muteGroupForCash(
       };
     } catch (err: any) {
       // Revertir cobro en caso de error Baileys
-      await prisma.userProfile.update({
+      const reverted = await prisma.userProfile.update({
         where: { id: user.id },
         data: { balance: { increment: cost } },
       });
+      updateCachedUser(user.jid, { balance: reverted.balance });
       return {
         success: false,
         error: `Error al cambiar los ajustes del grupo: ${err.message || err}`,
@@ -200,7 +202,7 @@ export async function changeGroupNameForCash(
   const COST = 100000;
   const user = await resolveOrRegisterUser(requesterJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
 
     if (current.balance < COST) {
@@ -217,6 +219,7 @@ export async function changeGroupNameForCash(
         where: { id: user.id },
         data: { balance: { decrement: COST } },
       });
+      updateCachedUser(user.jid, { balance: updated.balance });
 
       return {
         success: true,

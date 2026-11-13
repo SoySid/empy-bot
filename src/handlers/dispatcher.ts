@@ -207,46 +207,50 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
 
   // 9. Procesamiento de feedback implícito y registro de historial crudo (solo mensajes humanos que NO sean comandos)
   if (body && !body.trim().startsWith(PREFIX)) {
-    await processImplicitFeedback(body);
+    await Promise.allSettled([
+      processImplicitFeedback(body),
+      recordIncomingMessage(
+        senderProfile.jid,
+        senderProfile.primaryName,
+        body,
+        false,
+        quotedSenderProfile?.primaryName,
+        quotedSnippet,
+        msg
+      ),
+    ]);
 
-    await recordIncomingMessage(
-      senderProfile.jid,
-      senderProfile.primaryName,
-      body,
-      false,
-      quotedSenderProfile?.primaryName,
-      quotedSnippet,
-      msg
-    );
-
-    // Eventos del destino espontáneos cada 40-70 mensajes
+    // Tareas secundarias de grupo en paralelo para no frenar la cola FIFO de mensajes
     if (isGroup) {
-      await handleDestinyEvents(sock, remoteJid, senderProfile.jid);
+      const sideTasks: Promise<unknown>[] = [
+        handleDestinyEvents(sock, remoteJid, senderProfile.jid),
+        handleBusinessPassiveIncome(sock, remoteJid, senderProfile.jid),
+        consumeHungerOnMessage(sock, remoteJid, senderProfile),
+      ];
 
-      // Renta pasiva de negocios cada 50 mensajes
-      await handleBusinessPassiveIncome(sock, remoteJid, senderProfile.jid);
-
-      // Consumo de energía/hambre y filtro anti-fantasmones (reutilizando senderProfile en memoria)
-      await consumeHungerOnMessage(sock, remoteJid, senderProfile);
-
-      // Detección automática en vivo de promesas o apuestas sociales
       if (detectPromiseIntent(body)) {
-        try {
-          await createSocialPromise({
-            chatJid: remoteJid,
-            userJid: senderProfile.jid,
-            senderName: senderProfile.primaryName,
-            promiseText: body.trim(),
-            waMessageId: msg.key?.id || undefined,
-          });
+        sideTasks.push(
+          (async () => {
+            try {
+              await createSocialPromise({
+                chatJid: remoteJid,
+                userJid: senderProfile.jid,
+                senderName: senderProfile.primaryName,
+                promiseText: body.trim(),
+                waMessageId: msg.key?.id || undefined,
+              });
 
-          if (msg.key) {
-            await sock.sendMessage(remoteJid, { react: { text: "✍️", key: msg.key } }).catch(() => {});
-          }
-        } catch (err) {
-          console.error("[Dispatcher] Error registrando promesa en vivo:", err);
-        }
+              if (msg.key) {
+                await sock.sendMessage(remoteJid, { react: { text: "✍️", key: msg.key } }).catch(() => {});
+              }
+            } catch (err) {
+              console.error("[Dispatcher] Error registrando promesa en vivo:", err);
+            }
+          })()
+        );
       }
+
+      await Promise.allSettled(sideTasks);
     }
   }
 
@@ -304,7 +308,8 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
 
   const hasToolCallingIntent =
     isDirectlyAddressed &&
-    /\b(tiktok|descarga(r)?)\b/i.test(ctx.cleanBody);
+    (/\b(tiktok|descarga(r)?)\b/i.test(ctx.cleanBody) ||
+      /https?:\/\/(?:www\.|vm\.|vt\.)?tiktok\.com\//i.test(ctx.cleanBody));
 
   if ((hasMedia || hasQuotedMedia || hasToolCallingIntent) && (await handleAiInteraction(ctx))) return;
 

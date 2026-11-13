@@ -39,7 +39,17 @@ export const CATEGORY_METADATA: Record<string, { icon: string; desc: string }> =
   triggers: { icon: "⚡", desc: "Respuestas automáticas a palabras clave específicas" },
 };
 
+let cachedCategoryCounts: Record<string, number> | null = null;
+
+export function invalidateStickerCategoryCountsCache(): void {
+  cachedCategoryCounts = null;
+}
+
 export function getStickerCategoryCounts(): Record<string, number> {
+  if (cachedCategoryCounts) {
+    return { ...cachedCategoryCounts };
+  }
+
   const counts: Record<string, number> = {};
   for (const cat of VALID_CATEGORIES) {
     const catDir = path.join(STICKERS_ROOT, cat);
@@ -54,7 +64,8 @@ export function getStickerCategoryCounts(): Record<string, number> {
       counts[cat] = 0;
     }
   }
-  return counts;
+  cachedCategoryCounts = counts;
+  return { ...counts };
 }
 
 export function initStickersDirectory(): void {
@@ -123,6 +134,7 @@ export async function syncStickersFromDb(): Promise<void> {
     if (syncedCount > 0) {
       console.log(`[Sticker Service] 📦 Sincronizados ${syncedCount} stickers desde la base de datos a disco.`);
       invalidateTriggerPrefixesCache();
+      invalidateStickerCategoryCountsCache();
     }
   } catch (err: any) {
     console.error("[Sticker Service] Error sincronizando stickers desde PostgreSQL:", err?.message || err);
@@ -265,6 +277,7 @@ export async function saveCustomSticker(params: {
       },
     });
 
+    invalidateStickerCategoryCountsCache();
     if (cleanCat === "triggers") {
       invalidateTriggerPrefixesCache();
     }

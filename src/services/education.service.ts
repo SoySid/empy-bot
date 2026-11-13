@@ -1,4 +1,4 @@
-import { prisma, withWriteLock } from "./db/prisma.js";
+import { prisma, withKeyLock } from "./db/prisma.js";
 import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { ProfessionType } from "../config/economy.config.js";
 import { EDUCATION_CONFIG, ExamQuestion } from "../config/education.config.js";
@@ -22,6 +22,20 @@ const examCooldowns = new Map<string, number>();
 
 // Cooldown entre parciales de carrera universitaria (15 minutos)
 const degreeCooldowns = new Map<string, number>();
+
+function pruneExpiredTimestamps(map: Map<string, number>, now: number): void {
+  if (map.size <= 200) return;
+  for (const [key, expiresAt] of map.entries()) {
+    if (now >= expiresAt) map.delete(key);
+  }
+}
+
+function pruneExpiredSessions(now: number): void {
+  if (activeExamSessions.size <= 200) return;
+  for (const [key, session] of activeExamSessions.entries()) {
+    if (now >= session.expiresAt) activeExamSessions.delete(key);
+  }
+}
 
 /**
  * Obtiene los descuentos acumulados por educación (Carnet Estudiantil y Título de Grado).
@@ -69,19 +83,23 @@ export async function getUserEducationDiscounts(userJid: string): Promise<{
  */
 export async function getUserEducationBuffs(
   userJid: string,
-  profession?: ProfessionType | null
+  profession?: ProfessionType | null,
+  preloadedInventory?: Array<{ itemId: string }>
 ): Promise<{ earningsBonusPercent: number; hungerReductionPercent: number }> {
   if (!profession) return { earningsBonusPercent: 0, hungerReductionPercent: 0 };
 
   try {
-    const user = await resolveOrRegisterUser(userJid);
-    const possibleJids = [user.jid];
-    if (user.lid) possibleJids.push(user.lid);
-    if (user.phone) possibleJids.push(user.phone);
+    let inv = preloadedInventory;
+    if (!inv) {
+      const user = await resolveOrRegisterUser(userJid);
+      const possibleJids = [user.jid];
+      if (user.lid) possibleJids.push(user.lid);
+      if (user.phone) possibleJids.push(user.phone);
 
-    const inv = await (prisma as any).userInventoryItem.findMany({
-      where: { userJid: { in: possibleJids }, quantity: { gt: 0 } },
-    });
+      inv = await (prisma as any).userInventoryItem.findMany({
+        where: { userJid: { in: possibleJids }, quantity: { gt: 0 } },
+      });
+    }
 
     let earningsBonusPercent = 0;
     let hungerReductionPercent = 0;
@@ -89,7 +107,7 @@ export async function getUserEducationBuffs(
     const certId = `cert_${profession}`;
     const diplomaId = `diploma_${profession}`;
 
-    for (const item of inv) {
+    for (const item of inv || []) {
       if (item.itemId === certId) {
         earningsBonusPercent += 12; // +12% por curso técnico
       }
@@ -154,145 +172,151 @@ export async function startExam(
   cost?: number;
 }> {
   const user = await resolveOrRegisterUser(userJid);
-  const profession = (user as any).profession as ProfessionType | null;
 
-  if (!profession || !EDUCATION_CONFIG[profession]) {
-    return {
-      success: false,
-      error: "Para ingresar a la Universidad o realizar cursos técnicos primero debés elegir una profesión con `!profesion`.",
-    };
-  }
+  return await withKeyLock(`user:${user.id}`, async () => {
+    const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
+    const profession = ((current as any).profession || (user as any).profession) as ProfessionType | null;
 
-  const edu = EDUCATION_CONFIG[profession];
-
-  // Verificar cooldown de recuperatorio (por reprobar)
-  const now = Date.now();
-  const failCooldown = examCooldowns.get(userJid);
-  if (failCooldown && now < failCooldown) {
-    const sec = Math.ceil((failCooldown - now) / 1000);
-    return {
-      success: false,
-      error: `⏳ Estás en período de recuperatorio. El profesor te mandó a repasar las fotocopias. Esperá *${sec} segundos* para volver a rendir.`,
-    };
-  }
-
-  const activeSession = activeExamSessions.get(userJid);
-  if (activeSession && now < activeSession.expiresAt) {
-    return {
-      success: false,
-      error: "Ya tenés un examen en curso. Respondé la pregunta activa con `!uni rendir <opcion>`.",
-    };
-  }
-
-  const academic = await getAcademicStatus(userJid, profession);
-  if (!academic) {
-    return { success: false, error: "Error cargando legajo universitario." };
-  }
-
-  if (type === "course") {
-    if (academic.hasCourse) {
+    if (!profession || !EDUCATION_CONFIG[profession]) {
       return {
         success: false,
-        error: `Ya completaste el *${edu.technicalCourse.name}* y tenés tu Carnet Estudiantil activo. ¡Anotate en la carrera universitaria con \`!uni carrera\`!`,
+        error: "Para ingresar a la Universidad o realizar cursos técnicos primero debés elegir una profesión con `!profesion`.",
       };
     }
 
-    const cost = edu.technicalCourse.cost;
-    if (user.balance < cost) {
+    const edu = EDUCATION_CONFIG[profession];
+
+    // Verificar cooldown de recuperatorio (por reprobar)
+    const now = Date.now();
+    const failCooldown = examCooldowns.get(userJid);
+    if (failCooldown && now < failCooldown) {
+      const sec = Math.ceil((failCooldown - now) / 1000);
       return {
         success: false,
-        error: `No te alcanza para la matrícula del curso técnico. Cuesta *$${cost}* fichas (tu saldo: *$${user.balance}*).`,
+        error: `⏳ Estás en período de recuperatorio. El profesor te mandó a repasar las fotocopias. Esperá *${sec} segundos* para volver a rendir.`,
       };
     }
 
-    const qPool = edu.technicalCourse.questions;
-    const question = qPool[Math.floor(Math.random() * qPool.length)];
-
-    const updatedUser = await prisma.userProfile.update({
-      where: { id: user.id },
-      data: { balance: { decrement: cost } },
-    });
-    updateCachedUser(user.jid, { balance: updatedUser.balance });
-
-    activeExamSessions.set(userJid, {
-      userJid,
-      userId: user.id,
-      profession,
-      type: "course",
-      question,
-      cost,
-      expiresAt: now + 5 * 60 * 1000,
-    });
-
-    return {
-      success: true,
-      question,
-      stageName: edu.technicalCourse.name,
-      facultyName: edu.facultyName,
-      cost,
-    };
-  } else {
-    // Carrera universitaria
-    if (academic.hasDegree) {
+    const activeSession = activeExamSessions.get(userJid);
+    if (activeSession && now < activeSession.expiresAt) {
       return {
         success: false,
-        error: `🎓 ¡Ya estás graduado/a de *${edu.universityDegree.titleName}*! Ya alcanzaste el máximo grado académico de tu oficio.`,
+        error: "Ya tenés un examen en curso. Respondé la pregunta activa con `!uni rendir <opcion>`.",
       };
     }
 
-    // Verificar cooldown entre parciales (15 min)
-    const degCooldown = degreeCooldowns.get(userJid);
-    if (degCooldown && now < degCooldown) {
-      const min = Math.ceil((degCooldown - now) / (60 * 1000));
+    const academic = await getAcademicStatus(userJid, profession);
+    if (!academic) {
+      return { success: false, error: "Error cargando legajo universitario." };
+    }
+
+    if (type === "course") {
+      if (academic.hasCourse) {
+        return {
+          success: false,
+          error: `Ya completaste el *${edu.technicalCourse.name}* y tenés tu Carnet Estudiantil activo. ¡Anotate en la carrera universitaria con \`!uni carrera\`!`,
+        };
+      }
+
+      const cost = edu.technicalCourse.cost;
+      if (current.balance < cost) {
+        return {
+          success: false,
+          error: `No te alcanza para la matrícula del curso técnico. Cuesta *$${cost}* fichas (tu saldo: *$${current.balance}*).`,
+        };
+      }
+
+      const qPool = edu.technicalCourse.questions;
+      const question = qPool[Math.floor(Math.random() * qPool.length)];
+
+      const updatedUser = await prisma.userProfile.update({
+        where: { id: current.id },
+        data: { balance: { decrement: cost } },
+      });
+      updateCachedUser(user.jid, { balance: updatedUser.balance });
+
+      pruneExpiredSessions(now);
+      activeExamSessions.set(userJid, {
+        userJid,
+        userId: user.id,
+        profession,
+        type: "course",
+        question,
+        cost,
+        expiresAt: now + 5 * 60 * 1000,
+      });
+
       return {
-        success: false,
-        error: `⏳ Estás en cursada regular. Debés esperar el recreo universitario entre parciales (*${min} minutos restantes*) antes de rendir la siguiente materia.`,
+        success: true,
+        question,
+        stageName: edu.technicalCourse.name,
+        facultyName: edu.facultyName,
+        cost,
+      };
+    } else {
+      // Carrera universitaria
+      if (academic.hasDegree) {
+        return {
+          success: false,
+          error: `🎓 ¡Ya estás graduado/a de *${edu.universityDegree.titleName}*! Ya alcanzaste el máximo grado académico de tu oficio.`,
+        };
+      }
+
+      // Verificar cooldown entre parciales (15 min)
+      const degCooldown = degreeCooldowns.get(userJid);
+      if (degCooldown && now < degCooldown) {
+        const min = Math.ceil((degCooldown - now) / (60 * 1000));
+        return {
+          success: false,
+          error: `⏳ Estás en cursada regular. Debés esperar el recreo universitario entre parciales (*${min} minutos restantes*) antes de rendir la siguiente materia.`,
+        };
+      }
+
+      const nextStageIdx = academic.degreeStage; // 0, 1 o 2
+      const stage = edu.universityDegree.stages[nextStageIdx];
+
+      if (!stage) {
+        return { success: false, error: "No hay más etapas pendientes en la carrera." };
+      }
+
+      const cost = stage.cost;
+      if (current.balance < cost) {
+        return {
+          success: false,
+          error: `No te alcanza para rendir esta materia (*${stage.name}*). Cuesta *$${cost}* fichas (tu saldo: *$${current.balance}*).`,
+        };
+      }
+
+      const qPool = stage.questions;
+      const question = qPool[Math.floor(Math.random() * qPool.length)];
+
+      const updatedUser = await prisma.userProfile.update({
+        where: { id: current.id },
+        data: { balance: { decrement: cost } },
+      });
+      updateCachedUser(user.jid, { balance: updatedUser.balance });
+
+      pruneExpiredSessions(now);
+      activeExamSessions.set(userJid, {
+        userJid,
+        userId: user.id,
+        profession,
+        type: "degree",
+        stageNumber: nextStageIdx + 1,
+        question,
+        cost,
+        expiresAt: now + 5 * 60 * 1000,
+      });
+
+      return {
+        success: true,
+        question,
+        stageName: stage.name,
+        facultyName: edu.facultyName,
+        cost,
       };
     }
-
-    const nextStageIdx = academic.degreeStage; // 0, 1 o 2
-    const stage = edu.universityDegree.stages[nextStageIdx];
-
-    if (!stage) {
-      return { success: false, error: "No hay más etapas pendientes en la carrera." };
-    }
-
-    const cost = stage.cost;
-    if (user.balance < cost) {
-      return {
-        success: false,
-        error: `No te alcanza para rendir esta materia (*${stage.name}*). Cuesta *$${cost}* fichas (tu saldo: *$${user.balance}*).`,
-      };
-    }
-
-    const qPool = stage.questions;
-    const question = qPool[Math.floor(Math.random() * qPool.length)];
-
-    const updatedUser = await prisma.userProfile.update({
-      where: { id: user.id },
-      data: { balance: { decrement: cost } },
-    });
-    updateCachedUser(user.jid, { balance: updatedUser.balance });
-
-    activeExamSessions.set(userJid, {
-      userJid,
-      userId: user.id,
-      profession,
-      type: "degree",
-      stageNumber: nextStageIdx + 1,
-      question,
-      cost,
-      expiresAt: now + 5 * 60 * 1000,
-    });
-
-    return {
-      success: true,
-      question,
-      stageName: stage.name,
-      facultyName: edu.facultyName,
-      cost,
-    };
-  }
+  });
 }
 
 /**
@@ -341,6 +365,7 @@ export async function submitExamAnswer(
 
   if (!isCorrect) {
     // Sanción leve: 3 minutos de recuperatorio
+    pruneExpiredTimestamps(examCooldowns, now);
     examCooldowns.set(userJid, now + 3 * 60 * 1000);
     return {
       success: true,
@@ -358,7 +383,7 @@ export async function submitExamAnswer(
     return { success: false, error: "No se encontró la configuración académica para tu profesión." };
   }
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
 
     if (session.type === "course") {
       // Guardar certificado técnico
@@ -394,6 +419,7 @@ export async function submitExamAnswer(
         });
 
         // Cooldown de 15 min para el próximo parcial
+        pruneExpiredTimestamps(degreeCooldowns, now);
         degreeCooldowns.set(userJid, now + 15 * 60 * 1000);
 
         return {
@@ -421,6 +447,7 @@ export async function submitExamAnswer(
             title: edu.universityDegree.titleName,
           },
         });
+        updateCachedUser(user.jid, { title: edu.universityDegree.titleName });
 
         return {
           success: true,

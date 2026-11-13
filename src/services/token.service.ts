@@ -328,7 +328,7 @@ export async function flushApiQuotaUsage(): Promise<void> {
   } catch (err: any) {
     console.warn("[Quota Tracker] Error persistiendo uso en base de datos:", err?.message || err);
     for (const item of items) {
-      const key = `${item.date}:${item.provider}:${item.model}:${item.feature}`;
+      const key = `${item.date}_${item.provider}_${item.model}_${item.feature}`;
       const existing = pendingQuotaUsage.get(key);
       if (existing) {
         existing.callCount += item.callCount;

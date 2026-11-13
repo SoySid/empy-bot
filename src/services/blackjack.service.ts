@@ -1,5 +1,5 @@
-import { prisma, withWriteLock } from "./db/prisma.js";
-import { resolveOrRegisterUser } from "./db/user.service.js";
+import { prisma, withKeyLock } from "./db/prisma.js";
+import { resolveOrRegisterUser, updateCachedUser } from "./db/user.service.js";
 import { ECONOMY_CONFIG } from "../config/economy.config.js";
 import { isUserEconomyFrozen } from "./admin-economy.service.js";
 import { checkCasinoRateLimit, recordCasinoBet } from "./economy.service.js";
@@ -147,7 +147,7 @@ export async function startBlackjack(
     };
   }
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
     if (current.balance < bet) {
       return {
@@ -160,10 +160,11 @@ export async function startBlackjack(
     recordCasinoBet(user.id);
 
     // Descontar la apuesta de la billetera
-    await prisma.userProfile.update({
+    const debited = await prisma.userProfile.update({
       where: { id: user.id },
       data: { balance: { decrement: bet } },
     });
+    updateCachedUser(user.jid, { balance: debited.balance });
 
     const playerCards = [drawCard(), drawCard()];
     const dealerCards = [drawCard(), drawCard()];
@@ -179,6 +180,7 @@ export async function startBlackjack(
           where: { id: user.id },
           data: { balance: { increment: bet } },
         });
+        updateCachedUser(user.jid, { balance: updated.balance });
         return {
           success: true,
           gameFinished: true,
@@ -198,6 +200,7 @@ export async function startBlackjack(
           where: { id: user.id },
           data: { balance: { increment: payout } },
         });
+        updateCachedUser(user.jid, { balance: updated.balance });
         return {
           success: true,
           gameFinished: true,
@@ -368,7 +371,7 @@ export async function standBlackjack(userJid: string): Promise<{
     dealerCalc = calculateScore(game.dealerCards);
   }
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${game.userId}`, async () => {
     let outcome: "win" | "lose" | "push" = "lose";
     let statusText = "";
     let payout = 0;
@@ -398,6 +401,7 @@ export async function standBlackjack(userJid: string): Promise<{
         data: { balance: { increment: payout } },
       });
       updatedBalance = updated.balance;
+      updateCachedUser(user.jid, { balance: updated.balance });
     } else {
       const current = await prisma.userProfile.findUnique({ where: { id: game.userId } });
       updatedBalance = current?.balance ?? 0;

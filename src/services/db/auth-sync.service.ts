@@ -3,7 +3,10 @@ import fs from "fs";
 import path from "path";
 import zlib from "node:zlib";
 import crypto from "node:crypto";
+import { promisify } from "node:util";
 import { prisma } from "./prisma.js";
+
+const gzipAsync = promisify(zlib.gzip);
 
 const AUTH_DIR = path.resolve(process.cwd(), "auth_info");
 const SESSION_BUNDLE_KEY = "auth_bundle_v1";
@@ -121,25 +124,26 @@ export async function syncAuthToDb(): Promise<void> {
   try {
     if (!fs.existsSync(AUTH_DIR)) return;
 
-    const files = fs
-      .readdirSync(AUTH_DIR)
-      .filter((f) => f.endsWith(".json") && !f.startsWith("sender-key-"));
+    const allFiles = await fs.promises.readdir(AUTH_DIR);
+    const files = allFiles.filter((f) => f.endsWith(".json") && !f.startsWith("sender-key-"));
     if (files.length === 0) return;
 
     const bundle: Record<string, string> = {};
-    for (const filename of files) {
-      const safeFilename = path.basename(filename);
-      try {
-        const filePath = path.join(AUTH_DIR, safeFilename);
-        const content = fs.readFileSync(filePath, "utf8");
-        if (content && content.trim().length > 0) {
-          bundle[safeFilename] = content;
-        }
-      } catch {}
-    }
+    await Promise.all(
+      files.map(async (filename) => {
+        const safeFilename = path.basename(filename);
+        try {
+          const filePath = path.join(AUTH_DIR, safeFilename);
+          const content = await fs.promises.readFile(filePath, "utf8");
+          if (content && content.trim().length > 0) {
+            bundle[safeFilename] = content;
+          }
+        } catch {}
+      })
+    );
 
     const jsonString = JSON.stringify(bundle);
-    const compressed = zlib.gzipSync(Buffer.from(jsonString, "utf8"));
+    const compressed = await gzipAsync(Buffer.from(jsonString, "utf8"));
     const storedValue = encryptPayload(compressed);
 
     await prisma.baileysSession.upsert({

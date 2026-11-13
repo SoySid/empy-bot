@@ -1,5 +1,5 @@
 import type { WASocket } from "@whiskeysockets/baileys";
-import { prisma, withWriteLock, withKeyLock } from "./db/prisma.js";
+import { prisma, withWriteLock, withKeyLock, withUserPairLock } from "./db/prisma.js";
 import { resolveOrRegisterUser, refreshSingleUserCache, getCachedUserProfile, formatUserName, updateCachedUser } from "./db/user.service.js";
 import { getCachedGroupMetadata, findGroupParticipant } from "./whatsapp-identity.js";
 import {
@@ -72,7 +72,8 @@ export interface UserProfessionBuffs {
 
 export async function getUserProfessionBuffs(
   userJid: string,
-  profession?: ProfessionType | null
+  profession?: ProfessionType | null,
+  preloadedInventory?: any[]
 ): Promise<UserProfessionBuffs> {
   if (!profession) {
     return {
@@ -87,16 +88,19 @@ export async function getUserProfessionBuffs(
   }
 
   try {
-    const user = await resolveOrRegisterUser(userJid);
-    const possibleJids = [user.jid];
-    if (user.lid) possibleJids.push(user.lid);
-    if (user.phone) possibleJids.push(user.phone);
+    let inventory = preloadedInventory;
+    if (!inventory) {
+      const user = await resolveOrRegisterUser(userJid);
+      const possibleJids = [user.jid];
+      if (user.lid) possibleJids.push(user.lid);
+      if (user.phone) possibleJids.push(user.phone);
 
-    const inventory = await prisma.$queryRaw<any[]>`
-      SELECT "id", "userJid", "itemId", "quantity", COALESCE("durability", 100) AS "durability"
-      FROM "UserInventoryItem"
-      WHERE "userJid" = ANY(${possibleJids}) AND "quantity" > 0;
-    `;
+      inventory = await prisma.$queryRaw<any[]>`
+        SELECT "id", "userJid", "itemId", "quantity", COALESCE("durability", 100) AS "durability"
+        FROM "UserInventoryItem"
+        WHERE "userJid" = ANY(${possibleJids}) AND "quantity" > 0;
+      `;
+    }
 
     let earningsBonusPercent = 0;
     let cooldownReductionSec = 0;
@@ -200,8 +204,8 @@ export async function getUserProfessionBuffs(
       }
     }
 
-    // Computar buffs de educación (Cursos Técnicos y Título Universitario)
-    const eduBuffs = await getUserEducationBuffs(userJid, profession);
+    // Computar buffs de educación (Cursos Técnicos y Título Universitario) reutilizando el inventario cargado
+    const eduBuffs = await getUserEducationBuffs(userJid, profession, inventory);
     earningsBonusPercent += eduBuffs.earningsBonusPercent;
     hungerReductionPercent += eduBuffs.hungerReductionPercent;
 
@@ -256,6 +260,16 @@ export function checkCasinoRateLimit(userId: string): { allowed: boolean; remain
 export function recordCasinoBet(userId: string): void {
   const now = Date.now();
   const windowMs = 60 * 1000;
+  if (userCasinoTimestamps.size > 300) {
+    for (const [k, list] of userCasinoTimestamps.entries()) {
+      const fresh = list.filter((t) => now - t < windowMs);
+      if (fresh.length === 0) {
+        userCasinoTimestamps.delete(k);
+      } else {
+        userCasinoTimestamps.set(k, fresh);
+      }
+    }
+  }
   const timestamps = (userCasinoTimestamps.get(userId) || []).filter((t) => now - t < windowMs);
   timestamps.push(now);
   userCasinoTimestamps.set(userId, timestamps);
@@ -386,7 +400,10 @@ export async function rotateGlobalWeather(forcedWeatherKey?: string): Promise<{
 /**
  * Verifica y aplica cobro pasivo automático cada 20 horas.
  */
-export async function checkAndApplyPassiveDaily(userJid: string): Promise<{
+export async function checkAndApplyPassiveDaily(
+  userJid: string,
+  preloadedInventory?: any[]
+): Promise<{
   credited: boolean;
   amount: number;
   baseAmount: number;
@@ -399,15 +416,17 @@ export async function checkAndApplyPassiveDaily(userJid: string): Promise<{
   const ONE_HOUR_MS = 60 * 60 * 1000;
   const DAILY_INTERVAL_MS = ECONOMY_CONFIG.PASSIVE_DAILY_HOURS * ONE_HOUR_MS;
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({
       where: { id: user.id },
     })) || user;
 
     // Calcular renta pasiva de negocios del usuario
-    const userInv = await (prisma as any).userInventoryItem.findMany({
-      where: { userJid: user.jid, quantity: { gt: 0 } },
-    });
+    const userInv =
+      preloadedInventory ??
+      (await (prisma as any).userInventoryItem.findMany({
+        where: { userJid: user.jid, quantity: { gt: 0 } },
+      }));
     let businessBonus = 0;
     for (const inv of userInv) {
       const it = SHOP_ITEMS[inv.itemId];
@@ -485,7 +504,17 @@ export async function getWallet(userJid: string): Promise<{
   relics: ShopItem[];
 }> {
   const user = await resolveOrRegisterUser(userJid);
-  const dailyCheck = await checkAndApplyPassiveDaily(user.jid);
+  const walletPossibleJids = [user.jid];
+  if (user.lid) walletPossibleJids.push(user.lid);
+  if (user.phone) walletPossibleJids.push(user.phone);
+
+  const userInv = await prisma.$queryRaw<any[]>`
+    SELECT "id", "userJid", "itemId", "quantity", COALESCE("durability", 100) AS "durability"
+    FROM "UserInventoryItem"
+    WHERE "userJid" = ANY(${walletPossibleJids}) AND "quantity" > 0;
+  `;
+
+  const dailyCheck = await checkAndApplyPassiveDaily(user.jid, userInv);
 
   const current = (await prisma.userProfile.findUnique({
     where: { id: user.id },
@@ -497,7 +526,7 @@ export async function getWallet(userJid: string): Promise<{
 
   const rawProfession = await getUserProfession(current.id);
   const profMeta = rawProfession && PROFESSIONS[rawProfession] ? PROFESSIONS[rawProfession] : null;
-  const buffs = await getUserProfessionBuffs(current.jid, profMeta?.id);
+  const buffs = await getUserProfessionBuffs(current.jid, profMeta?.id, userInv);
 
   // Job cooldown (1m 30s base, reducible with tools down to 45s)
   const lastJobMs = current.lastJob ? current.lastJob.getTime() : 0;
@@ -522,14 +551,7 @@ export async function getWallet(userJid: string): Promise<{
   const title = (current as any).title || null;
   const hungerBar = renderHungerBar(hunger);
 
-  // Negocios, coleccionables y reliquias del usuario
-  const walletPossibleJids = [user.jid];
-  if (user.lid) walletPossibleJids.push(user.lid);
-  if (user.phone) walletPossibleJids.push(user.phone);
-
-  const userInv = await (prisma as any).userInventoryItem.findMany({
-    where: { userJid: { in: walletPossibleJids }, quantity: { gt: 0 } },
-  });
+  // Negocios, coleccionables y reliquias del usuario (reutilizando inventario ya cargado)
   const businesses: ShopItem[] = [];
   const collectibles: ShopItem[] = [];
   const relics: ShopItem[] = [];
@@ -588,7 +610,7 @@ export async function modifyBalance(
 
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({
       where: { id: user.id },
     })) || user;
@@ -650,7 +672,7 @@ export async function transfer(
     return { success: false, error: "El destinatario se encuentra congelado por administración." };
   }
 
-  return await withWriteLock(async () => {
+  return await withUserPairLock(sender.id, target.id, async () => {
     try {
       return await prisma.$transaction(async (tx) => {
         const curSender = await tx.userProfile.findUnique({ where: { id: sender.id } });
@@ -941,7 +963,7 @@ export async function executeRobbery(
   const now = new Date();
   const robCooldownMs = ECONOMY_CONFIG.ROB_COOLDOWN_MINUTES * 60 * 1000;
 
-  return await withWriteLock(async () => {
+  return await withUserPairLock(aggressor.id, victim.id, async () => {
     const curAggressor = (await prisma.userProfile.findUnique({ where: { id: aggressor.id } })) || aggressor;
     const curVictim = (await prisma.userProfile.findUnique({ where: { id: victim.id } })) || victim;
 
@@ -1565,13 +1587,10 @@ export async function handleBusinessPassiveIncome(
 
     if (userBusinessMap.size === 0) return;
 
-    const lines: string[] = [];
+    const entries = Array.from(userBusinessMap.entries());
+    await Promise.allSettled(entries.map(([jid, total]) => modifyBalance(jid, total)));
 
-    for (const [jid, total] of userBusinessMap.entries()) {
-      await modifyBalance(jid, total);
-      const name = formatUserName(jid);
-      lines.push(`• ${name} cobró *$${total}* fichas`);
-    }
+    const lines = entries.map(([jid, total]) => `• ${formatUserName(jid)} cobró *$${total}* fichas`);
 
     const text =
       `🏢 *RENTA DE NEGOCIOS* (Cada 50 msgs)\n\n` +
@@ -1610,7 +1629,7 @@ export async function payBribe(userJid: string): Promise<{
   const BRIBE_COST = 15000;
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
 
     if (current.balance < BRIBE_COST) {
@@ -1664,7 +1683,7 @@ export async function buyCustomTitle(
 
   const user = await resolveOrRegisterUser(userJid);
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const current = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
 
     if (current.balance < TITLE_PRICE) {
@@ -1798,7 +1817,7 @@ export async function clearUserProfession(userJid: string): Promise<{
   userProfessionCache.delete(user.jid);
   userProfessionCache.delete(userJid);
 
-  await withWriteLock(async () => {
+  await withKeyLock(`user:${user.id}`, async () => {
     await prisma.userProfile.update({
       where: { id: user.id },
       data: { profession: null },
@@ -1869,7 +1888,7 @@ export async function repairTool(userJid: string): Promise<{
     };
   }
 
-  return await withWriteLock(async () => {
+  return await withKeyLock(`user:${user.id}`, async () => {
     const cur = (await prisma.userProfile.findUnique({ where: { id: user.id } })) || user;
     if (cur.balance < REPAIR_COST) {
       return {

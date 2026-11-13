@@ -82,13 +82,30 @@ export async function withKeyLock<T>(key: string, operation: () => Promise<T>, _
   }
 }
 
+/**
+ * Adquiere locks por usuario para dos cuentas en orden determinístico para evitar deadlocks.
+ */
+export async function withUserPairLock<T>(
+  userIdA: string,
+  userIdB: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  if (userIdA === userIdB) {
+    return await withKeyLock(`user:${userIdA}`, operation);
+  }
+  const [first, second] = userIdA < userIdB ? [userIdA, userIdB] : [userIdB, userIdA];
+  return await withKeyLock(`user:${first}`, async () => {
+    return await withKeyLock(`user:${second}`, operation);
+  });
+}
+
 // Inicializa y verifica la conexión activa con PostgreSQL (Supabase) con blindaje RLS
 export async function initPrisma(): Promise<void> {
   try {
     await prisma.$queryRaw`SELECT 1;`;
     console.log("[Prisma] 🚀 Conexión con PostgreSQL (Supabase) inicializada con éxito.");
 
-    // Blindaje de seguridad Supabase: Activar Row Level Security (RLS) en todas las tablas públicas
+    // Blindaje de seguridad Supabase: Activar Row Level Security (RLS) en todas las tablas públicas en 1 solo round-trip
     const tablesToShield = [
       "UserProfile",
       "UserAlias",
@@ -112,17 +129,19 @@ export async function initPrisma(): Promise<void> {
       "user_command_bans",
     ];
 
-    for (const tableName of tablesToShield) {
-      try {
-        await prisma.$executeRawUnsafe(
-          `DO $$ BEGIN
-             IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${tableName}') THEN
-               EXECUTE 'ALTER TABLE public."' || '${tableName}' || '" ENABLE ROW LEVEL SECURITY';
-             END IF;
-           END $$;`
-        );
-      } catch {}
-    }
+    const tableArraySql = tablesToShield.map((t) => `'${t}'`).join(", ");
+    await prisma.$executeRawUnsafe(
+      `DO $$
+       DECLARE
+         t text;
+       BEGIN
+         FOREACH t IN ARRAY ARRAY[${tableArraySql}] LOOP
+           IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = t) THEN
+             EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+           END IF;
+         END LOOP;
+       END $$;`
+    );
     console.log("[Prisma] 🛡️ Row Level Security (RLS) asegurado en tablas públicas de Supabase.");
   } catch (error) {
     console.error("[Prisma] Error conectando con la base de datos:", error);
