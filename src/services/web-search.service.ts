@@ -210,6 +210,14 @@ async function fetchWeather(query: string): Promise<string | null> {
   }
 
   // 1. Geocodificación precisa priorizando Argentina con Open-Meteo
+  let resolvedLocation: {
+    name: string;
+    country?: string;
+    admin1?: string;
+    latitude: number;
+    longitude: number;
+  } | null = null;
+
   try {
     const geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
       params: {
@@ -224,14 +232,27 @@ async function fetchWeather(query: string): Promise<string | null> {
     const results = geoRes.data?.results;
     if (Array.isArray(results) && results.length > 0) {
       const isExplicitCountry = /(,\s*|\s+(en|de)\s+)(españa|espana|mexico|méxico|chile|uruguay|brasil|brazil|peru|perú|colombia|venezuela|eeuu|usa|estados unidos|francia|italia|alemania|inglaterra|reino unido|uk)/i.test(targetCity);
-      const arMatch = isExplicitCountry ? null : results.find((r: any) => r.country_code === "AR");
+      let arMatch = isExplicitCountry ? null : results.find((r: any) => r.country_code === "AR");
+      if (!arMatch && !isExplicitCountry && results.length >= 10) {
+        const arGeoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+          params: { name: targetCity, count: 5, language: "es", format: "json", countryCode: "AR" },
+          timeout: 3000,
+        });
+        arMatch = arGeoRes.data?.results?.[0] || null;
+      }
       const topMatch = arMatch || results[0];
-      const { name, country, admin1, latitude, longitude } = topMatch;
+      resolvedLocation = {
+        name: topMatch.name,
+        country: topMatch.country,
+        admin1: topMatch.admin1,
+        latitude: topMatch.latitude,
+        longitude: topMatch.longitude,
+      };
 
       const weatherRes = await axios.get("https://api.open-meteo.com/v1/forecast", {
         params: {
-          latitude,
-          longitude,
+          latitude: resolvedLocation.latitude,
+          longitude: resolvedLocation.longitude,
           current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
           timezone: "auto",
         },
@@ -241,12 +262,46 @@ async function fetchWeather(query: string): Promise<string | null> {
       const current = weatherRes.data?.current;
       if (current) {
         const desc = interpretWeatherCode(current.weather_code);
-        const regionInfo = admin1 ? ` (${admin1}, ${country})` : ` (${country})`;
-        return `Clima en ${name}${regionInfo}: ${desc} | Temp: ${current.temperature_2m}°C (ST: ${current.apparent_temperature}°C) | Humedad: ${current.relative_humidity_2m}% | Viento: ${current.wind_speed_10m} km/h`;
+        const regionInfo = resolvedLocation.admin1
+          ? ` (${resolvedLocation.admin1}, ${resolvedLocation.country})`
+          : ` (${resolvedLocation.country})`;
+        return `Clima en ${resolvedLocation.name}${regionInfo}: ${desc} | Temp: ${current.temperature_2m}°C (ST: ${current.apparent_temperature}°C) | Humedad: ${current.relative_humidity_2m}% | Viento: ${current.wind_speed_10m} km/h`;
       }
     }
   } catch (err: any) {
     console.warn("[Weather Open-Meteo] Fallback por error:", err?.message || err);
+  }
+
+  // 1b. Fallback por coordenadas con MET Norway si Open-Meteo forecast falló (ej. HTTP 429)
+  if (resolvedLocation) {
+    try {
+      const metRes = await axios.get("https://api.met.no/weatherapi/locationforecast/2.0/compact", {
+        params: {
+          lat: Number(resolvedLocation.latitude.toFixed(4)),
+          lon: Number(resolvedLocation.longitude.toFixed(4)),
+        },
+        headers: {
+          "User-Agent": "EmpyBot/1.0 (https://github.com/SoySid/empy-bot; soysidarg@gmail.com)",
+        },
+        timeout: 4500,
+      });
+      const details = metRes.data?.properties?.timeseries?.[0]?.data?.instant?.details;
+      if (details && details.air_temperature != null) {
+        const t = Number(details.air_temperature);
+        const rh = Number(details.relative_humidity ?? 50);
+        const ws = Number(details.wind_speed ?? 0);
+        const e = (rh / 100) * 6.105 * Math.exp((17.27 * t) / (237.7 + t));
+        const st = Math.round(t + 0.33 * e - 0.7 * ws - 4.0);
+        const regionInfo = resolvedLocation.admin1
+          ? ` (${resolvedLocation.admin1}, ${resolvedLocation.country})`
+          : resolvedLocation.country
+            ? ` (${resolvedLocation.country})`
+            : "";
+        return `Clima en ${resolvedLocation.name}${regionInfo}: Temp: ${Math.round(t)}°C (ST: ${st}°C) | Humedad: ${Math.round(rh)}% | Viento: ${Math.round(ws * 3.6)} km/h`;
+      }
+    } catch (err: any) {
+      console.warn("[Weather MET Norway] Fallback por error:", err?.message || err);
+    }
   }
 
   // 2. Fallback a wttr.in forzando estrictamente Argentina

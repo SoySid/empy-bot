@@ -68,28 +68,320 @@ const WMO_WEATHER_MAP: Record<number, { text: string; emoji: string }> = {
   99: { text: "Tormenta eléctrica con granizo fuerte", emoji: "⛈️" },
 };
 
+const WEATHER_USER_AGENT = "EmpyBot/1.0 (https://github.com/SoySid/empy-bot; soysidarg@gmail.com)";
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+const OPEN_METEO_COOLDOWN_MS = 15 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 500;
+const EXPLICIT_COUNTRY_REGEX =
+  /(,\s*|\s+(en|de)\s+)(españa|espana|mexico|méxico|chile|uruguay|brasil|brazil|peru|perú|colombia|venezuela|eeuu|usa|estados unidos|francia|italia|alemania|inglaterra|reino unido|uk|europa|asia)/i;
+
+export interface GeoLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  admin1?: string;
+}
+
+export interface WeatherSnapshot {
+  conditionText: string;
+  conditionEmoji: string;
+  tempActual: number;
+  tempSensacion: number;
+  minToday: number | null;
+  maxToday: number | null;
+  humidity: number;
+  windKmh: number;
+  precipitationMm: number;
+}
+
+const geoCache = new Map<string, GeoLocation>();
+const weatherCache = new Map<string, { report: string; expiresAt: number }>();
+let openMeteoBlockedUntil = 0;
+
+function setBoundedCache<T>(cache: Map<string, T>, key: string, value: T): void {
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+  cache.set(key, value);
+}
+
+function mapMetSymbol(symbolCode: string): { text: string; emoji: string } {
+  const s = symbolCode.toLowerCase();
+  if (s.includes("thunder")) return { text: "Tormenta eléctrica", emoji: "⛈️" };
+  if (s.includes("snow") || s.includes("sleet")) return { text: "Nevada", emoji: "❄️" };
+  if (s.includes("heavyrain")) return { text: "Lluvia fuerte", emoji: "🌧️" };
+  if (s.includes("rainshowers")) return { text: "Chubascos", emoji: "🌦️" };
+  if (s.includes("lightrain") || s.includes("drizzle")) return { text: "Llovizna leve", emoji: "🌦️" };
+  if (s.includes("rain")) return { text: "Lluvia moderada", emoji: "🌧️" };
+  if (s.includes("fog")) return { text: "Niebla", emoji: "🌫️" };
+  if (s.includes("partlycloudy")) return { text: "Parcialmente nublado", emoji: "⛅" };
+  if (s.includes("cloudy")) return { text: "Nublado", emoji: "☁️" };
+  if (s.includes("fair")) return { text: "Mayormente despejado", emoji: "🌤️" };
+  if (s.includes("clearsky")) return { text: "Cielo despejado", emoji: "☀️" };
+  return { text: "Tiempo variable", emoji: "🌡️" };
+}
+
+function mapWttrEmoji(code: number): string {
+  if ([200, 386, 389, 392, 395].includes(code)) return "⛈️";
+  if ([179, 182, 185, 227, 230].includes(code) || (code >= 323 && code <= 377)) return "❄️";
+  if ([143, 248, 260].includes(code)) return "🌫️";
+  if ([176, 263, 266, 293, 296, 353].includes(code)) return "🌦️";
+  if ([299, 302, 305, 308, 356, 359].includes(code) || (code >= 311 && code <= 320)) return "🌧️";
+  if ([119, 122].includes(code)) return "☁️";
+  if (code === 116) return "⛅";
+  if (code === 113) return "☀️";
+  return "🌡️";
+}
+
+async function queryNominatim(query: string): Promise<GeoLocation | null> {
+  const res = await axios.get("https://nominatim.openstreetmap.org/search", {
+    params: {
+      q: query,
+      format: "jsonv2",
+      addressdetails: 1,
+      limit: 5,
+      "accept-language": "es",
+    },
+    headers: { "User-Agent": WEATHER_USER_AGENT },
+    timeout: 6000,
+  });
+
+  const item = Array.isArray(res.data) ? res.data[0] : null;
+  if (!item || item.lat == null || item.lon == null) return null;
+
+  return {
+    name: item.name || String(item.display_name || query).split(",")[0].trim(),
+    latitude: Number(item.lat),
+    longitude: Number(item.lon),
+    country: item.address?.country,
+    admin1: item.address?.state,
+  };
+}
+
+export async function resolveCityLocation(
+  city: string
+): Promise<{ location: GeoLocation | null; geocodingErrored: boolean }> {
+  const cacheKey = city.toLowerCase().trim();
+  const cached = geoCache.get(cacheKey);
+  if (cached) return { location: cached, geocodingErrored: false };
+
+  const isExplicitCountry = EXPLICIT_COUNTRY_REGEX.test(city);
+  let geocodingErrored = false;
+
+  if (Date.now() >= openMeteoBlockedUntil) {
+    try {
+      const geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+        params: { name: city, count: 10, language: "es", format: "json" },
+        timeout: 5000,
+      });
+      const results = geoRes.data?.results;
+      if (Array.isArray(results) && results.length > 0) {
+        let arMatch = isExplicitCountry ? null : results.find((r: any) => r.country_code === "AR");
+        if (!arMatch && !isExplicitCountry && results.length >= 10) {
+          const arGeoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
+            params: { name: city, count: 5, language: "es", format: "json", countryCode: "AR" },
+            timeout: 4000,
+          });
+          arMatch = arGeoRes.data?.results?.[0] || null;
+        }
+        const picked = arMatch || results[0];
+        const loc: GeoLocation = {
+          name: picked.name,
+          latitude: picked.latitude,
+          longitude: picked.longitude,
+          country: picked.country,
+          admin1: picked.admin1,
+        };
+        setBoundedCache(geoCache, cacheKey, loc);
+        return { location: loc, geocodingErrored: false };
+      }
+    } catch (err: any) {
+      geocodingErrored = true;
+      if (err?.response?.status === 429) {
+        openMeteoBlockedUntil = Date.now() + OPEN_METEO_COOLDOWN_MS;
+      }
+    }
+  } else {
+    geocodingErrored = true;
+  }
+
+  try {
+    let loc = await queryNominatim(isExplicitCountry ? city : `${city}, Argentina`);
+    if (!loc && !isExplicitCountry) {
+      loc = await queryNominatim(city);
+    }
+    if (loc) {
+      setBoundedCache(geoCache, cacheKey, loc);
+      return { location: loc, geocodingErrored: false };
+    }
+    return { location: null, geocodingErrored: false };
+  } catch {
+    return { location: null, geocodingErrored: true };
+  }
+}
+
+async function fetchFromOpenMeteo(loc: GeoLocation): Promise<WeatherSnapshot | null> {
+  if (Date.now() < openMeteoBlockedUntil) return null;
+  try {
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+    const weatherRes = await axios.get(weatherUrl, { timeout: 5000 });
+    const current = weatherRes.data?.current;
+    const daily = weatherRes.data?.daily;
+    if (!current) return null;
+
+    const condition = WMO_WEATHER_MAP[current.weather_code] || {
+      text: "Tiempo variable",
+      emoji: "🌡️",
+    };
+
+    return {
+      conditionText: condition.text,
+      conditionEmoji: condition.emoji,
+      tempActual: Math.round(current.temperature_2m),
+      tempSensacion: Math.round(current.apparent_temperature),
+      minToday: daily?.temperature_2m_min?.[0] != null ? Math.round(daily.temperature_2m_min[0]) : null,
+      maxToday: daily?.temperature_2m_max?.[0] != null ? Math.round(daily.temperature_2m_max[0]) : null,
+      humidity: Math.round(current.relative_humidity_2m),
+      windKmh: Math.round(current.wind_speed_10m),
+      precipitationMm: Number(current.precipitation || 0),
+    };
+  } catch (err: any) {
+    if (err?.response?.status === 429) {
+      openMeteoBlockedUntil = Date.now() + OPEN_METEO_COOLDOWN_MS;
+    }
+    console.warn("[Clima Open-Meteo] Falló consulta, cambiando a respaldo:", err?.message || err);
+    return null;
+  }
+}
+
+async function fetchFromMetNorway(loc: GeoLocation): Promise<WeatherSnapshot | null> {
+  try {
+    const res = await axios.get("https://api.met.no/weatherapi/locationforecast/2.0/compact", {
+      params: {
+        lat: Number(loc.latitude.toFixed(4)),
+        lon: Number(loc.longitude.toFixed(4)),
+      },
+      headers: { "User-Agent": WEATHER_USER_AGENT },
+      timeout: 6000,
+    });
+
+    const timeseries = res.data?.properties?.timeseries;
+    if (!Array.isArray(timeseries) || timeseries.length === 0) return null;
+
+    const first = timeseries[0]?.data;
+    const details = first?.instant?.details;
+    if (!details || details.air_temperature == null) return null;
+
+    const t = Number(details.air_temperature);
+    const rh = Number(details.relative_humidity ?? 50);
+    const ws = Number(details.wind_speed ?? 0);
+    const e = (rh / 100) * 6.105 * Math.exp((17.27 * t) / (237.7 + t));
+    const apparent = t + 0.33 * e - 0.7 * ws - 4.0;
+
+    const temps24h = timeseries
+      .slice(0, 24)
+      .map((entry: any) => entry?.data?.instant?.details?.air_temperature)
+      .filter((val: unknown): val is number => typeof val === "number");
+
+    const next1h = first?.next_1_hours;
+    const next6h = first?.next_6_hours;
+    const symbolCode = next1h?.summary?.symbol_code || next6h?.summary?.symbol_code || "";
+    const condition = mapMetSymbol(symbolCode);
+
+    return {
+      conditionText: condition.text,
+      conditionEmoji: condition.emoji,
+      tempActual: Math.round(t),
+      tempSensacion: Math.round(apparent),
+      minToday: temps24h.length > 0 ? Math.round(Math.min(...temps24h)) : null,
+      maxToday: temps24h.length > 0 ? Math.round(Math.max(...temps24h)) : null,
+      humidity: Math.round(rh),
+      windKmh: Math.round(ws * 3.6),
+      precipitationMm: Number(next1h?.details?.precipitation_amount ?? next6h?.details?.precipitation_amount ?? 0),
+    };
+  } catch (err: any) {
+    console.warn("[Clima MET Norway] Falló respaldo:", err?.message || err);
+    return null;
+  }
+}
+
+async function fetchFromWttr(query: string): Promise<WeatherSnapshot | null> {
+  try {
+    const res = await axios.get(`https://wttr.in/${encodeURIComponent(query)}`, {
+      params: { format: "j1", lang: "es" },
+      headers: { "User-Agent": WEATHER_USER_AGENT },
+      timeout: 6000,
+    });
+    const cc = res.data?.current_condition?.[0];
+    if (!cc || cc.temp_C == null) return null;
+
+    const day = res.data?.weather?.[0];
+    const code = Number(cc.weatherCode || 0);
+    const desc = cc.lang_es?.[0]?.value || cc.weatherDesc?.[0]?.value || "Tiempo variable";
+
+    return {
+      conditionText: desc,
+      conditionEmoji: mapWttrEmoji(code),
+      tempActual: Math.round(Number(cc.temp_C)),
+      tempSensacion: Math.round(Number(cc.FeelsLikeC ?? cc.temp_C)),
+      minToday: day?.mintempC != null ? Math.round(Number(day.mintempC)) : null,
+      maxToday: day?.maxtempC != null ? Math.round(Number(day.maxtempC)) : null,
+      humidity: Math.round(Number(cc.humidity ?? 0)),
+      windKmh: Math.round(Number(cc.windspeedKmph ?? 0)),
+      precipitationMm: Number(cc.precipMM || 0),
+    };
+  } catch (err: any) {
+    console.warn("[Clima wttr.in] Falló respaldo:", err?.message || err);
+    return null;
+  }
+}
+
+export async function fetchWeatherSnapshot(loc: GeoLocation | null, rawCity: string): Promise<WeatherSnapshot | null> {
+  if (loc) {
+    const openMeteo = await fetchFromOpenMeteo(loc);
+    if (openMeteo) return openMeteo;
+
+    const metNorway = await fetchFromMetNorway(loc);
+    if (metNorway) return metNorway;
+  }
+
+  const wttrQuery = loc
+    ? `${loc.name}${loc.country ? `, ${loc.country}` : ""}`
+    : EXPLICIT_COUNTRY_REGEX.test(rawCity)
+      ? rawCity
+      : `${rawCity}, Argentina`;
+
+  return await fetchFromWttr(wttrQuery);
+}
+
+function formatWeatherReport(locTitle: string, snapshot: WeatherSnapshot): string {
+  let report = `🌤️ *CLIMA EN ${locTitle}*\n\n`;
+  report += `• *Estado:* ${snapshot.conditionEmoji} ${snapshot.conditionText}\n`;
+  report += `• *Temperatura:* ${snapshot.tempActual}°C (ST: ${snapshot.tempSensacion}°C)\n`;
+  if (snapshot.minToday != null && snapshot.maxToday != null) {
+    report += `• *Mín / Máx hoy:* ${snapshot.minToday}°C / ${snapshot.maxToday}°C\n`;
+  }
+  report += `• *Humedad:* ${snapshot.humidity}%\n`;
+  report += `• *Viento:* ${snapshot.windKmh} km/h\n`;
+  if (snapshot.precipitationMm > 0) {
+    report += `• *Precipitación:* ${snapshot.precipitationMm} mm\n`;
+  }
+  return report.trim();
+}
+
 export const climaCommand: Command = {
   name: "clima",
   aliases: ["tiempo", "temperatura", "weather"],
-  description: "Consulta el clima actual y pronóstico mediante Open-Meteo.",
+  description: "Consulta el clima actual y pronóstico con respaldo multi-proveedor.",
   execute: async ({ sock, msg, remoteJid, cleanText }: CommandContext) => {
     const city = cleanText.trim() || "Buenos Aires";
 
     try {
-      // 1. Geocodificación priorizando estrictamente localidades, partidos y pueblos de Argentina
-      let geoRes = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
-        params: {
-          name: city,
-          count: 10,
-          language: "es",
-          format: "json",
-        },
-        timeout: 6000,
-      });
+      const { location, geocodingErrored } = await resolveCityLocation(city);
 
-      let geoResults = geoRes.data?.results;
-
-      if (!geoResults || geoResults.length === 0) {
+      if (!location && !geocodingErrored) {
         await sock.sendMessage(
           remoteJid,
           { text: `❌ No encontré datos para la localidad "*${city}*". Probá con el nombre exacto del pueblo o ciudad.` },
@@ -98,51 +390,37 @@ export const climaCommand: Command = {
         return;
       }
 
-      // Priorizar coincidencia en Argentina salvo que el usuario haya especificado un país explícitamente
-      const isExplicitCountry = /(,\s*|\s+(en|de)\s+)(españa|espana|mexico|méxico|chile|uruguay|brasil|brazil|peru|perú|colombia|venezuela|eeuu|usa|estados unidos|francia|italia|alemania|inglaterra|reino unido|uk|europa|asia)/i.test(city);
-      const arMatch = isExplicitCountry ? null : geoResults.find((r: any) => r.country_code === "AR");
-      const location = arMatch || geoResults[0];
-      const { name, latitude, longitude, country, admin1 } = location;
+      const weatherCacheKey = location
+        ? `${location.latitude.toFixed(3)},${location.longitude.toFixed(3)}`
+        : `raw:${city.toLowerCase().trim()}`;
 
-      // 2. Consulta de clima actual y extremos del día
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
-      const weatherRes = await axios.get(weatherUrl, { timeout: 6000 });
-      const current = weatherRes.data?.current;
-      const daily = weatherRes.data?.daily;
-
-      if (!current) {
-        throw new Error("Respuesta inválida de Open-Meteo");
+      const cached = weatherCache.get(weatherCacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        await sock.sendMessage(remoteJid, { text: cached.report }, { quoted: msg as any });
+        return;
       }
 
-      const condition = WMO_WEATHER_MAP[current.weather_code] || {
-        text: "Tiempo variable",
-        emoji: "🌡️",
-      };
-
-      const locTitle = `${name.toUpperCase()}${admin1 ? `, ${admin1}` : ""}${country ? ` (${country})` : ""}`;
-      const tempActual = Math.round(current.temperature_2m);
-      const tempSensacion = Math.round(current.apparent_temperature);
-      const minToday = daily?.temperature_2m_min?.[0] != null ? Math.round(daily.temperature_2m_min[0]) : null;
-      const maxToday = daily?.temperature_2m_max?.[0] != null ? Math.round(daily.temperature_2m_max[0]) : null;
-
-      let report = `🌤️ *CLIMA EN ${locTitle}*\n\n`;
-      report += `• *Estado:* ${condition.emoji} ${condition.text}\n`;
-      report += `• *Temperatura:* ${tempActual}°C (ST: ${tempSensacion}°C)\n`;
-      if (minToday != null && maxToday != null) {
-        report += `• *Mín / Máx hoy:* ${minToday}°C / ${maxToday}°C\n`;
-      }
-      report += `• *Humedad:* ${current.relative_humidity_2m}%\n`;
-      report += `• *Viento:* ${Math.round(current.wind_speed_10m)} km/h\n`;
-      if (current.precipitation > 0) {
-        report += `• *Precipitación:* ${current.precipitation} mm\n`;
+      const snapshot = await fetchWeatherSnapshot(location, city);
+      if (!snapshot) {
+        throw new Error("Sin respuesta de proveedores meteorológicos");
       }
 
-      await sock.sendMessage(remoteJid, { text: report.trim() }, { quoted: msg as any });
+      const locTitle = location
+        ? `${location.name.toUpperCase()}${location.admin1 ? `, ${location.admin1}` : ""}${location.country ? ` (${location.country})` : ""}`
+        : city.toUpperCase();
+
+      const report = formatWeatherReport(locTitle, snapshot);
+      setBoundedCache(weatherCache, weatherCacheKey, {
+        report,
+        expiresAt: Date.now() + WEATHER_CACHE_TTL_MS,
+      });
+
+      await sock.sendMessage(remoteJid, { text: report }, { quoted: msg as any });
     } catch (err) {
       console.error("[Clima Command] Error:", err);
       await sock.sendMessage(
         remoteJid,
-        { text: "❌ Error al consultar el servicio meteorológico de Open-Meteo." },
+        { text: "❌ Error al consultar el servicio meteorológico." },
         { quoted: msg as any }
       );
     }
