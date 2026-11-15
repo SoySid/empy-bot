@@ -398,7 +398,7 @@ export async function downloadWithYtDlp(
   args.push("--", url);
 
   try {
-    await execFileAsync(binaryPath, args, { timeout: 90000 });
+    await execFileAsync(binaryPath, args, { timeout: 60000 });
 
     const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
     if (files.length === 0) {
@@ -442,6 +442,12 @@ export async function downloadWithYtDlp(
         errorNotice: "❌ El contenido excede el límite de 50 MB permitido por WhatsApp.",
       };
     }
+
+    let safeHost = "desconocido";
+    try {
+      safeHost = new URL(url).hostname;
+    } catch {}
+    console.warn(`[Media Service] yt-dlp falló para ${safeHost}:`, stderr.trim().slice(0, 300) || "sin detalle");
 
     return null;
   }
@@ -694,6 +700,8 @@ async function downloadYouTubeInnerTube(
     },
   ];
 
+  const innerTubeErrors: string[] = [];
+
   for (let i = 0; i < clients.length; i++) {
     const client = clients[i];
     try {
@@ -711,7 +719,7 @@ async function downloadYouTubeInnerTube(
             "Content-Type": "application/json",
             ...(client.name === "VISIONOS" && visitorData ? { "X-Goog-Visitor-Id": visitorData } : {}),
           },
-          timeout: 8000,
+          timeout: 4500,
         }
       );
 
@@ -727,6 +735,7 @@ async function downloadYouTubeInnerTube(
       }
 
       if (playStatus === "LOGIN_REQUIRED" && /age|edad/i.test(playReason)) {
+        innerTubeErrors.push(`${client.name}:AGE_RESTRICTED`);
         break;
       }
 
@@ -738,6 +747,7 @@ async function downloadYouTubeInnerTube(
       }
 
       if (playStatus !== "OK") {
+        innerTubeErrors.push(`${client.name}:${playStatus || "UNKNOWN"}`);
         continue;
       }
 
@@ -885,7 +895,12 @@ async function downloadYouTubeInnerTube(
           errorNotice: `❌ ${mediaName} excede el límite de 50 MB permitido por WhatsApp.`,
         };
       }
+      innerTubeErrors.push(`${client.name}:${err?.response?.status || err?.message || "ERR"}`);
     }
+  }
+
+  if (innerTubeErrors.length > 0) {
+    console.warn(`[Media Service] InnerTube falló para ${videoId} (${innerTubeErrors.join(", ")})`);
   }
 
   return null;
@@ -908,7 +923,7 @@ async function downloadYouTubePiped(
   for (const inst of PIPED_INSTANCES) {
     try {
       const res = await axios.get(`${inst}/streams/${videoId}`, {
-        timeout: 10000,
+        timeout: 4000,
         headers: { "User-Agent": ua },
       });
 
@@ -1040,7 +1055,7 @@ async function downloadYouTubeInvidious(
   for (const inst of INVIDIOUS_INSTANCES) {
     try {
       const res = await axios.get(`${inst}/api/v1/videos/${videoId}`, {
-        timeout: 8000,
+        timeout: 4000,
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
@@ -1206,7 +1221,7 @@ let ytdlAnonClientPromise: Promise<Ytdl> | null = null;
 
 async function getSharedPoTokenProvider(): Promise<PoTokenFn | null> {
   if (!sharedPoTokenProviderPromise) {
-    sharedPoTokenProviderPromise = createPoTokenProvider({ timeoutMs: 45000 }).catch((err: any) => {
+    sharedPoTokenProviderPromise = createPoTokenProvider({ timeoutMs: 15000 }).catch((err: any) => {
       console.warn("[Media Service] Falló inicialización de PO token provider:", err?.message || err);
       sharedPoTokenProviderPromise = null;
       return null;
@@ -1222,7 +1237,7 @@ async function mintPoTokenForVideo(videoId: string): Promise<string | null> {
     return await provider({
       contentBinding: videoId,
       client: Client.Mweb,
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     });
   } catch {
     return null;
@@ -1271,6 +1286,20 @@ async function getYtdlClient(useCookies = true): Promise<Ytdl> {
   return ytdlAnonClientPromise;
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function downloadYouTubeWithYtdlCore(
   videoId: string,
   audioOnly: boolean,
@@ -1281,7 +1310,7 @@ async function downloadYouTubeWithYtdlCore(
   const targetUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
   const attemptWithClient = async (yt: Ytdl) => {
-    const info = await yt.getInfo(targetUrl);
+    const info = await withTimeout(yt.getInfo(targetUrl), 18000, "ytdl-core getInfo timeout");
     const title = info.videoDetails.title || defaultCaption || "YouTube Media";
 
     if (audioOnly) {
@@ -1443,7 +1472,7 @@ async function runYtDlpYouTubeAttempt(options: {
   args.push("--", target);
 
   try {
-    const { stdout } = await execFileAsync(binaryPath, args, { timeout: 90000 });
+    const { stdout } = await execFileAsync(binaryPath, args, { timeout: 45000 });
     const files = fs.readdirSync(TEMP_DIR).filter((f) => f.startsWith(filePrefix));
     if (files.length === 0) return {};
 
@@ -1549,7 +1578,8 @@ async function downloadYouTubeWithYtDlp(
   if (attempt.result) return attempt.result;
 
   const firstStderr = attempt.stderr || "";
-  if (useCookies && (firstStderr.includes("Sign in to confirm") || firstStderr.includes("bot"))) {
+  const blockedByVerification = firstStderr.includes("Sign in to confirm") || firstStderr.includes("bot");
+  if (useCookies && blockedByVerification) {
     console.warn("[Media Service] yt-dlp con cookies falló por verificación; reintentando sin cookies con PO token...");
     attempt = await runYtDlpYouTubeAttempt({
       binaryPath,
@@ -1586,11 +1616,15 @@ async function downloadYouTubeWithYtDlp(
     };
   }
 
-  if (stderr.includes("Sign in to confirm") || stderr.includes("bot")) {
+  if (blockedByVerification || stderr.includes("Sign in to confirm") || stderr.includes("bot")) {
+    console.error(`[Media Service] Bloqueo de verificación YouTube (${mediaType}):`, {
+      message: attempt.error?.message,
+      stderr,
+    });
     return {
       type: mediaType,
       errorNotice:
-        "⚠️ *Bloqueo de YouTube en el servidor:*\nYouTube requiere verificación para descargas desde la IP del servidor. Podés configurar la variable `COOKIES_TXT` o `YOUTUBE_COOKIES` en las variables de entorno de Render para desbloquearlo.",
+        "⚠️ *Bloqueo de YouTube en el servidor:*\nYouTube bloqueó la descarga desde la IP del servidor y rechazó la verificación actual. Podés actualizar `COOKIES_TXT` / `YOUTUBE_COOKIES` en Render o configurar `COBALT_API_URL`.",
     };
   }
 
@@ -2023,6 +2057,7 @@ export async function downloadInstagram(rawUrl: string): Promise<MediaDownloadRe
   }
 
   // 4. Si todas las opciones fallan
+  console.warn("[Media Service] Instagram agotó yt-dlp, OpenGraph y Cobalt para:", url.split("?")[0]);
   return {
     type: "video",
     errorNotice:
@@ -2085,8 +2120,8 @@ export async function downloadWithCobalt(
           caption: "Acá tenés el contenido descargado",
         };
       }
-    } catch {
-      // Ignorar fallos de instancia
+    } catch (err: any) {
+      console.warn("[Media Service] Cobalt falló:", err?.response?.status || err?.message);
     }
   }
 
