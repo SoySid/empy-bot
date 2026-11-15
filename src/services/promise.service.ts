@@ -34,7 +34,8 @@ const PROMISE_TRIGGER_REGEX =
 export function detectPromiseIntent(text: string): boolean {
   // Ignorar citas previas incrustadas
   const clean = text.replace(/\[Respondiendo a [^\]]+\]/gi, "").trim();
-  if (clean.length < 6 || clean.length > 350) return false;
+  if (clean.length < 16 || clean.length > 350 || clean.split(/\s+/).length < 4) return false;
+  if (/\b(te\s+juro|les\s+juro|te\s+prometo|les\s+prometo|doy\s+mi\s+palabra)[.!?\s]*$/i.test(clean)) return false;
   return PROMISE_TRIGGER_REGEX.test(clean);
 }
 

@@ -1,5 +1,10 @@
 import { prisma } from "../db/prisma.js";
-import { getAllCachedProfiles, getCachedUserProfile } from "../db/user.service.js";
+import {
+  getAllCachedProfiles,
+  getCachedUserProfile,
+  getCleanActiveFacts,
+  formatUserFactForPrompt,
+} from "../db/user.service.js";
 import { getRecentToneContext, getBurnedJokesContext, getActiveLessonsContext, getCachedGroupLexicon } from "../db/reflection.service.js";
 import { searchRelevantPastMessages } from "../db/embedding.service.js";
 import { fetchWebSearchContext } from "../web-search.service.js";
@@ -139,52 +144,13 @@ export async function hydrateContextForActiveUsers(
     );
 
     const now = new Date();
-
-    // Excluir claves técnicas de minijuegos / colecciones serializadas en JSON para que no contaminen los hechos humanos
-    const isMinigameKey = (clave: string) => {
-      const lower = clave.toLowerCase();
-      return (
-        lower.endsWith("_v1") ||
-        lower.startsWith("fishing_") ||
-        lower.startsWith("pokedex_") ||
-        lower.startsWith("mlbb_") ||
-        lower.startsWith("superheroes_") ||
-        lower.startsWith("inventory_")
-      );
-    };
-
-    // Prioridad biográfica: hechos identitarios de alto valor
-    const BIOGRAPHICAL_KEYS = new Set([
-      "fechanacimiento", "cumpleanos", "cumpleaños", "nacimiento", "horanacimiento",
-      "signo", "ciudadnacimiento", "origen", "ciudad", "ubicacion", "vivienda",
-      "profesion", "trabajo", "estudio", "estudios", "carrera", "universidad", "escuela",
-      "pareja", "convivencia", "edad", "genero", "mascotas", "idioma", "hobbies"
-    ]);
-
-    const activeFacts = (u.facts || [])
-      .filter((f: any) => (!f.expiresAt || f.expiresAt > now) && !isMinigameKey(f.clave))
-      .sort((a: any, b: any) => {
-        const aBio = BIOGRAPHICAL_KEYS.has(a.clave.toLowerCase()) ? 1 : 0;
-        const bBio = BIOGRAPHICAL_KEYS.has(b.clave.toLowerCase()) ? 1 : 0;
-        if (aBio !== bBio) return bBio - aBio; // Hechos biográficos primero
-        return (b.weight || 1) - (a.weight || 1);
-      });
-
+    const activeFacts = getCleanActiveFacts(u.facts || [], now);
     const relevantFacts: string[] = [];
-    const formatFactString = (f: any) => {
-      const isOldSeasonal =
-        f.tipo === "TEMPORADA" &&
-        f.lastConfirmedAt &&
-        now.getTime() - new Date(f.lastConfirmedAt).getTime() > 21 * 24 * 60 * 60 * 1000;
-      return isOldSeasonal
-        ? `${f.clave}: ${f.valor} [dato antiguo, no asumir actual]`
-        : `${f.clave}: ${f.valor}`;
-    };
 
     if (isTargetOfQuery) {
       // Si preguntaron por esta persona puntual, traer hasta 6 hechos destacados limpios
       for (const f of activeFacts.slice(0, 6)) {
-        relevantFacts.push(formatFactString(f));
+        relevantFacts.push(formatUserFactForPrompt(f, now));
       }
     } else {
       // En charla casual, solo incluir un hecho si su tema específico fue mencionado en el chat con coincidencia de palabra completa
@@ -194,7 +160,7 @@ export async function hydrateContextForActiveUsers(
         const isKeyInText = k.length >= 3 && new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(normText);
         const isValInText = v.length >= 4 && new RegExp(`\\b${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(normText);
         if (isKeyInText || isValInText) {
-          relevantFacts.push(formatFactString(f));
+          relevantFacts.push(formatUserFactForPrompt(f, now));
           if (relevantFacts.length >= 2) break;
         }
       }

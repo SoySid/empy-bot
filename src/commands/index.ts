@@ -2,6 +2,7 @@ import { Command } from "./types.js";
 import { bugCommand, ideaCommand, listaCommand, borrarIdeaCommand } from "./feedback.js";
 import { searchCommand } from "./search.js";
 import { shutdownCommand } from "./shutdown.js";
+import { reglaCommand } from "./regla.js";
 import { sCommand } from "./s.js";
 import { stickerCommand } from "./sticker.js";
 import { audioCommand } from "./audio.js";
@@ -233,6 +234,7 @@ const staticCommands: Command[] = [
   borrarIdeaCommand,
   searchCommand,
   shutdownCommand,
+  reglaCommand,
 ];
 
 // Comandos dinámicos: un comando por cada FISH_VOICE_* en el .env

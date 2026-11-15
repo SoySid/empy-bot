@@ -174,14 +174,15 @@ REGLAS DE ORO DE EXTRACCIÓN (LEER CON MÁXIMA ATENCIÓN):
      * NUNCA extraigas hambre, guiso, fichas, saldo virtual, coimas o apuestas.
    - FILTRO DE CONTENIDO:
      * PROHIBIDO temas sexuales, genitales o íntimos.
-     * Descartá trivialidades efímeras ("comió pizza", "se fue a dormir"). Solo datos identitarios reales (profesión real confirmada, ciudad, carrera universitaria, pareja formal, mascotas).
+     * Descartá trivialidades efímeras ("comió pizza", "amasó pizza", "compró champú", "tomó un ibuprofeno", "se fue a dormir"). Solo guardá datos identitarios duraderos (PERMANENTE: profesión real, ciudad, cumpleaños, edad, pareja formal, mascotas) o procesos sostenidos de varias semanas (TEMPORADA: carrera, examen próximo, mudanza, proyecto o juego activo).
+     * Los mensajes marcados como [Empy (BOT)] son respuestas previas del bot: úsalos SOLO como contexto para detectar chistes quemados o correcciones al bot. PROHIBIDO extraer userFacts sobre Empy.
    - ACCIÓN: "UPSERT" o "DELETE" (si el propio usuario desmintió o rectificó un dato previo).
 2. CORRECCIONES AL BOT (botCorrections):
    - Pautas explícitas de conducta si un integrante o admin le marcó un límite o error al bot ("bot pesado", "no digas más X", "aflojale a Y").
 3. CHISTES QUEMADOS (burnedJokes):
    - Chicanas o remates que se volvieron repetitivos en esta charla.
 4. MOMENTOS MEMORABLES (memorableMoments):
-   - Frases icónicas, peleas épicas o anécdotas para el archivo histórico.
+   - Frases icónicas, peleas épicas o anécdotas narrativas para el archivo histórico. PROHIBIDO guardar comentarios sexuales/explícitos o frases cortas aisladas sin contexto.
 5. VOCABULARIO Y MODISMOS (groupLexicon):
    - Expresiones propias, chistes internos o apodos creados por el grupo (descartá palabras comunes del diccionario).
 6. PROMESAS O APUESTAS SOCIALES (socialPromises):
@@ -239,20 +240,26 @@ export async function runSynthesis(): Promise<void> {
       })
       .join("\n");
 
-    // Filtrar para el análisis cognitivo: SOLO mensajes de personas reales, nunca del bot ni comandos
-    const conversationalBatch = batch.filter((m) => {
+    // Mensajes humanos reales (para hechos/correcciones) y transcript completo con contexto del bot
+    const humanBatch = batch.filter((m) => {
       if (m.isBot) return false;
       const text = m.body.trim();
       if (text.startsWith("!") || text.startsWith(".") || text.startsWith("/")) return false;
       return true;
     });
 
-    if (conversationalBatch.length === 0) {
+    if (humanBatch.length === 0) {
       if (lastMsg) {
         await setLastSynthesizedTime(lastMsg.createdAt);
       }
       return;
     }
+
+    const transcriptBatch = batch.filter((m) => {
+      if (m.isBot) return true;
+      const text = m.body.trim();
+      return !(text.startsWith("!") || text.startsWith(".") || text.startsWith("/"));
+    });
 
     const sanitizeTranscriptLine = (text: string) => {
       return (text || "")
@@ -262,8 +269,14 @@ export async function runSynthesis(): Promise<void> {
         .trim();
     };
 
-    const formattedTranscript = conversationalBatch
-      .map((m) => `[${(m.senderName || "").replace(/[<>[\]{}\r\n]/g, "").slice(0, 35)} (${m.userJid})]: ${sanitizeTranscriptLine(m.body)}`)
+    const formattedTranscript = transcriptBatch
+      .map((m) => {
+        if (m.isBot) {
+          return `[Empy (BOT)]: ${sanitizeTranscriptLine(m.body)}`;
+        }
+        const safeName = (m.senderName || "").replace(/[<>[\]{}\r\n]/g, "").slice(0, 35);
+        return `[${safeName} (${m.userJid})]: ${sanitizeTranscriptLine(m.body)}`;
+      })
       .join("\n");
 
     const userPrompt = `<known_user_facts>\n${currentKnowledge || "Sin datos previos."}\n</known_user_facts>\n\n<chat_transcript>\n${formattedTranscript}\n</chat_transcript>`;
@@ -338,6 +351,9 @@ export async function runSynthesis(): Promise<void> {
 
     console.log(`[Memory Worker] ✅ Datos extraídos y validados con Zod: ${parsedData.userFacts.length} hechos, ${parsedData.groupLexicon.length} términos.`);
 
+    const EXPLICIT_SEXUAL_CONTENT_REGEX =
+      /\b(sexo|foll(a|ar|o|amos|ando)|garch(a|ar|o|ando)|poronga|pija|chota|verga|concha|cog(er|iendo)|paja|jal[eé]|masturb\w*|semen|prepucio|fotopo\w*|ojete|orto|culo|tetas|petear|petes)\b/i;
+
     const FORBIDDEN_FACT_KEYWORDS = [
       "hambre", "guiso", "saldo", "situacionfinanciera", "plata", "fichas", "laburojuego",
       "trabajojuego", "juegotrabajorol", "roljuego", "juegoapuestas", "juegomecanicoideas",
@@ -347,7 +363,7 @@ export async function runSynthesis(): Promise<void> {
     ];
 
     // 1. Aplicar hechos aprendidos (con deduplicación en el lote y validación de presencia real)
-    const activeJidsInBatch = new Set(conversationalBatch.map((m) => m.userJid));
+    const activeJidsInBatch = new Set(humanBatch.map((m) => m.userJid));
 
     if (Array.isArray(parsedData.userFacts)) {
       const uniqueFactsMap = new Map<string, z.infer<typeof UserFactExtractionSchema>>();
@@ -356,9 +372,10 @@ export async function runSynthesis(): Promise<void> {
 
         const lowerKey = fact.clave.toLowerCase();
         const lowerVal = fact.valor.toLowerCase();
-        const isForbidden = FORBIDDEN_FACT_KEYWORDS.some(
-          (kw) => lowerKey.includes(kw) || lowerVal.includes(kw)
-        );
+        const isForbidden =
+          EXPLICIT_SEXUAL_CONTENT_REGEX.test(fact.clave) ||
+          EXPLICIT_SEXUAL_CONTENT_REGEX.test(fact.valor) ||
+          FORBIDDEN_FACT_KEYWORDS.some((kw) => lowerKey.includes(kw) || lowerVal.includes(kw));
         if (isForbidden) {
           console.log(`[Memory Worker] 🛡️ Hecho descartado por filtro de seguridad/minijuego: [${fact.clave}: ${fact.valor}]`);
           continue;
@@ -389,7 +406,7 @@ export async function runSynthesis(): Promise<void> {
         .filter((c) => {
           if (!c.correction || !c.authorJid) return false;
           const isOwner = isBotOwner(null, c.authorJid);
-          const authorInBatch = conversationalBatch.some((m) => m.userJid === c.authorJid);
+          const authorInBatch = humanBatch.some((m) => m.userJid === c.authorJid);
           return isOwner && authorInBatch;
         })
         .map((c) => c.correction);
@@ -410,15 +427,21 @@ export async function runSynthesis(): Promise<void> {
       }
     }
 
-    // 4. Guardar momentos memorables en base de datos (con enlace forense a su waMessageId)
+    // 4. Guardar momentos memorables en base de datos (con filtro de contenido y enlace forense a su waMessageId)
     if (Array.isArray(parsedData.memorableMoments)) {
       for (const m of parsedData.memorableMoments) {
-        if (m.body && m.body.trim().length >= 10) {
-          const matchedRaw = batch.find((b) => b.body.includes(m.body.trim().slice(0, 30)));
+        const cleanMoment = (m.body || "").trim();
+        if (
+          cleanMoment.length >= 20 &&
+          !m.userJid.includes("bot") &&
+          !isSpamOrLowValue(cleanMoment) &&
+          !EXPLICIT_SEXUAL_CONTENT_REGEX.test(cleanMoment)
+        ) {
+          const matchedRaw = batch.find((b) => !b.isBot && b.body.includes(cleanMoment.slice(0, 30)));
           await saveMessageEmbedding(
             m.userJid,
             m.senderName,
-            m.body,
+            cleanMoment,
             matchedRaw?.waMessageId || undefined,
             matchedRaw?.chatJid || undefined
           );

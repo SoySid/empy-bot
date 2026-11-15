@@ -61,9 +61,9 @@ export async function recordIncomingMessage(
   const cleanText = body.trim().slice(0, 1500);
   if (!cleanText) return;
 
-  const normalizedJid = cleanJid(userJid || (isBot ? "bot" : "usuario"));
+  const normalizedJid = isBot ? "bot@s.whatsapp.net" : cleanJid(userJid || "usuario");
   const now = Date.now();
-  const cleanSenderName = senderName.trim() || (isBot ? "empy-bot" : "Integrante");
+  const cleanSenderName = isBot ? "Empy" : senderName.trim() || "Integrante";
   const cleanReplySender = replyToSender?.trim() || undefined;
   const cleanReplySnippet = replyToSnippet?.trim() || undefined;
 
@@ -104,8 +104,11 @@ export async function recordIncomingMessage(
     liveBuffer.shift();
   }
 
-  // Filtro anti-basura: risas solas, stickers, emojis, mensajes del bot o comandos del sistema no se guardan en RawMessage
-  if (isBot || isSpamOrLowValue(cleanText) || cleanText.startsWith("!") || cleanText.startsWith(".") || cleanText.startsWith("/")) {
+  // Filtro anti-basura: risas solas, stickers, emojis o comandos del sistema no se guardan en RawMessage
+  if (
+    isSpamOrLowValue(cleanText) ||
+    (!isBot && (cleanText.startsWith("!") || cleanText.startsWith(".") || cleanText.startsWith("/")))
+  ) {
     return;
   }
 
@@ -140,12 +143,12 @@ export async function recordIncomingMessage(
         isBot,
       },
     });
-    lastRecordedRawId = created.id;
-    lastRecordedRawJid = normalizedJid;
-    lastRecordedRawTime = now;
-    lastRecordedRawBody = `${cleanText}${contextNote}`;
-
     if (!isBot) {
+      lastRecordedRawId = created.id;
+      lastRecordedRawJid = normalizedJid;
+      lastRecordedRawTime = now;
+      lastRecordedRawBody = `${cleanText}${contextNote}`;
+
       unhandledMessageCount++;
 
       const timeSinceLast = Date.now() - lastSynthesisTriggerTime;
@@ -160,6 +163,48 @@ export async function recordIncomingMessage(
     }
   } catch (error) {
     console.error("[Message DB] Error guardando RawMessage:", error);
+  }
+}
+
+/**
+ * Hidrata el buffer en RAM al iniciar el proceso con los mensajes recientes dentro del TTL,
+ * evitando amnesia inmediata tras reinicios (incluye respuestas previas del bot).
+ */
+export async function initLiveBufferFromDb(limit = 25): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - CONTEXT_TTL_MS);
+    const rows = await prisma.rawMessage.findMany({
+      where: { createdAt: { gte: cutoff } },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    if (rows.length === 0) return;
+
+    liveBuffer.length = 0;
+    const chronological = rows.reverse();
+    for (const r of chronological) {
+      let cleanBody = r.body;
+      let replyToSender: string | undefined;
+      const replyMatch = cleanBody.match(/\s*\[Respondiendo a @([^\s"\]]+)(?:\s+"[^"]*")?\]\s*$/);
+      if (replyMatch) {
+        replyToSender = replyMatch[1];
+        cleanBody = cleanBody.slice(0, replyMatch.index).trim();
+      }
+      if (!cleanBody) continue;
+
+      liveBuffer.push({
+        sender: r.senderName,
+        jid: r.userJid,
+        text: cleanBody,
+        timestamp: r.createdAt.getTime(),
+        isBot: r.isBot,
+        replyToSender,
+      });
+    }
+    console.log(`[Message Buffer] 🧠 ${liveBuffer.length} mensajes recientes restaurados en RAM.`);
+  } catch (err) {
+    console.error("[Message Buffer] Error restaurando liveBuffer desde DB:", err);
   }
 }
 

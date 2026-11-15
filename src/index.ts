@@ -17,6 +17,7 @@ import {
   getCachedUserProfile,
 } from "./services/db/user.service.js";
 import { refreshReflectionCache } from "./services/db/reflection.service.js";
+import { initLiveBufferFromDb } from "./services/db/message.service.js";
 import { initStickersDirectory, syncStickersFromDb } from "./services/sticker.service.js";
 import { syncCustomVoicesFromDb } from "./services/voice.service.js";
 import { registerDynamicVoiceCommand } from "./commands/index.js";
@@ -387,6 +388,7 @@ async function bootstrap(): Promise<void> {
   await initQuotaTracker();
   await initUserCache();
   await refreshReflectionCache();
+  await initLiveBufferFromDb();
   await initCommandBanService();
 
   // El worker de síntesis se arranca una ÚNICA vez por ciclo de vida de la aplicación

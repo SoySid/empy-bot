@@ -75,9 +75,13 @@ export async function refreshReflectionCache(): Promise<void> {
   }
 }
 
+export function getCachedLessons(): string[] {
+  return [...cachedLessons];
+}
+
 export function getActiveLessonsContext(): string {
   if (cachedLessons.length === 0) return "";
-  return cachedLessons.slice(0, 3).map((l) => `• ${l}`).join("\n");
+  return cachedLessons.slice(0, 5).map((l) => `• ${l}`).join("\n");
 }
 
 export function getBurnedJokesContext(): string {
@@ -104,9 +108,9 @@ export function recordSessionBurnedJoke(topic: string): void {
 const TOXIC_LESSON_REGEX =
   /\b(maten|apaga|apágalo|apagalo|desactiva|elimina|silencia|silenciar|reinicia|basta|mierda|mrda|bugeo|bugeó|mutea|mutear|callate|cállate|rompas|hdp|pelotudo|inutil|inútil|cansado)\b/i;
 
-export async function addMasterLesson(lesson: string, context = "Corrección en vivo"): Promise<void> {
-  const cleanLesson = lesson.trim();
-  if (cleanLesson.length < 6 || TOXIC_LESSON_REGEX.test(cleanLesson)) return;
+export async function addMasterLesson(lesson: string, context = "Corrección en vivo", bypassToxicityFilter = false): Promise<boolean> {
+  const cleanLesson = lesson.trim().slice(0, 200);
+  if (cleanLesson.length < 6 || (!bypassToxicityFilter && TOXIC_LESSON_REGEX.test(cleanLesson))) return false;
 
   try {
     const exists = await prisma.botLesson.findFirst({
@@ -134,8 +138,38 @@ export async function addMasterLesson(lesson: string, context = "Corrección en 
     }
 
     await refreshReflectionCache();
+    return true;
   } catch (error) {
     console.error("[Reflection DB] Error agregando lección:", error);
+    return false;
+  }
+}
+
+export async function removeMasterLessonByIndex(oneBasedIndex: number): Promise<string | null> {
+  try {
+    const allLessons = await prisma.botLesson.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    const target = allLessons[oneBasedIndex - 1];
+    if (!target) return null;
+
+    await prisma.botLesson.delete({ where: { id: target.id } });
+    await refreshReflectionCache();
+    return target.lesson;
+  } catch (error) {
+    console.error("[Reflection DB] Error eliminando lección:", error);
+    return null;
+  }
+}
+
+export async function clearMasterLessons(): Promise<number> {
+  try {
+    const res = await prisma.botLesson.deleteMany({});
+    await refreshReflectionCache();
+    return res.count;
+  } catch (error) {
+    console.error("[Reflection DB] Error limpiando lecciones:", error);
+    return 0;
   }
 }
 

@@ -717,6 +717,53 @@ export function parseOutboundMentions(text: string): {
  * Solo inyecta hechos relevantes (máximo 3-5 hechos clave por usuario activo),
  * priorizando hechos permanentes y descartando los vencidos para no inflar la ventana de tokens.
  */
+const BIOGRAPHICAL_FACT_KEYS = new Set([
+  "fechanacimiento", "cumpleanos", "cumpleaños", "nacimiento", "horanacimiento",
+  "signo", "ciudadnacimiento", "origen", "ciudad", "ubicacion", "vivienda",
+  "profesion", "trabajo", "estudio", "estudios", "carrera", "universidad", "escuela",
+  "pareja", "convivencia", "edad", "genero", "mascotas", "idioma", "hobbies",
+]);
+
+const SEASONAL_STALE_MS = 21 * 24 * 60 * 60 * 1000;
+
+export function isMinigameFactKey(clave: string): boolean {
+  const lower = clave.toLowerCase();
+  return (
+    lower.endsWith("_v1") ||
+    lower.startsWith("fishing_") ||
+    lower.startsWith("pokedex_") ||
+    lower.startsWith("mlbb_") ||
+    lower.startsWith("superheroes_") ||
+    lower.startsWith("inventory_")
+  );
+}
+
+/**
+ * Filtra hechos vencidos y claves técnicas de minijuegos, priorizando datos biográficos y peso.
+ */
+export function getCleanActiveFacts(facts: UserFact[] = [], now = new Date()): UserFact[] {
+  return facts
+    .filter((f) => (!f.expiresAt || f.expiresAt > now) && !isMinigameFactKey(f.clave))
+    .sort((a, b) => {
+      const aBio = BIOGRAPHICAL_FACT_KEYS.has(a.clave.toLowerCase()) ? 1 : 0;
+      const bBio = BIOGRAPHICAL_FACT_KEYS.has(b.clave.toLowerCase()) ? 1 : 0;
+      if (aBio !== bBio) return bBio - aBio;
+      if (a.tipo === "PERMANENTE" && b.tipo !== "PERMANENTE") return -1;
+      if (b.tipo === "PERMANENTE" && a.tipo !== "PERMANENTE") return 1;
+      return (b.weight || 1) - (a.weight || 1);
+    });
+}
+
+export function formatUserFactForPrompt(f: UserFact, now = new Date()): string {
+  const isOldSeasonal =
+    f.tipo === "TEMPORADA" &&
+    f.lastConfirmedAt &&
+    now.getTime() - new Date(f.lastConfirmedAt).getTime() > SEASONAL_STALE_MS;
+  return isOldSeasonal
+    ? `${f.clave}: ${f.valor} [dato antiguo, no asumir actual]`
+    : `${f.clave}: ${f.valor}`;
+}
+
 export function getContextualUsersPrompt(
   speakerJid: string,
   quotedJid?: string,
@@ -770,8 +817,7 @@ export function getContextualUsersPrompt(
     const normMsg = (messageText || "").toLowerCase();
     const isPersonalQuery = /\b(quien es|qui[eé]n es|quien era|qui[eé]n era|qu[eé] sab[eé]s?|data de|info de|contame de|hablame de|conoc[eé]s a|ubic[aá]s a)\b/i.test(normMsg);
 
-    const relevantFacts = (user.facts || [])
-      .filter((f) => !f.expiresAt || f.expiresAt > now)
+    const relevantFacts = getCleanActiveFacts(user.facts || [], now)
       .filter((f) => {
         if (isPersonalQuery && normMsg.includes(user.primaryName.toLowerCase())) return true;
         const k = f.clave.toLowerCase();
@@ -783,15 +829,10 @@ export function getContextualUsersPrompt(
         if (v.length >= 4 && normMsg.includes(v)) return true;
         return false;
       })
-      .sort((a, b) => {
-        if (a.tipo === "PERMANENTE" && b.tipo !== "PERMANENTE") return -1;
-        if (b.tipo === "PERMANENTE" && a.tipo !== "PERMANENTE") return 1;
-        return (b.weight || 1) - (a.weight || 1);
-      })
       .slice(0, 2);
 
     const factsStr = relevantFacts.length > 0
-      ? ` (${relevantFacts.map((f) => `${f.clave}: ${f.valor}`).join(", ")})`
+      ? ` (${relevantFacts.map((f) => formatUserFactForPrompt(f, now)).join(", ")})`
       : "";
 
     userLines.push(`• @${user.primaryName}${roleTag}${statusTag}${factsStr}`);
