@@ -213,14 +213,43 @@ const STATIC_MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
-function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
+interface SecurityHeaderOptions {
+  allowInlineScripts?: boolean;
+  isHttps?: boolean;
+  noStore?: boolean;
+}
+
+function isHttpsRequest(req: http.IncomingMessage): boolean {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0]?.trim().toLowerCase();
+  return process.env.NODE_ENV === "production" || forwardedProto === "https";
+}
+
+function setSecurityHeaders(
+  res: http.ServerResponse,
+  contentType: string,
+  options: SecurityHeaderOptions = {}
+) {
+  const scriptSrc = options.allowInlineScripts
+    ? "'self' 'unsafe-inline' https://cdnjs.cloudflare.com"
+    : "'self'";
+
   res.setHeader("Content-Type", contentType);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  if (options.isHttps) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  if (options.noStore) {
+    res.setHeader("Cache-Control", "no-store");
+  }
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+    `default-src 'self'; script-src ${scriptSrc}; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self';`
   );
 }
 
@@ -230,7 +259,8 @@ function setSecurityHeaders(res: http.ServerResponse, contentType: string) {
 async function tryServePublicFile(
   res: http.ServerResponse,
   method: string | undefined,
-  pathname: string
+  pathname: string,
+  isHttps: boolean
 ): Promise<boolean> {
   if (method !== "GET" && method !== "HEAD") {
     return false;
@@ -297,7 +327,7 @@ async function tryServePublicFile(
     }
   }
 
-  setSecurityHeaders(res, mimeType);
+  setSecurityHeaders(res, mimeType, { isHttps });
   res.setHeader("Cache-Control", ext === ".html" ? "no-cache" : "public, max-age=300");
   res.setHeader("Content-Length", String(content ? content.byteLength : lstat.size));
   res.writeHead(200);
@@ -310,6 +340,7 @@ async function tryServePublicFile(
  */
 export function startHttpServer(port = Number(process.env.PORT) || 3000): http.Server {
   const server = http.createServer(async (req, res) => {
+    const isHttps = isHttpsRequest(req);
     const socketIp = req.socket.remoteAddress || "127.0.0.1";
     const forwardedHeader = req.headers["x-forwarded-for"] as string;
     const hops = forwardedHeader ? forwardedHeader.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -317,7 +348,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     const rawIp = `${clientIp}#${socketIp}`;
 
     if (isIpRateLimited(rawIp)) {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       res.writeHead(429);
       res.end(JSON.stringify({ error: "Demasiadas peticiones. Intenta más tarde." }));
       return;
@@ -328,9 +359,13 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     const pathname = parsedUrl.pathname;
 
     // 1. Health check público para Render, UptimeRobot, cron-job.org
-    if (pathname === "/health" || pathname === "/ping") {
-      setSecurityHeaders(res, "application/json");
+    if ((req.method === "GET" || req.method === "HEAD") && (pathname === "/health" || pathname === "/ping")) {
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       res.writeHead(200);
+      if (req.method === "HEAD") {
+        res.end();
+        return;
+      }
       res.end(
         JSON.stringify({
           status: "ok",
@@ -348,7 +383,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     // Validación preventiva de CSRF para métodos que alteran estado
     if (req.method === "POST" && pathname.startsWith("/api/")) {
       if (!isSameOriginRequest(req, host)) {
-        setSecurityHeaders(res, "application/json");
+        setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
         res.writeHead(403);
         res.end(JSON.stringify({ error: "Origen no permitido (CSRF check fallido)." }));
         return;
@@ -357,7 +392,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 2. API: Login con contraseña
     if (req.method === "POST" && pathname === "/api/login") {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       if (!IS_ADMIN_AUTH_CONFIGURED) {
         res.writeHead(503);
         res.end(JSON.stringify({ error: "Panel de administración deshabilitado por seguridad (ADMIN_PASSWORD no configurado)." }));
@@ -378,8 +413,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
       const provided = parsedPayload.data.password;
       if (isConstantTimeMatch(provided, ADMIN_PASSWORD)) {
         loginAttempts.delete(rawIp);
-        const isSecure = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
-        const secureFlag = isSecure ? "; Secure" : "";
+        const secureFlag = isHttps ? "; Secure" : "";
         res.setHeader("Set-Cookie", `admin_session=${ADMIN_SESSION_TOKEN}; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=86400`);
         res.writeHead(200);
         res.end(JSON.stringify({ success: true, message: "Acceso autorizado." }));
@@ -392,8 +426,9 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 3. API: Logout
     if (req.method === "POST" && pathname === "/api/logout") {
-      setSecurityHeaders(res, "application/json");
-      res.setHeader("Set-Cookie", "admin_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
+      const secureFlag = isHttps ? "; Secure" : "";
+      res.setHeader("Set-Cookie", `admin_session=; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=0`);
       res.writeHead(200);
       res.end(JSON.stringify({ success: true }));
       return;
@@ -401,21 +436,26 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 4. API: Estado en vivo del bot
     if (req.method === "GET" && pathname === "/api/bot/status") {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       const isAuthorized = checkAdminAuth(req, parsedUrl);
+      if (!isAuthorized) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: "No autorizado.", isAuthorized: false }));
+        return;
+      }
       res.writeHead(200);
       res.end(
         JSON.stringify({
           isConnected: state.isConnected,
           isSuspended: state.isSuspended,
-          qrCode: isAuthorized && !state.isSuspended ? state.qrCode : undefined,
-          userPhone: isAuthorized ? state.userPhone : undefined,
-          userName: isAuthorized ? state.userName : undefined,
+          qrCode: !state.isSuspended ? state.qrCode : undefined,
+          userPhone: state.userPhone,
+          userName: state.userName,
           uptime: formatUptime(process.uptime()),
           uptimeSeconds: Math.floor(process.uptime()),
           heapMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-          targetGroup: isAuthorized ? (process.env.GROUP_JID ? "Exclusivo" : "Global") : "Protegido",
-          isAuthorized,
+          targetGroup: process.env.GROUP_JID ? "Exclusivo" : "Global",
+          isAuthorized: true,
         })
       );
       return;
@@ -423,7 +463,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 5. API: Suspender / Apagar el Bot
     if (req.method === "POST" && pathname === "/api/bot/suspend") {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       if (!checkAdminAuth(req, parsedUrl)) {
         res.writeHead(401);
         res.end(JSON.stringify({ error: "No autorizado." }));
@@ -446,7 +486,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 6. API: Reanudar / Encender el Bot
     if (req.method === "POST" && pathname === "/api/bot/resume") {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       if (!checkAdminAuth(req, parsedUrl)) {
         res.writeHead(401);
         res.end(JSON.stringify({ error: "No autorizado." }));
@@ -469,7 +509,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 7. API: Desvincular / Cambiar Número
     if (req.method === "POST" && (pathname === "/api/bot/unlink" || pathname === "/reset-auth" || pathname === "/api/reset-session")) {
-      setSecurityHeaders(res, "application/json");
+      setSecurityHeaders(res, "application/json", { isHttps, noStore: true });
       if (!checkAdminAuth(req, parsedUrl)) {
         res.writeHead(401);
         res.end(JSON.stringify({ error: "No autorizado." }));
@@ -496,7 +536,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
 
     // 8. Panel de Control Web y Visor de QR
     if (pathname === "/admin" || pathname === "/qr") {
-      setSecurityHeaders(res, "text/html; charset=utf-8");
+      setSecurityHeaders(res, "text/html; charset=utf-8", { allowInlineScripts: true, isHttps, noStore: true });
       res.writeHead(200);
 
       const isAuthorized = checkAdminAuth(req, parsedUrl);
@@ -1050,13 +1090,12 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
     }
 
     // 9. Landing page pública y archivos estáticos desde public/
-    if (await tryServePublicFile(res, req.method, pathname)) {
+    if (await tryServePublicFile(res, req.method, pathname, isHttps)) {
       return;
     }
 
     if ((req.method === "GET" || req.method === "HEAD") && pathname === "/") {
-      setSecurityHeaders(res, "text/html; charset=utf-8");
-      res.setHeader("Cache-Control", "no-cache");
+      setSecurityHeaders(res, "text/html; charset=utf-8", { isHttps, noStore: true });
       res.writeHead(404);
       if (req.method === "HEAD") {
         res.end();
@@ -1068,7 +1107,7 @@ export function startHttpServer(port = Number(process.env.PORT) || 3000): http.S
       return;
     }
 
-    setSecurityHeaders(res, "text/plain");
+    setSecurityHeaders(res, "text/plain", { isHttps, noStore: true });
     res.writeHead(404);
     res.end("Not Found");
   });
