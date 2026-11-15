@@ -17,3 +17,4 @@ export { campominadoCommand, pisarCommand, cobrarCommand } from "./campominado.j
 export { tuttifruttiCommand } from "./tuttifrutti.js";
 export { ciegoCommand, unirmeCommand } from "./ciego.js";
 export { impostorCommand, votarCommand, terminarImpostorCommand } from "./impostor.js";
+export { quienCommand } from "./quien.js";

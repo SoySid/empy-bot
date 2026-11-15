@@ -44,6 +44,7 @@ function verifySync(): void {
     campominado: { triggers: ["!campominado", "!campo", "!minas"], label: "Campo Minado" },
     tuttifrutti: { triggers: ["!tuttifrutti", "!basta"], label: "Tutti Frutti" },
     ciego: { triggers: ["!ciego", "!elnumero"], label: "El Número Ciego" },
+    quien: { triggers: ["!quien", "!quiendijo"], label: "¿Quién lo dijo?" },
   };
 
   for (const [key, meta] of Object.entries(expectedGames)) {

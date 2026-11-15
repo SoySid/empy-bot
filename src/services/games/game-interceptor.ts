@@ -13,6 +13,7 @@ import {
   checkTuttiFruttiSubmission,
   isTuttiFruttiGameActive,
 } from "./tuttifrutti.service.js";
+import { checkQuienGuess, isQuienGameActive } from "./quien.service.js";
 import { setGameCooldown } from "./game-cooldown.service.js";
 
 function formatMention(senderProfile: any): string {
@@ -312,6 +313,46 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
         await sock.sendMessage(
           remoteJid,
           { react: { text: "📝", key: msg.key } }
+        ).catch(() => {});
+      }
+      return true;
+    }
+  }
+
+  // 8. ¿Hay partida de ¿Quién lo dijo? activa?
+  if (isQuienGameActive(remoteJid)) {
+    const quienRes = await checkQuienGuess(remoteJid, senderProfile.jid, cleanBody);
+    if (quienRes.matched) {
+      if (quienRes.isCorrect) {
+        setGameCooldown(remoteJid);
+        const podium = quienRes.game.neuralRanking
+          .slice(0, 3)
+          .map((entry, idx) => `${idx + 1}. *${entry.name}* — ${entry.percent}%`)
+          .join("\n");
+
+        const neuralNote =
+          quienRes.neuralBeatBonus > 0
+            ? `🔥 *¡LE GANASTE A LA RED NEURONAL!* Apostaba por *${quienRes.game.neuralTopName}* (${quienRes.game.neuralRanking[0]?.percent ?? 0}%) (+*$${quienRes.neuralBeatBonus.toLocaleString("es-AR")}* bonus).`
+            : `🤖 *Empate con la máquina:* la Red Neuronal también había predicho a *${quienRes.game.neuralTopName}* (${quienRes.game.neuralRanking[0]?.percent ?? 0}%).`;
+
+        const text =
+          `🧠 *¡ACERTASTE!* ${mention} descubrió quién lo dijo!\n\n` +
+          `🗣️ *Autor real:* *${quienRes.game.winnerName}*\n` +
+          `💬 _"${quienRes.game.secretQuote}"_\n\n` +
+          `${neuralNote}\n\n` +
+          `📊 *Predicción de la Red Neuronal:*\n${podium}\n\n` +
+          `• *Premio total:* +*$${quienRes.reward.toLocaleString("es-AR")}* fichas\n` +
+          `• *Tu saldo actual:* *$${quienRes.newBalance?.toLocaleString("es-AR")}* fichas`;
+
+        await sock.sendMessage(
+          remoteJid,
+          { text, mentions: [senderProfile.jid] },
+          { quoted: msg as any }
+        );
+      } else {
+        await sock.sendMessage(
+          remoteJid,
+          { react: { text: "❌", key: msg.key } }
         ).catch(() => {});
       }
       return true;

@@ -1,5 +1,9 @@
 import { evaluateBurrada, isSpamOrLowValue } from "../services/ai.service.js";
 import { getTextMessageRate, isChatActive } from "../services/db/message.service.js";
+import {
+  classifyStickerMood,
+  pickSmartStickerCategory,
+} from "../services/neural/sticker-classifier.service.js";
 import { getRandomLocalSticker, VALID_CATEGORIES, getStickerCategoryCounts } from "../services/sticker.service.js";
 import { MessageContext } from "./types.js";
 
@@ -78,13 +82,20 @@ export async function handleSpontaneousReaction(ctx: MessageContext): Promise<bo
       return false;
     }
 
-    // Evaluación: mayor probabilidad si detecta tilteo/burrada (70%), o probabilidad natural (25%) en chat activo
     const roastCheck = await evaluateBurrada(body);
-    const triggerChance = roastCheck?.shouldRoast ? 0.7 : 0.25;
+    const mood = classifyStickerMood(body);
+    const triggerChance = roastCheck?.shouldRoast
+      ? 0.7
+      : mood.confidence >= 0.55 && ["bardo", "burla", "wtf"].includes(mood.topCategory)
+        ? 0.55
+        : 0.25;
 
     if (Math.random() < triggerChance) {
-      // Selección equilibrada y puramente aleatoria entre todas las categorías disponibles
-      const chosenCat = eligibleCats[Math.floor(Math.random() * eligibleCats.length)];
+      const chosenCat = pickSmartStickerCategory(body, eligibleCats);
+      if (!chosenCat) {
+        return false;
+      }
+
       const stickerData = await getRandomLocalSticker(chosenCat);
 
       if (stickerData) {
@@ -92,6 +103,9 @@ export async function handleSpontaneousReaction(ctx: MessageContext): Promise<bo
           remoteJid,
           { sticker: stickerData.buffer, isAnimated: stickerData.isAnimated },
           { quoted: msg as any }
+        );
+        console.log(
+          `[Spontaneous] Sticker "${chosenCat}" enviado (mood=${mood.topCategory}, conf=${(mood.confidence * 100).toFixed(0)}%)`
         );
         markStickerCat(chosenCat);
         lastSpontaneousTime = now;

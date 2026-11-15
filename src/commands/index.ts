@@ -112,6 +112,7 @@ import {
   impostorCommand,
   votarCommand,
   terminarImpostorCommand,
+  quienCommand,
 } from "./games/index.js";
 
 // Comandos estáticos
@@ -212,6 +213,7 @@ const staticCommands: Command[] = [
   impostorCommand,
   votarCommand,
   terminarImpostorCommand,
+  quienCommand,
   hoyCommand,
   cumpleCommand,
   letraCommand,
