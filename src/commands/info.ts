@@ -490,7 +490,7 @@ export const cumpleCommand: Command = {
       `🎂 *CUMPLEAÑOS OFICIAL DE EMPY-BOT* 🎉\n\n` +
       `• *Fecha de Nacimiento:* 22 de Agosto\n` +
       `• *Signo Zodiacal:* Leo en cúspide con Virgo ♌♍\n` +
-      `• *Creador:* Alfredo (Sid)\n\n` +
+      `• *Creador:* Alfred (Sid)\n\n` +
       `_¡Anoten la fecha para los festejos y las empanadas!_ 🥟🍾`;
 
     await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
