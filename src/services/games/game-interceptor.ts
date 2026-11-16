@@ -324,7 +324,6 @@ export async function interceptGameGuess(ctx: MessageContext): Promise<boolean> 
     const quienRes = await checkQuienGuess(remoteJid, senderProfile.jid, cleanBody);
     if (quienRes.matched) {
       if (quienRes.isCorrect) {
-        setGameCooldown(remoteJid);
         const podium = quienRes.game.neuralRanking
           .slice(0, 3)
           .map((entry, idx) => `${idx + 1}. *${entry.name}* — ${entry.percent}%`)

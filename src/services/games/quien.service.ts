@@ -65,6 +65,22 @@ export type QuienGuessResult =
     };
 
 const activeQuienGames = new Map<string, ActiveQuienGame>();
+const recentQuotesByGroup = new Map<string, string[]>();
+const lastWinnerByGroup = new Map<string, string>();
+const MAX_RECENT_QUOTES = 40;
+
+function recordPlayedQuote(remoteJid: string, quote: string, winnerJid: string): void {
+  const key = quote.trim().toLowerCase();
+  const list = recentQuotesByGroup.get(remoteJid) ?? [];
+  if (!list.includes(key)) {
+    list.push(key);
+    if (list.length > MAX_RECENT_QUOTES) {
+      list.shift();
+    }
+    recentQuotesByGroup.set(remoteJid, list);
+  }
+  lastWinnerByGroup.set(remoteJid, winnerJid);
+}
 
 export function normalizeName(raw: string): string {
   return raw
@@ -246,29 +262,41 @@ export async function startQuienGame(
       });
     }
 
-    // Priorizamos candidatos que tengan alguna frase de 22..220 chars sin revelar su propio nombre
-    const withCleanQuote = candidateInfos.filter((c) => {
+    let recentQuotes = new Set(recentQuotesByGroup.get(remoteJid) ?? []);
+    const lastWinnerJid = lastWinnerByGroup.get(remoteJid);
+
+    const getCandidateQuotes = (c: { jid: string; name: string; messages: string[] }, onlyFresh: boolean) => {
       const accepted = acceptedNamesByJid.get(c.jid) ?? new Set<string>();
-      return c.messages.some(
+      let pool = c.messages.filter(
         (m) => m.length >= 22 && m.length <= 220 && !quoteMentionsAuthor(m, accepted)
       );
-    });
+      if (pool.length === 0) {
+        pool = c.messages.filter((m) => m.length >= 22 && m.length <= 220);
+      }
+      if (pool.length === 0) {
+        pool = c.messages;
+      }
+      return onlyFresh ? pool.filter((m) => !recentQuotes.has(m.trim().toLowerCase())) : pool;
+    };
 
-    const winnerPool = withCleanQuote.length > 0 ? withCleanQuote : candidateInfos;
-    const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
-    const winnerAccepted = acceptedNamesByJid.get(winner.jid) ?? new Set<string>();
-
-    let quotePool = winner.messages.filter(
-      (m) => m.length >= 22 && m.length <= 220 && !quoteMentionsAuthor(m, winnerAccepted)
-    );
-    if (quotePool.length === 0) {
-      quotePool = winner.messages.filter((m) => m.length >= 22 && m.length <= 220);
+    let freshPool = candidateInfos.filter((c) => getCandidateQuotes(c, true).length > 0);
+    if (freshPool.length === 0) {
+      recentQuotesByGroup.set(remoteJid, []);
+      recentQuotes = new Set();
+      freshPool = candidateInfos;
     }
+
+    const rotatedPool = freshPool.filter((c) => c.jid !== lastWinnerJid);
+    const winnerPool = rotatedPool.length > 0 ? rotatedPool : freshPool;
+    const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
+
+    let quotePool = getCandidateQuotes(winner, true);
     if (quotePool.length === 0) {
-      quotePool = winner.messages;
+      quotePool = getCandidateQuotes(winner, false);
     }
 
     const secretQuote = quotePool[Math.floor(Math.random() * quotePool.length)];
+    recordPlayedQuote(remoteJid, secretQuote, winner.jid);
 
     const samples: TrainingSample[] = [];
     for (const candidate of candidateInfos) {

@@ -1,6 +1,5 @@
 import { Command, CommandContext } from "../types.js";
 import { ActiveQuienGame, startQuienGame } from "../../services/games/quien.service.js";
-import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 function formatNeuralPodium(game: ActiveQuienGame): string {
   return game.neuralRanking
@@ -13,7 +12,7 @@ export const quienCommand: Command = {
   name: "quien",
   aliases: ["quiendijo", "redneuronal", "adivinaquien"],
   description: "Humanos vs. Red Neuronal: adivina quién escribió una frase real del grupo (!quien).",
-  execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
+  execute: async ({ sock, remoteJid, msg }: CommandContext) => {
     if (!remoteJid.endsWith("@g.us")) {
       await sock.sendMessage(
         remoteJid,
@@ -23,18 +22,7 @@ export const quienCommand: Command = {
       return;
     }
 
-    const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
-    if (!cd.canStart) {
-      await sock.sendMessage(
-        remoteJid,
-        { text: `⏳ *Minijuegos en enfriamiento:* Esperen *${cd.remainingSeconds}s* antes de iniciar otra partida en el grupo.` },
-        { quoted: msg as any }
-      );
-      return;
-    }
-
     const onTimeout = async (game: ActiveQuienGame) => {
-      setGameCooldown(remoteJid);
       const neuralHit = game.neuralTopJid === game.winnerJid;
       const verdictLine = neuralHit
         ? `🤖 *Punto para la Red Neuronal:* acertó con *${game.neuralRanking[0]?.percent ?? 0}%* de confianza.`
