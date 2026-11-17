@@ -1,19 +1,28 @@
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
 import { modifyBalance } from "../economy.service.js";
-import { FEATURE_DIMENSION, vectorizeText } from "../neural/vectorizer.js";
-import { NeuralMLP, TrainingSample } from "../neural/mlp.js";
 
 const MIN_CANDIDATES = 2;
-const MAX_CANDIDATES = 6;
-const MIN_MESSAGES_PER_CANDIDATE = 6;
-const MAX_TRAIN_MESSAGES_PER_CANDIDATE = 35;
+const SUSPECT_DISPLAY_MAX = 8;
 const GAME_DURATION_MS = 45 * 1000;
 const BASE_REWARD_MIN = 12000;
 const BASE_REWARD_MAX = 20000;
-const NEURAL_BEAT_BONUS = 5000;
+
+const RAW_RECENT_TAKE = 250;
+const RAW_RANDOM_TAKE = 150;
+const EMB_RANDOM_TAKE = 200;
+const MAX_PLAYED_QUOTES = 300;
+const QUOTE_MIN_LENGTH = 22;
+const QUOTE_MAX_LENGTH = 220;
 
 const GuessSchema = z.string().trim().min(1).max(60);
+
+const QuienHistorySchema = z.object({
+  playedQuotes: z.array(z.string()).max(MAX_PLAYED_QUOTES),
+  lastWinnerJid: z.string().optional(),
+});
+
+type QuienHistory = z.infer<typeof QuienHistorySchema>;
 
 interface CleanMessageEntry {
   userJid: string;
@@ -21,18 +30,10 @@ interface CleanMessageEntry {
   body: string;
 }
 
-export interface QuienCandidate {
-  jid: string;
-  name: string;
-  acceptedNames: string[];
-  messageCount: number;
-}
-
-export interface NeuralRankEntry {
-  jid: string;
-  name: string;
-  prob: number;
-  percent: number;
+interface UserMessageBucket {
+  latestName: string;
+  seenBodies: Set<string>;
+  messages: string[];
 }
 
 export interface ActiveQuienGame {
@@ -42,10 +43,6 @@ export interface ActiveQuienGame {
   winnerName: string;
   candidates: Array<{ jid: string; name: string }>;
   acceptedNamesByJid: Map<string, Set<string>>;
-  neuralRanking: NeuralRankEntry[];
-  neuralTopJid: string;
-  neuralTopName: string;
-  trainAccuracy: number;
   baseReward: number;
   startedAt: number;
   expiresAt: number;
@@ -60,26 +57,71 @@ export type QuienGuessResult =
       isCorrect: true;
       game: ActiveQuienGame;
       reward: number;
-      neuralBeatBonus: number;
       newBalance?: number;
     };
 
 const activeQuienGames = new Map<string, ActiveQuienGame>();
-const recentQuotesByGroup = new Map<string, string[]>();
-const lastWinnerByGroup = new Map<string, string>();
-const MAX_RECENT_QUOTES = 40;
+const historyCacheByGroup = new Map<string, QuienHistory>();
 
-function recordPlayedQuote(remoteJid: string, quote: string, winnerJid: string): void {
-  const key = quote.trim().toLowerCase();
-  const list = recentQuotesByGroup.get(remoteJid) ?? [];
-  if (!list.includes(key)) {
-    list.push(key);
-    if (list.length > MAX_RECENT_QUOTES) {
-      list.shift();
+function getHistoryKey(remoteJid: string): string {
+  return `state:quien_history:${remoteJid}`;
+}
+
+function toQuoteHistoryKey(quote: string): string {
+  return quote.trim().toLowerCase().slice(0, 120);
+}
+
+async function loadQuienHistory(remoteJid: string): Promise<QuienHistory> {
+  const cached = historyCacheByGroup.get(remoteJid);
+  try {
+    const row = await prisma.baileysSession.findUnique({
+      where: { key: getHistoryKey(remoteJid) },
+    });
+    if (row?.value) {
+      const parsed = QuienHistorySchema.safeParse(JSON.parse(row.value));
+      if (parsed.success) {
+        historyCacheByGroup.set(remoteJid, parsed.data);
+        return parsed.data;
+      }
     }
-    recentQuotesByGroup.set(remoteJid, list);
+  } catch (err) {
+    console.error("[QuienService] Error leyendo historial desde DB:", err);
+    if (cached) return cached;
   }
-  lastWinnerByGroup.set(remoteJid, winnerJid);
+
+  if (cached) return cached;
+  const empty: QuienHistory = { playedQuotes: [] };
+  historyCacheByGroup.set(remoteJid, empty);
+  return empty;
+}
+
+async function saveQuienHistory(remoteJid: string, history: QuienHistory): Promise<void> {
+  const normalized: QuienHistory = {
+    playedQuotes: history.playedQuotes.slice(-MAX_PLAYED_QUOTES),
+    ...(history.lastWinnerJid ? { lastWinnerJid: history.lastWinnerJid } : {}),
+  };
+  historyCacheByGroup.set(remoteJid, normalized);
+
+  try {
+    const key = getHistoryKey(remoteJid);
+    const value = JSON.stringify(normalized);
+    await prisma.baileysSession.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value },
+    });
+  } catch (err) {
+    console.error("[QuienService] Error guardando historial en DB:", err);
+  }
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 export function normalizeName(raw: string): string {
@@ -93,11 +135,17 @@ export function normalizeName(raw: string): string {
     .trim();
 }
 
+function sanitizeQuoteBody(rawBody: string): string {
+  return rawBody
+    .replace(/\s*\[Respondiendo a @[^\]]*\]\s*$/i, "")
+    .replace(/\s*\[Respondiendo a @[^\]]*\]\s*/gi, " ")
+    .trim();
+}
+
 function isCleanGameMessage(body: string): boolean {
-  const trimmed = body.trim();
-  if (trimmed.length < 18 || trimmed.length > 280) return false;
-  if (trimmed.startsWith("!")) return false;
-  if (/^(https?:\/\/\S+|www\.\S+)$/i.test(trimmed)) return false;
+  if (body.length < QUOTE_MIN_LENGTH || body.length > QUOTE_MAX_LENGTH) return false;
+  if (body.startsWith("!") || body.startsWith(".") || body.startsWith("/")) return false;
+  if (/^(https?:\/\/\S+|www\.\S+)$/i.test(body)) return false;
   return true;
 }
 
@@ -118,15 +166,15 @@ function quoteMentionsAuthor(quote: string, acceptedNames: Set<string>): boolean
 }
 
 function collectCleanMessages(
-  rows: Array<{ userJid: string; senderName: string; body: string }>,
-  byUser: Map<string, { latestName: string; seenBodies: Set<string>; messages: string[] }>
+  rows: CleanMessageEntry[],
+  byUser: Map<string, UserMessageBucket>
 ): void {
   for (const row of rows) {
     if (!row.userJid || row.userJid.includes("bot@s.whatsapp.net")) continue;
-    const trimmed = (row.body || "").trim();
-    if (!isCleanGameMessage(trimmed)) continue;
+    const cleaned = sanitizeQuoteBody(row.body || "");
+    if (!isCleanGameMessage(cleaned)) continue;
 
-    const dedupKey = trimmed.toLowerCase();
+    const dedupKey = cleaned.toLowerCase();
     let bucket = byUser.get(row.userJid);
     if (!bucket) {
       bucket = {
@@ -139,18 +187,23 @@ function collectCleanMessages(
 
     if (bucket.seenBodies.has(dedupKey)) continue;
     bucket.seenBodies.add(dedupKey);
-    bucket.messages.push(trimmed);
+    bucket.messages.push(cleaned);
   }
 }
 
-function countEligibleCandidates(
-  byUser: Map<string, { latestName: string; seenBodies: Set<string>; messages: string[] }>
-): number {
-  let count = 0;
-  for (const bucket of byUser.values()) {
-    if (bucket.messages.length >= MIN_MESSAGES_PER_CANDIDATE) count++;
+function buildRandomOffsets(minSkip: number, maxSkip: number, count: number): number[] {
+  if (maxSkip <= minSkip) return [minSkip];
+  if (count === 1) {
+    return [minSkip + Math.floor(Math.random() * (maxSkip - minSkip + 1))];
   }
-  return count;
+
+  const mid = Math.floor((minSkip + maxSkip) / 2);
+  const first = minSkip + Math.floor(Math.random() * (mid - minSkip + 1));
+  const second =
+    mid + 1 <= maxSkip
+      ? mid + 1 + Math.floor(Math.random() * (maxSkip - mid))
+      : maxSkip;
+  return [first, second];
 }
 
 export function isQuienGameActive(remoteJid: string): boolean {
@@ -173,45 +226,71 @@ export async function startQuienGame(
   }
 
   try {
-    const byUser = new Map<string, { latestName: string; seenBodies: Set<string>; messages: string[] }>();
+    const rawWhere = { chatJid: remoteJid, isBot: false };
+    const embWhere = { chatJid: remoteJid };
 
-    const embeddingRows: CleanMessageEntry[] = await prisma.messageEmbedding.findMany({
-      where: { chatJid: remoteJid },
-      orderBy: { createdAt: "desc" },
-      take: 600,
-      select: {
-        userJid: true,
-        senderName: true,
-        body: true,
-      },
-    });
+    const [rawCount, embCount, history] = await Promise.all([
+      prisma.rawMessage.count({ where: rawWhere }),
+      prisma.messageEmbedding.count({ where: embWhere }),
+      loadQuienHistory(remoteJid),
+    ]);
 
-    collectCleanMessages(embeddingRows, byUser);
+    const rawQueries: Array<Promise<CleanMessageEntry[]>> = [];
+    if (rawCount > 0) {
+      rawQueries.push(
+        prisma.rawMessage.findMany({
+          where: rawWhere,
+          orderBy: { createdAt: "desc" },
+          take: RAW_RECENT_TAKE,
+          select: { userJid: true, senderName: true, body: true },
+        })
+      );
 
-    if (countEligibleCandidates(byUser) < MAX_CANDIDATES) {
-      const rawRows: CleanMessageEntry[] = await prisma.rawMessage.findMany({
-        where: { chatJid: remoteJid, isBot: false },
-        orderBy: { createdAt: "desc" },
-        take: 400,
-        select: {
-          userJid: true,
-          senderName: true,
-          body: true,
-        },
-      });
-      collectCleanMessages(rawRows, byUser);
+      if (rawCount > RAW_RECENT_TAKE) {
+        const minSkip = RAW_RECENT_TAKE;
+        const maxSkip = Math.max(minSkip, rawCount - RAW_RANDOM_TAKE);
+        const skips = buildRandomOffsets(minSkip, maxSkip, 2);
+        for (const skip of skips) {
+          rawQueries.push(
+            prisma.rawMessage.findMany({
+              where: rawWhere,
+              orderBy: { createdAt: "desc" },
+              skip,
+              take: RAW_RANDOM_TAKE,
+              select: { userJid: true, senderName: true, body: true },
+            })
+          );
+        }
+      }
     }
 
-    const eligible = Array.from(byUser.entries())
-      .filter(([, data]) => data.messages.length >= MIN_MESSAGES_PER_CANDIDATE)
-      .sort((a, b) => b[1].messages.length - a[1].messages.length)
-      .slice(0, MAX_CANDIDATES);
+    let embQuery: Promise<CleanMessageEntry[]> = Promise.resolve([]);
+    if (embCount > 0) {
+      const maxEmbSkip = Math.max(0, embCount - EMB_RANDOM_TAKE);
+      const embSkip = Math.floor(Math.random() * (maxEmbSkip + 1));
+      embQuery = prisma.messageEmbedding.findMany({
+        where: embWhere,
+        orderBy: { createdAt: "desc" },
+        skip: embSkip,
+        take: EMB_RANDOM_TAKE,
+        select: { userJid: true, senderName: true, body: true },
+      });
+    }
 
+    const [rawWindows, embRows] = await Promise.all([Promise.all(rawQueries), embQuery]);
+
+    const byUser = new Map<string, UserMessageBucket>();
+    for (const windowRows of rawWindows) {
+      collectCleanMessages(windowRows, byUser);
+    }
+    collectCleanMessages(embRows, byUser);
+
+    const eligible = Array.from(byUser.entries()).filter(([, data]) => data.messages.length >= 1);
     if (eligible.length < MIN_CANDIDATES) {
       return {
         success: false,
         error:
-          "Todavía no hay suficientes mensajes en este grupo para entrenar la red neuronal (se necesitan al menos 2 personas con 6+ mensajes reales).",
+          "Todavía no hay suficientes frases limpias en este grupo para jugar (se necesitan al menos 2 participantes con frases reales).",
       };
     }
 
@@ -262,84 +341,66 @@ export async function startQuienGame(
       });
     }
 
-    let recentQuotes = new Set(recentQuotesByGroup.get(remoteJid) ?? []);
-    const lastWinnerJid = lastWinnerByGroup.get(remoteJid);
-
-    const getCandidateQuotes = (c: { jid: string; name: string; messages: string[] }, onlyFresh: boolean) => {
-      const accepted = acceptedNamesByJid.get(c.jid) ?? new Set<string>();
-      let pool = c.messages.filter(
-        (m) => m.length >= 22 && m.length <= 220 && !quoteMentionsAuthor(m, accepted)
-      );
-      if (pool.length === 0) {
-        pool = c.messages.filter((m) => m.length >= 22 && m.length <= 220);
-      }
-      if (pool.length === 0) {
-        pool = c.messages;
-      }
-      return onlyFresh ? pool.filter((m) => !recentQuotes.has(m.trim().toLowerCase())) : pool;
-    };
-
-    let freshPool = candidateInfos.filter((c) => getCandidateQuotes(c, true).length > 0);
-    if (freshPool.length === 0) {
-      recentQuotesByGroup.set(remoteJid, []);
-      recentQuotes = new Set();
-      freshPool = candidateInfos;
+    interface QuotePoolItem {
+      candidate: { jid: string; name: string; messages: string[] };
+      quote: string;
     }
 
-    const rotatedPool = freshPool.filter((c) => c.jid !== lastWinnerJid);
-    const winnerPool = rotatedPool.length > 0 ? rotatedPool : freshPool;
-    const winner = winnerPool[Math.floor(Math.random() * winnerPool.length)];
-
-    let quotePool = getCandidateQuotes(winner, true);
-    if (quotePool.length === 0) {
-      quotePool = getCandidateQuotes(winner, false);
-    }
-
-    const secretQuote = quotePool[Math.floor(Math.random() * quotePool.length)];
-    recordPlayedQuote(remoteJid, secretQuote, winner.jid);
-
-    const samples: TrainingSample[] = [];
+    const safeEntries: QuotePoolItem[] = [];
+    const allEntries: QuotePoolItem[] = [];
     for (const candidate of candidateInfos) {
-      const pool =
-        candidate.jid === winner.jid
-          ? candidate.messages.filter((m) => m !== secretQuote)
-          : candidate.messages;
-
-      const selected = pool.slice(0, MAX_TRAIN_MESSAGES_PER_CANDIDATE);
-      for (const text of selected) {
-        samples.push({
-          features: vectorizeText(text),
-          label: candidate.jid,
-        });
+      const accepted = acceptedNamesByJid.get(candidate.jid) ?? new Set<string>();
+      for (const quote of candidate.messages) {
+        allEntries.push({ candidate, quote });
+        if (!quoteMentionsAuthor(quote, accepted)) {
+          safeEntries.push({ candidate, quote });
+        }
       }
     }
 
-    const mlp = new NeuralMLP(FEATURE_DIMENSION, candidateJids, 20, Date.now() & 0xffff);
-    const trainStats = mlp.train(samples, { epochs: 75 });
-    const prediction = mlp.predictProba(vectorizeText(secretQuote));
+    const baseQuotePool = safeEntries.length > 0 ? safeEntries : allEntries;
+    let playedQuotes = [...history.playedQuotes];
+    const playedSet = new Set(playedQuotes);
 
-    const nameByJid = new Map(candidateInfos.map((c) => [c.jid, c.name]));
-    const neuralRanking: NeuralRankEntry[] = prediction.probabilities.map((entry) => ({
-      jid: entry.label,
-      name: nameByJid.get(entry.label) || entry.label.split("@")[0],
-      prob: entry.prob,
-      percent: Math.round(entry.prob * 100),
-    }));
+    let freshEntries = baseQuotePool.filter(
+      (entry) => !playedSet.has(toQuoteHistoryKey(entry.quote))
+    );
+
+    if (freshEntries.length === 0) {
+      playedQuotes = [];
+      freshEntries = baseQuotePool;
+    }
+
+    const rotatedEntries = history.lastWinnerJid
+      ? freshEntries.filter((entry) => entry.candidate.jid !== history.lastWinnerJid)
+      : freshEntries;
+    const selectionPool = rotatedEntries.length > 0 ? rotatedEntries : freshEntries;
+    const chosen = selectionPool[Math.floor(Math.random() * selectionPool.length)];
+
+    const chosenKey = toQuoteHistoryKey(chosen.quote);
+    const updatedPlayed = playedQuotes.includes(chosenKey)
+      ? playedQuotes
+      : [...playedQuotes, chosenKey].slice(-MAX_PLAYED_QUOTES);
+
+    await saveQuienHistory(remoteJid, {
+      playedQuotes: updatedPlayed,
+      lastWinnerJid: chosen.candidate.jid,
+    });
+
+    const otherCandidates = candidateInfos.filter((c) => c.jid !== chosen.candidate.jid);
+    const sampledOthers = shuffleArray(otherCandidates).slice(0, SUSPECT_DISPLAY_MAX - 1);
+    const displayedSuspects = shuffleArray([chosen.candidate, ...sampledOthers]);
 
     const baseReward =
       Math.floor(Math.random() * (BASE_REWARD_MAX - BASE_REWARD_MIN + 1)) + BASE_REWARD_MIN;
 
     const game: ActiveQuienGame = {
       remoteJid,
-      secretQuote,
-      winnerJid: winner.jid,
-      winnerName: winner.name,
-      candidates: candidateInfos.map((c) => ({ jid: c.jid, name: c.name })),
+      secretQuote: chosen.quote,
+      winnerJid: chosen.candidate.jid,
+      winnerName: chosen.candidate.name,
+      candidates: displayedSuspects.map((c) => ({ jid: c.jid, name: c.name })),
       acceptedNamesByJid,
-      neuralRanking,
-      neuralTopJid: neuralRanking[0]?.jid || winner.jid,
-      neuralTopName: neuralRanking[0]?.name || winner.name,
-      trainAccuracy: trainStats.accuracy,
       baseReward,
       startedAt: Date.now(),
       expiresAt: Date.now() + GAME_DURATION_MS,
@@ -358,7 +419,7 @@ export async function startQuienGame(
     console.error("[QuienService] Error iniciando partida:", err);
     return {
       success: false,
-      error: "No se pudo entrenar la red neuronal para la partida. Intentá de nuevo en un momento.",
+      error: "No se pudo iniciar la partida de *¿Quién lo dijo?* en este momento. Intentá de nuevo.",
     };
   }
 }
@@ -401,8 +462,7 @@ export async function checkQuienGuess(
   clearTimeout(game.timer);
   activeQuienGames.delete(remoteJid);
 
-  const neuralBeatBonus = game.neuralTopJid !== game.winnerJid ? NEURAL_BEAT_BONUS : 0;
-  const reward = game.baseReward + neuralBeatBonus;
+  const reward = game.baseReward;
   const balanceRes = await modifyBalance(guesserJid, reward);
 
   return {
@@ -410,7 +470,6 @@ export async function checkQuienGuess(
     isCorrect: true,
     game,
     reward,
-    neuralBeatBonus,
     newBalance: balanceRes.newBalance,
   };
 }

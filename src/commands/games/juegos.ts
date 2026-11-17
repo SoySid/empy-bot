@@ -57,9 +57,9 @@ export const juegosCommand: Command = {
       `• Todos reciben la palabra secreta por privado, menos 1 Impostor que solo sabe la categoría.\n` +
       `• Debate sin límite de tiempo, votación grupal o robo de palabra.\n` +
       `• *Premios:* *$15.000* fichas por inocente o *$35.000* fichas al Impostor.\n\n` +
-      `🧠 *14. ¿Quién lo dijo?* (\`!quien\` o \`!quiendijo\`)\n` +
-      `• Humanos vs. Red Neuronal: adiviná qué miembro escribió una frase real del grupo.\n` +
-      `• *Premios:* *$12.000 a $20.000* fichas (+ *$5.000* bonus si le ganás a la red).\n\n` +
+      `🔎 *14. ¿Quién lo dijo?* (\`!quien\`, \`!quiendijo\` o \`!adivinaquien\`)\n` +
+      `• Muestra una frase real del historial del grupo con sospechosos rotativos para adivinar quién la escribió.\n` +
+      `• *Premio:* *$12.000 a $20.000* fichas.\n\n` +
       `🎭 *Humor y Generadores:*\n` +
       `• \`!roast\` — Bardeo visual con remate ácido citando una foto o sticker.\n` +
       `• \`!tweet <texto> [@user]\` — Genera una imagen de tweet verificado en modo oscuro.\n` +

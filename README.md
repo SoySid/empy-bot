@@ -227,7 +227,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!tuttifrutti` | `!basta`, `!tutti` | Tutti Frutti multijugador con 7 categorías oficiales, sistema de puntos y ranking. |
 | `!ciego` | `!elnumero`, `!unirme`, `!arriesgar` | Juego de deducción con números asignados al privado, debate grupal y margen ±3. |
 | `!impostor` | `!imp`, `!votar`, `!terminarimpostor` | Deducción social grupal: palabra secreta por privado, 1 impostor, votación sin límite de tiempo y cierre manual. |
-| `!quien` | `!quiendijo`, `!redneuronal`, `!adivinaquien` | Humanos vs. Red Neuronal: adivina qué miembro del grupo escribió la frase oculta. |
+| `!quien` | `!quiendijo`, `!adivinaquien` | Muestra una frase real del historial del grupo con sospechosos rotativos para adivinar quién la escribió. |
 
 ---
 

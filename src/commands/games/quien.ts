@@ -1,17 +1,10 @@
 import { Command, CommandContext } from "../types.js";
 import { ActiveQuienGame, startQuienGame } from "../../services/games/quien.service.js";
 
-function formatNeuralPodium(game: ActiveQuienGame): string {
-  return game.neuralRanking
-    .slice(0, 3)
-    .map((entry, idx) => `${idx + 1}. *${entry.name}* — ${entry.percent}%`)
-    .join("\n");
-}
-
 export const quienCommand: Command = {
   name: "quien",
-  aliases: ["quiendijo", "redneuronal", "adivinaquien"],
-  description: "Humanos vs. Red Neuronal: adivina quién escribió una frase real del grupo (!quien).",
+  aliases: ["quiendijo", "adivinaquien"],
+  description: "Adivina quién escribió una frase real del historial del grupo (!quien).",
   execute: async ({ sock, remoteJid, msg }: CommandContext) => {
     if (!remoteJid.endsWith("@g.us")) {
       await sock.sendMessage(
@@ -23,18 +16,11 @@ export const quienCommand: Command = {
     }
 
     const onTimeout = async (game: ActiveQuienGame) => {
-      const neuralHit = game.neuralTopJid === game.winnerJid;
-      const verdictLine = neuralHit
-        ? `🤖 *Punto para la Red Neuronal:* acertó con *${game.neuralRanking[0]?.percent ?? 0}%* de confianza.`
-        : `🤖 *La Red Neuronal también pifió:* apostaba por *${game.neuralTopName}* (${game.neuralRanking[0]?.percent ?? 0}%).`;
-
       const text =
         `⏱️ *¡TIEMPO AGOTADO EN ¿QUIÉN LO DIJO?!*\n\n` +
         `Nadie descubrió al autor a tiempo.\n` +
-        `🗣️ *Autor real:* *${game.winnerName}*\n\n` +
-        `${verdictLine}\n\n` +
-        `📊 *Podio Softmax de la Red Neuronal:*\n` +
-        `${formatNeuralPodium(game)}`;
+        `💬 _"${game.secretQuote}"_\n` +
+        `🗣️ *Autor real:* *${game.winnerName}*`;
 
       await sock.sendMessage(remoteJid, { text }).catch(() => {});
     };
@@ -51,14 +37,12 @@ export const quienCommand: Command = {
 
     const game = res.game;
     const candidatesList = game.candidates.map((c) => `*${c.name}*`).join(" • ");
-    const accuracyPct = Math.round(game.trainAccuracy * 100);
 
     const text =
-      `🧠 *¿QUIÉN LO DIJO? (Humanos vs. Red Neuronal)*\n\n` +
+      `🕵️ *¿QUIÉN LO DIJO?*\n\n` +
       `_"${game.secretQuote}"_\n\n` +
-      `👥 *Sospechosos:* ${candidatesList}\n` +
-      `🤖 *Red Neuronal:* entrenada con mensajes del grupo (${accuracyPct}% precisión), ya guardó su predicción secreta.\n` +
-      `💰 *Premio:* *$${game.baseReward.toLocaleString("es-AR")}* fichas (+*$5.000* bonus si le ganan a la red)\n\n` +
+      `👥 *Sospechosos (${game.candidates.length}):* ${candidatesList}\n` +
+      `💰 *Premio:* *$${game.baseReward.toLocaleString("es-AR")}* fichas\n\n` +
       `⏳ *Tienen 45 segundos para escribir el nombre o apodo del autor en el chat!*`;
 
     await sock.sendMessage(remoteJid, { text }, { quoted: msg as any });
