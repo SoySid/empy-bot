@@ -174,6 +174,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!ranking` | `!top`, `!mensajes` | Muestra los miembros más activos del día. Con `!ranking total` consulta el histórico. |
 | `!resumen` | `!resumir`, `!summary` | Genera un resumen del flujo reciente del grupo. Con `!resumen hoy` sintetiza la jornada. |
 | `!tokens` | `!consumo`, `!uso` | Muestra el recuento de llamadas y cuota consumida de APIs. |
+| `!psicologo [texto]` | `!psico`, `!terapia`, `!divan`, `!diván`, `!consejo` | Escucha una situación personal, consulta o mensaje citado y devuelve opinión, perspectiva y consejo según el tono del mensaje (con contención y derivación ante crisis). |
 
 ---
 
