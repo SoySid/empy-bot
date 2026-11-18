@@ -48,7 +48,7 @@ export const horoscopoCommand: Command = {
         await sock.sendMessage(
           remoteJid,
           {
-            text: `🔮 @${targetName} todavía no tiene su signo registrado.\nPuede registrarlo con *!setsigno <signo>* o *!setcumple <DD/MM>*. O podés consultar directo: *!horoscopo <signo>*`,
+            text: `🔮 @${targetName} todavía no tiene su signo registrado.\nPuede registrarlo con *!setcumple <DD/MM>*. O podés consultar directo: *!horoscopo <signo>*`,
           },
           { quoted: msg as any }
         );
@@ -82,7 +82,6 @@ export const horoscopoCommand: Command = {
             `Tirá el comando con tu signo:\n` +
             `👉 *!horoscopo <tu_signo>* _(ej: !horoscopo aries)_\n\n` +
             `💡 *O guardalo para siempre en tu perfil:*\n` +
-            `👉 *!setsigno <signo>* _(ej: !setsigno escorpio)_\n` +
             `👉 *!setcumple <DD/MM>* _(ej: !setcumple 15/05)_`,
         },
         { quoted: msg as any }

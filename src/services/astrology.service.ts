@@ -270,31 +270,103 @@ export function drawTarotCards(count = 3): { card: TarotCard; isReversed: boolea
 // Generadores con Gemini (Voz y Personalidad de Empy)
 // -----------------------------------------------------------------------------
 
+const dailyHoroscopeCache = new Map<string, string>();
+
+const DAILY_FOCUS_ANGLES = [
+  "mensajes sin responder, malentendidos en chats y orgullo",
+  "gastos impulsivos, tentaciones de último momento y organización",
+  "planes improvisados, ganas de salir o cortar con la rutina",
+  "paciencia con gente densa, discusiones evitables y límites",
+  "intuición, corazonadas y señales que venías ignorando",
+  "energía física, fiaca acumulada y prioridades pendientes",
+  "chamuyo, atracción inesperada y sinceridad sin vueltas",
+];
+
+function getMoonPhaseLabel(phaseDeg: number): string {
+  if (phaseDeg < 45 || phaseDeg >= 315) return "Nueva";
+  if (phaseDeg < 135) return "Creciente";
+  if (phaseDeg < 225) return "Llena";
+  return "Menguante";
+}
+
+function getDailyAstralContext(): { dateKey: string; displayDate: string; weekday: string; moonLabel: string; dayOfYear: number } {
+  const now = new Date();
+  const argParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  const weekday = new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "long",
+  }).format(now);
+  const [y, m, d] = argParts.split("-");
+  const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const displayDate = `${capitalizedWeekday} ${d}/${m}`;
+
+  const astroTime = new Astro.AstroTime(now);
+  const moonEcl = Astro.Ecliptic(Astro.GeoVector(Astro.Body.Moon, astroTime, true));
+  const moonSign = longitudeToSign(moonEcl.elon);
+  const moonPhase = getMoonPhaseLabel(Astro.MoonPhase(astroTime));
+  const startOfYear = Date.UTC(Number(y), 0, 0);
+  const dayOfYear = Math.floor((Date.UTC(Number(y), Number(m) - 1, Number(d)) - startOfYear) / 86400000);
+
+  return {
+    dateKey: argParts,
+    displayDate,
+    weekday: capitalizedWeekday,
+    moonLabel: `Luna en ${moonSign.name} (${moonPhase})`,
+    dayOfYear,
+  };
+}
+
 export async function getDailyHoroscope(signName: string, userName?: string): Promise<string> {
-  const sign = ZODIAC_SIGNS.find((s) => s.name.toLowerCase() === signName.toLowerCase()) || ZODIAC_SIGNS[0];
-  const targetUser = userName ? ` para @${userName}` : "";
+  const signIndex = Math.max(0, ZODIAC_SIGNS.findIndex((s) => s.name.toLowerCase() === signName.toLowerCase()));
+  const sign = ZODIAC_SIGNS[signIndex] || ZODIAC_SIGNS[0];
+  const { dateKey, displayDate, weekday, moonLabel, dayOfYear } = getDailyAstralContext();
+  const cacheKey = `${dateKey}:${sign.name}`;
+
+  const cached = dailyHoroscopeCache.get(cacheKey);
+  if (cached) return cached;
+
+  const focusAngle = DAILY_FOCUS_ANGLES[(dayOfYear + signIndex) % DAILY_FOCUS_ANGLES.length];
+  const targetHint = userName ? ` (consultado por ${userName})` : "";
 
   const prompt = `Sos Empy, el bot de WhatsApp del grupo Empyreal (Argentina).
-Armá el horóscopo del día para el signo *${sign.name}* (${sign.symbol} - Elemento ${sign.element}, regido por ${sign.ruler})${targetUser}.
+Armá el horóscopo de hoy (${displayDate}) para *${sign.name}* (${sign.symbol} - Elemento ${sign.element}, regido por ${sign.ruler})${targetHint}.
+Clima astral real de hoy: ${moonLabel}. Día: ${weekday}.
+Ángulo sugerido para variar hoy: ${focusAngle}.
 
 TONO Y ESTILO OBLIGATORIO:
-- Pibe de 20-25 años, porteño, picante, compinche, con humor argentino y psicología astrológica real del signo (sus mañas, defectos, virtudes y costumbres cotidianas).
-- Cero formalismos aburridos ni frases new-age acartonadas.
-- NO hagas foco en videojuegos (prohibido forzar menciones a LoL, MLBB, rankeds o tilteo de juegos). Enfocate en la vida real, el chat, la calle, la guita y las relaciones.
+- Pibe de 20-25 años, argentino, picante, compinche, con humor cotidiano y psicología astrológica real del signo.
+- Cero formalismos ni frases new-age acartonadas. Evitá repetir muletillas gastadas ("clavar visto", "no te regales", "potrero").
+- NO hagas foco en videojuegos. Enfocate en la vida real, la calle, la plata, el humor y los vínculos.
 - Máximo 90-130 palabras en total. Que entre en una pantalla de celular sin scrollear.
 - Negrita con un solo asterisco (*texto*).
 
 ESTRUCTURA OBLIGATORIA:
 ✨ *HORÓSCOPO DE EMPY | ${sign.symbol} ${sign.name.toUpperCase()}*
+📅 _${displayDate} • ${moonLabel}_
 
-💘 *Amor & Chamuyo:* [1 oración sobre levante, histeriqueo o si te van a clavar visto]
-💸 *Billetera & La Pala:* [1 oración sobre plata, gastos compulsivos o cómo sobrevivir al día]
-⚡ *Ánimo & Mecha:* [1 oración sobre paciencia, humor o energía mental hoy]
-🚨 *Alerta del Día:* [Consejo o advertencia picante de potrero sin filtro]
-🍀 *Cábala:* [Número de 1 o 2 cifras con remate en joda]`.trim();
+💘 *Amor & Chamuyo:* [1 oración concreta y original sobre vínculos, levante o pareja hoy]
+💸 *Billetera & La Pala:* [1 oración concreta sobre plata, laburo, gastos o decisiones económicas]
+⚡ *Ánimo & Paciencia:* [1 oración sobre humor, tolerancia y cabeza en este ${weekday.toLowerCase()}]
+🚨 *Alerta del Día:* [Advertencia directa y útil según el signo y la ${moonLabel}]
+🍀 *Cábala:* [Número de 1 o 2 cifras con un remate corto y gracioso]`.trim();
 
-  const res = await generateWithGemini(prompt, 380, 0.7, "astrology");
-  return res || `✨ *HORÓSCOPO: ${sign.symbol} ${sign.name}*\nHoy los astros andan medio desconectados che. Cuidá la billetera y no te regales en el amor.`;
+  const res = await generateWithGemini(prompt, 380, 0.88, "astrology");
+  if (res) {
+    if (dailyHoroscopeCache.size > 24) {
+      for (const k of dailyHoroscopeCache.keys()) {
+        if (!k.startsWith(dateKey)) dailyHoroscopeCache.delete(k);
+      }
+    }
+    dailyHoroscopeCache.set(cacheKey, res);
+    return res;
+  }
+
+  return `✨ *HORÓSCOPO DE EMPY | ${sign.symbol} ${sign.name.toUpperCase()}*\n📅 _${displayDate} • ${moonLabel}_\n\nHoy los astros andan con señal floja che. Cuidá la guita y pensá dos veces antes de contestar en caliente.`;
 }
 
 export async function getNatalChartReading(chart: NatalChartData, userName: string): Promise<string> {
