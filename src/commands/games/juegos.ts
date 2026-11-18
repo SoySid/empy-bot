@@ -17,9 +17,9 @@ export const juegosCommand: Command = {
       `• *Premio:* *$10.000 a $20.000* fichas.\n\n` +
       `🎣 *3. Pesca de Río & Laguna* (\`!pescar\` o \`!pesca\`)\n` +
       `• Tirás la línea con tu caja de carnadas acumulables.\n` +
-      `• Hay 33 peces coleccionables en Temporada S2 (incluidos 2 Abisales y el Leviatán) para tu \`!acuario\` con pesos y récords.\n` +
+      `• Hay 30 peces coleccionables para tu \`!acuario\` con pesos y récords.\n` +
       `• Mejorá tu equipo y cañas en la \`!tiendapesca\`.\n` +
-      `• *Precios:* Desde *$1.000* (comunes) hasta *$120.000* (Abisales y Leviatán).\n\n` +
+      `• *Precios:* Desde *$1.000* (comunes) hasta *$20.000* (trofeos épicos y leyendas).\n\n` +
       `👹 *4. Raid / Boss Grupal* (\`!boss\` | \`!atacar\`)\n` +
       `• Invocan a un monstruo grupal con barra de HP (3.000 a 5.000 de vida).\n` +
       `• Todos cooperan pegando con \`!atacar\` hasta vencerlo.\n` +

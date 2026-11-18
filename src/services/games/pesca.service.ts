@@ -1,19 +1,13 @@
 import { prisma, withWriteLock } from "../db/prisma.js";
 import { resolveOrRegisterUser } from "../db/user.service.js";
 import {
-  CURRENT_FISHING_SEASON,
   FISH_CATALOG,
   FISHING_SHOP,
   FishDefinition,
   FishingShopItem,
-  S1_TOTAL_SPECIES,
 } from "../../config/fish.config.js";
 
 export interface UserFishingState {
-  season?: string;
-  medals?: string[];
-  s1Completed?: boolean;
-  s1SpeciesCount?: number;
   charges: number;
   lastRegen: number;
   lastCast: number;
@@ -50,26 +44,6 @@ export async function getUserFishingState(userJid: string): Promise<UserFishingS
 
     if (fact?.valor) {
       const parsed: UserFishingState = JSON.parse(fact.valor);
-      if (parsed.season !== CURRENT_FISHING_SEASON) {
-        const uniqueS1Count = new Set(parsed.collection || []).size;
-        const medals = Array.isArray(parsed.medals) ? [...parsed.medals] : [];
-        const completedS1 = uniqueS1Count >= S1_TOTAL_SPECIES;
-        if (completedS1 && !medals.includes("S1_PESCA")) {
-          medals.push("S1_PESCA");
-        }
-        parsed.season = CURRENT_FISHING_SEASON;
-        parsed.medals = medals;
-        parsed.s1Completed = completedS1;
-        parsed.s1SpeciesCount = uniqueS1Count;
-        parsed.collection = [];
-        parsed.ownedItems = [];
-        parsed.activeBuffs = {};
-        parsed.charges = BASE_MAX_CHARGES;
-        parsed.maxWeightRecord = null;
-        applyStaminaRegeneration(parsed);
-        await saveUserFishingState(userJid, parsed);
-        return parsed;
-      }
       applyStaminaRegeneration(parsed);
       fishingStateMemory.set(userJid, parsed);
       return parsed;
@@ -79,8 +53,6 @@ export async function getUserFishingState(userJid: string): Promise<UserFishingS
   }
 
   const defaultState: UserFishingState = {
-    season: CURRENT_FISHING_SEASON,
-    medals: [],
     charges: BASE_MAX_CHARGES,
     lastRegen: Date.now(),
     lastCast: 0,
@@ -270,14 +242,13 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
     }
   }
 
-  // 4. Probabilidades por Tier S2 (100.00% total)
-  let t1Prob = 40.0;
-  let t2Prob = 26.0;
-  let t3Prob = 19.0;
-  let t4Prob = 10.0;
-  let t5Prob = 3.8;
+  // 4. Probabilidades por Tier (Épicos 24%, Legendarios 10%, Míticos 6%, Abisal 1%)
+  let t1Prob = 34.0;
+  let t2Prob = 25;
+  let t3Prob = 24;
+  let t4Prob = 10;
+  let t5Prob = 6;
   let t6Prob = 1.0;
-  let t7Prob = 0.2;
 
   if (state.activeBuffs.tier2Uses && state.activeBuffs.tier2Uses > 0) {
     t2Prob += 15;
@@ -291,31 +262,23 @@ export async function castFishingLine(userJid: string): Promise<FishResult> {
   }
   if (state.ownedItems.includes("permiso_pesca")) {
     t4Prob += 2.5;
-    t5Prob += 0.2;
-    t1Prob -= 2.7;
-  }
-  if (state.ownedItems.includes("cana_grafito")) {
-    t6Prob += 0.3;
-    t7Prob += 0.1;
-    t1Prob -= 0.4;
+    t1Prob -= 2.5;
   }
 
   t1Prob = Math.max(5, t1Prob);
 
   const roll = Math.random() * 100;
-  let chosenTier: 1 | 2 | 3 | 4 | 5 | 6 | 7 = 1;
+  let chosenTier: 1 | 2 | 3 | 4 | 5 | 6 = 1;
 
-  if (roll < t7Prob) {
-    chosenTier = 7;
-  } else if (roll < t7Prob + t6Prob) {
+  if (roll < t6Prob) {
     chosenTier = 6;
-  } else if (roll < t7Prob + t6Prob + t5Prob) {
+  } else if (roll < t6Prob + t5Prob) {
     chosenTier = 5;
-  } else if (roll < t7Prob + t6Prob + t5Prob + t4Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob) {
     chosenTier = 4;
-  } else if (roll < t7Prob + t6Prob + t5Prob + t4Prob + t3Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob + t3Prob) {
     chosenTier = 3;
-  } else if (roll < t7Prob + t6Prob + t5Prob + t4Prob + t3Prob + t2Prob) {
+  } else if (roll < t6Prob + t5Prob + t4Prob + t3Prob + t2Prob) {
     chosenTier = 2;
   } else {
     chosenTier = 1;

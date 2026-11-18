@@ -2,15 +2,12 @@
  * Catálogo Oficial de Peces Coleccionables y Tienda de Pesca para empy-bot.
  */
 
-export const CURRENT_FISHING_SEASON = "S2";
-export const S1_TOTAL_SPECIES = 30;
-
 export interface FishDefinition {
   id: string;
   name: string;
   icon: string;
-  tier: 1 | 2 | 3 | 4 | 5 | 6 | 7;
-  tierName: "Común" | "Raro" | "Épico" | "Legendario" | "Mítico" | "Abisal" | "Leviatán";
+  tier: 1 | 2 | 3 | 4 | 5 | 6;
+  tierName: "Común" | "Raro" | "Épico" | "Legendario" | "Mítico" | "Abisal";
   probability: number; // Porcentaje (ej: 5.6 para 5.6%)
   minWeightKg: number;
   maxWeightKg: number;
@@ -29,21 +26,12 @@ export interface FishingShopItem {
   maxCharges?: number;
   buffDurationUses?: number;
   passiveBonus?: {
-    type:
-      | "tier2_boost"
-      | "tier3_boost"
-      | "legendary_boost"
-      | "mythic_boost"
-      | "abyssal_boost"
-      | "leviathan_boost"
-      | "weight_boost"
-      | "stamina_boost"
-      | "anti_blooper";
+    type: "tier2_boost" | "tier3_boost" | "legendary_boost" | "weight_boost" | "stamina_boost" | "anti_blooper";
     value: number;
   };
 }
 
-// Catálogo de Peces Coleccionables (Temporada S2)
+// 30 Peces Únicos Coleccionables
 export const FISH_CATALOG: Record<string, FishDefinition> = {
   // Tier 1: Comunes (45% total | $1.000 a $1.200 fichas)
   mojarrita_brava: {
@@ -377,30 +365,30 @@ export const FISH_CATALOG: Record<string, FishDefinition> = {
     lore: "Espíritu acuático que solo pica en noches de niebla espesa.",
   },
 
-  // Tier 5: Míticos & Mutantes (3.8% total | $19.800 a $20.000 fichas)
+  // Tier 5: Míticos & Mutantes (1% total | $19.800 a $20.000 fichas)
   blinky_riachuelo: {
     id: "blinky_riachuelo",
     name: "Blinky del Riachuelo",
     icon: "👁️",
     tier: 5,
     tierName: "Mítico",
-    probability: 1.27,
+    probability: 0.34,
     minWeightKg: 4.0,
     maxWeightKg: 15.0,
     basePrice: 19800,
     lore: "Pez de tres ojos fosforescentes curtido con 50 años de efluentes químicos.",
   },
-  dorado_yacyreta: {
-    id: "dorado_yacyreta",
-    name: "Dorado Albino de Yacyretá",
-    icon: "🌟",
+  leviatan_costanera: {
+    id: "leviatan_costanera",
+    name: "El Leviatán de Costanera",
+    icon: "👹",
     tier: 5,
     tierName: "Mítico",
-    probability: 1.26,
-    minWeightKg: 35.0,
-    maxWeightKg: 90.0,
+    probability: 0.33,
+    minWeightKg: 50.0,
+    maxWeightKg: 120.0,
     basePrice: 19950,
-    lore: "Mutación dorada rarísima que surca las turbinas de la represa en noches de tormenta.",
+    lore: "Bestia descomunal alimentada a base de bondiolas y choris caídos al agua.",
   },
   pez_gauchito: {
     id: "pez_gauchito",
@@ -408,51 +396,25 @@ export const FISH_CATALOG: Record<string, FishDefinition> = {
     icon: "🎗️",
     tier: 5,
     tierName: "Mítico",
-    probability: 1.27,
+    probability: 0.33,
     minWeightKg: 7.7,
     maxWeightKg: 7.7,
     basePrice: 20000,
     lore: "Pez milagroso que bendice la billetera del pescador con abundancia infinita.",
   },
 
-  // Tier 6: Abisales & Criaturas de las Fosas Profundas (1.0% total | $50.000 a $55.000 fichas)
+  // Tier 6: Abisales & Criaturas de las Fosas Profundas (1% total | $50.000 fichas)
   calamar_abisal_primigenio: {
     id: "calamar_abisal_primigenio",
     name: "Calamar Abisal Primigenio",
     icon: "🦑",
     tier: 6,
     tierName: "Abisal",
-    probability: 0.5,
+    probability: 1.0,
     minWeightKg: 120.0,
     maxWeightKg: 350.0,
     basePrice: 50000,
     lore: "Monstruo de tentáculos bioluminiscentes que acecha en las fosas más oscuras e insondables del río.",
-  },
-  tiburon_duende_fosa: {
-    id: "tiburon_duende_fosa",
-    name: "Tiburón Duende de Fosa",
-    icon: "🦈",
-    tier: 6,
-    tierName: "Abisal",
-    probability: 0.5,
-    minWeightKg: 150.0,
-    maxWeightKg: 400.0,
-    basePrice: 55000,
-    lore: "Fósil viviente rosado de mandíbula retráctil que emerge solo de las grietas más profundas.",
-  },
-
-  // Tier 7: Leviatán (0.2% total | $120.000 fichas)
-  leviatan_parana: {
-    id: "leviatan_parana",
-    name: "El Leviatán del Paraná",
-    icon: "🐉",
-    tier: 7,
-    tierName: "Leviatán",
-    probability: 0.2,
-    minWeightKg: 300.0,
-    maxWeightKg: 750.0,
-    basePrice: 120000,
-    lore: "Soberano colosal del abismo fluvial; leyenda viva que muy pocos pescadores vieron emerger.",
   },
 };
 
@@ -528,7 +490,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
     icon: "🏆",
     category: "cana",
     price: 600000, // Cero agregado como solicitó el usuario ($60.000 -> $600.000)
-    description: "Equipo de alta gama: +15% de peso promedio en kg, +0.30% de chance Abisal y +0.10% Leviatán.",
+    description: "Equipo de alta gama: tus peces salen con un +15% de peso promedio en kg y mayor bono de venta.",
     passiveBonus: { type: "weight_boost", value: 15 },
   },
   permiso_pesca: {
@@ -538,7 +500,7 @@ export const FISHING_SHOP: Record<string, FishingShopItem> = {
     icon: "📜",
     category: "accesorio",
     price: 50000,
-    description: "Acceso exclusivo al canal profundo: +2.5% de probabilidad de peces Legendarios y +0.20% Míticos.",
+    description: "Acceso exclusivo al canal profundo: +2.5% de probabilidad de peces Legendarios.",
     passiveBonus: { type: "legendary_boost", value: 2.5 },
   },
 };

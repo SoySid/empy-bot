@@ -39,7 +39,6 @@ export const pescarCommand: Command = {
 
     const fish = res.fish!;
     const tierStars =
-      fish.tier === 7 ? "🐉 LEVIATÁN ⭐⭐⭐⭐⭐⭐⭐" :
       fish.tier === 6 ? "🌌 ABISAL ⭐⭐⭐⭐⭐⭐" :
       fish.tier === 5 ? "🧪 MÍTICO ⭐⭐⭐⭐⭐" :
       fish.tier === 4 ? "👑 LEGENDARIO ⭐⭐⭐⭐" :
@@ -108,8 +107,8 @@ export const acuarioCommand: Command = {
     const percent = Math.round((discovered / totalFishes) * 100);
 
     // Conteo por rareza
-    const tierCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
-    const tierTotals: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    const tierCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const tierTotals: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     for (const f of fishes) {
       tierTotals[f.tier] = (tierTotals[f.tier] || 0) + 1;
       if (state.collection.includes(f.id)) {
@@ -123,8 +122,7 @@ export const acuarioCommand: Command = {
       `• 🦈 *Épicos:* ${tierCounts[3]}/${tierTotals[3]} ${tierCounts[3] === tierTotals[3] ? "✅" : ""}\n` +
       `• 👑 *Legendarios:* ${tierCounts[4]}/${tierTotals[4]} ${tierCounts[4] === tierTotals[4] ? "✅" : ""}\n` +
       `• 🧪 *Míticos:* ${tierCounts[5]}/${tierTotals[5]} ${tierCounts[5] === tierTotals[5] ? "✅" : ""}\n` +
-      `• 🌌 *Abisales:* ${tierCounts[6]}/${tierTotals[6]} ${tierCounts[6] === tierTotals[6] ? "✅" : ""}\n` +
-      `• 🐉 *Leviatán:* ${tierCounts[7]}/${tierTotals[7]} ${tierCounts[7] === tierTotals[7] ? "✅" : ""}`;
+      `• 🌌 *Abisales:* ${tierCounts[6]}/${tierTotals[6]} ${tierCounts[6] === tierTotals[6] ? "✅" : ""}`;
 
     // Récord
     let recordText = "Sin capturas registradas";
@@ -158,15 +156,10 @@ export const acuarioCommand: Command = {
     }
     const buffsDisplay = activeBuffsList.length > 0 ? activeBuffsList.join("\n• ") : "Ninguno";
 
-    const medalsText = state.medals?.includes("S1_PESCA")
-      ? "🏅 Maestro Pescador S1 (30/30)"
-      : "Ninguna todavía";
-
     const text =
-      `🌊 *TU ÁLBUM DE PESCA — TEMPORADA S2* 🐠\n\n` +
+      `🌊 *TU ÁLBUM DE PESCA & ACUARIO* 🐠\n\n` +
       `📊 *Progreso de Colección:* *${discovered}/${totalFishes}* (${percent}% completado)\n` +
       `${tierBreakdown}\n\n` +
-      `🏅 *Medallas de Temporada:* ${medalsText}\n` +
       `🏆 *Mayor Captura Histórica:* ${recordText}\n` +
       `🎣 *Caña Equipada:* ${cañaName}\n` +
       `🧰 *Accesorios Permanentes:* ${accText}\n` +
