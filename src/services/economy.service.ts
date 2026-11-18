@@ -15,6 +15,7 @@ import {
 import { SHOP_ITEMS, ShopItem } from "../config/shop.config.js";
 import { renderHungerBar } from "./hunger.service.js";
 import { triggerSmartEmergency } from "./community.service.js";
+import { FEATURE_FLAGS } from "../config/feature-flags.js";
 import { getUserEducationBuffs } from "./education.service.js";
 import { isUserEconomyFrozen } from "./admin-economy.service.js";
 
@@ -977,12 +978,14 @@ export async function executeRobbery(
       };
     }
 
-    const curAggressorHunger = typeof (curAggressor as any).hunger === "number" ? (curAggressor as any).hunger : 85;
-    if (curAggressorHunger <= 0) {
-      return {
-        success: false,
-        error: "Estás desmayado de hambre (0% de energía). No tenés fuerzas para salir a correr ni asaltar a nadie. ¡Comé algo con `!comer`!",
-      };
+    if (FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED) {
+      const curAggressorHunger = typeof (curAggressor as any).hunger === "number" ? (curAggressor as any).hunger : 85;
+      if (curAggressorHunger <= 0) {
+        return {
+          success: false,
+          error: "Estás desmayado de hambre (0% de energía). No tenés fuerzas para salir a correr ni asaltar a nadie. ¡Comé algo con `!comer`!",
+        };
+      }
     }
 
     if (curAggressor.lastRobAttempt) {

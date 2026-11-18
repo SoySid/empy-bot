@@ -1,4 +1,5 @@
 import { Command, CommandContext } from "../types.js";
+import { FEATURE_FLAGS } from "../../config/feature-flags.js";
 
 export const juegosCommand: Command = {
   name: "juegos",
@@ -15,11 +16,13 @@ export const juegosCommand: Command = {
       `• Trivia de geografía con la bandera oficial y pistas de continente/capital.\n` +
       `• El primero en adivinar el país gana el pozo.\n` +
       `• *Premio:* *$10.000 a $20.000* fichas.\n\n` +
-      `🎣 *3. Pesca de Río & Laguna* (\`!pescar\` o \`!pesca\`)\n` +
-      `• Tirás la línea con tu caja de carnadas acumulables.\n` +
-      `• Hay 30 peces coleccionables para tu \`!acuario\` con pesos y récords.\n` +
-      `• Mejorá tu equipo y cañas en la \`!tiendapesca\`.\n` +
-      `• *Precios:* Desde *$1.000* (comunes) hasta *$20.000* (trofeos épicos y leyendas).\n\n` +
+      (FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED
+        ? `🎣 *3. Pesca de Río & Laguna* (\`!pescar\` o \`!pesca\`)\n` +
+          `• Tirás la línea con tu caja de carnadas acumulables.\n` +
+          `• Hay 30 peces coleccionables para tu \`!acuario\` con pesos y récords.\n` +
+          `• Mejorá tu equipo y cañas en la \`!tiendapesca\`.\n` +
+          `• *Precios:* Desde *$1.000* (comunes) hasta *$20.000* (trofeos épicos y leyendas).\n\n`
+        : "") +
       `👹 *4. Raid / Boss Grupal* (\`!boss\` | \`!atacar\`)\n` +
       `• Invocan a un monstruo grupal con barra de HP (3.000 a 5.000 de vida).\n` +
       `• Todos cooperan pegando con \`!atacar\` hasta vencerlo.\n` +

@@ -10,6 +10,7 @@ import { handleAiInteraction } from "./ai.handler.js";
 import { handleSpontaneousReaction } from "./spontaneous.handler.js";
 import { handleDestinyEvents, handleBusinessPassiveIncome } from "../services/economy.service.js";
 import { consumeHungerOnMessage, interceptStarvedUserMessage } from "../services/hunger.service.js";
+import { FEATURE_FLAGS } from "../config/feature-flags.js";
 import { runLiveChatPipeline } from "../services/pipeline/index.js";
 import { interceptGameGuess } from "../services/games/game-interceptor.js";
 import { detectPromiseIntent, createSocialPromise } from "../services/promise.service.js";
@@ -186,7 +187,7 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     : undefined;
 
   // 8a. Si el usuario está desmayado por inanición (0%), borrar su mensaje a menos que sea comando de morfi
-  if (remoteJid.endsWith("@g.us")) {
+  if (FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED && remoteJid.endsWith("@g.us")) {
     const isStarved = await interceptStarvedUserMessage(
       sock,
       remoteJid,
@@ -223,10 +224,14 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     // Tareas secundarias de grupo en paralelo para no frenar la cola FIFO de mensajes
     if (isGroup) {
       const sideTasks: Promise<unknown>[] = [
-        handleDestinyEvents(sock, remoteJid, senderProfile.jid),
         handleBusinessPassiveIncome(sock, remoteJid, senderProfile.jid),
-        consumeHungerOnMessage(sock, remoteJid, senderProfile),
       ];
+      if (FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED) {
+        sideTasks.push(
+          handleDestinyEvents(sock, remoteJid, senderProfile.jid),
+          consumeHungerOnMessage(sock, remoteJid, senderProfile)
+        );
+      }
 
       if (detectPromiseIntent(body)) {
         sideTasks.push(

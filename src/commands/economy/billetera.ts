@@ -1,6 +1,7 @@
 import { Command, CommandContext } from "../types.js";
 import { getWallet, transfer } from "../../services/economy.service.js";
 import { formatUserName } from "../../services/db/user.service.js";
+import { FEATURE_FLAGS } from "../../config/feature-flags.js";
 
 export const billeteraCommand: Command = {
   name: "billetera",
@@ -73,19 +74,26 @@ export const billeteraCommand: Command = {
       ? `📉 *Castigo:* -30% cobro (${Math.abs(wallet.jobBuffTurns)} changas restantes)\n`
       : "";
 
-    const text =
-      `${titleHeader}\n\n` +
-      userTitleText +
-      profText +
-      `💰 *Saldo:* *$${wallet.balance.toLocaleString("es-AR")}* fichas\n` +
-      `🔋 *Energía:* ${wallet.hungerBar}${wallet.hunger <= 15 ? " ⚠️ *¡CRÍTICO!*" : ""}\n\n` +
-      toolsText +
-      relicText +
-      businessText +
-      collectText +
-      jobBuffText +
-      `💼 *Laburo:* ${jobStatus}\n` +
-      `📅 *Diario:* ${dailyStatus}`;
+    const text = FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED
+      ? `${titleHeader}\n\n` +
+        userTitleText +
+        profText +
+        `💰 *Saldo:* *$${wallet.balance.toLocaleString("es-AR")}* fichas\n` +
+        `🔋 *Energía:* ${wallet.hungerBar}${wallet.hunger <= 15 ? " ⚠️ *¡CRÍTICO!*" : ""}\n\n` +
+        toolsText +
+        relicText +
+        businessText +
+        collectText +
+        jobBuffText +
+        `💼 *Laburo:* ${jobStatus}\n` +
+        `📅 *Diario:* ${dailyStatus}`
+      : `${titleHeader}\n\n` +
+        userTitleText +
+        `💰 *Saldo:* *$${wallet.balance.toLocaleString("es-AR")}* fichas\n\n` +
+        relicText +
+        businessText +
+        collectText +
+        `📅 *Diario:* ${dailyStatus}`;
 
     await sock.sendMessage(
       remoteJid,
