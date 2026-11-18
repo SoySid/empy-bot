@@ -46,7 +46,7 @@ export async function generateFishCard(options: FishCardOptions): Promise<Buffer
   const price = options.price ?? fish.basePrice;
   const equippedRodName = options.equippedRodName || "Caña Básica";
 
-  // Paleta de colores e identidad según la rareza (Tier 1 a 5)
+  // Paleta de colores e identidad según la rareza (Tier 1 a 7)
   let borderColor = "#78909C";
   let borderGradientStart = "#90A4AE";
   let borderGradientEnd = "#546E7A";
@@ -56,7 +56,16 @@ export async function generateFishCard(options: FishCardOptions): Promise<Buffer
   let bgGradientEnd = "#000a12";
   let glowColor = "#37474F";
 
-  if (fish.tier === 6) {
+  if (fish.tier === 7) {
+    borderColor = "#FF3D00";
+    borderGradientStart = "#FFD700";
+    borderGradientEnd = "#B71C1C";
+    tierLabel = "LEVIATÁN 🐉⭐⭐⭐⭐⭐⭐⭐";
+    tierBadgeColor = "#B71C1C";
+    bgGradientStart = "#2b0505";
+    bgGradientEnd = "#080000";
+    glowColor = "#FF6D00";
+  } else if (fish.tier === 6) {
     borderColor = "#00E5FF";
     borderGradientStart = "#00FFFF";
     borderGradientEnd = "#0052D4";

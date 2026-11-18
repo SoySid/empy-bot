@@ -42,3 +42,5 @@ GEMINI.md
 .agent/
 brain/
 .system_generated/
+backups/
+

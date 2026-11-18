@@ -7,9 +7,9 @@ import {
 import { checkGameCooldown, setGameCooldown } from "../../services/games/game-cooldown.service.js";
 
 export const mlbbCommand: Command = {
-  name: "mlbb",
-  aliases: ["heroe", "heroemlbb", "mobilelegends"],
-  description: "Adiviná el héroe de Mobile Legends: Bang Bang por su avatar pixelado (!mlbb).",
+  name: "moba",
+  aliases: ["heroe", "heroemlbb", "mobilelegends", "mlbbquiz"],
+  description: "Adiviná el héroe de Mobile Legends: Bang Bang por su avatar pixelado (!moba).",
   execute: async ({ sock, remoteJid, msg, senderProfile }: CommandContext) => {
     const cd = checkGameCooldown(remoteJid, senderProfile, msg.key?.participant || remoteJid);
     if (!cd.canStart) {
@@ -75,7 +75,7 @@ export const mlbbdexCommand: Command = {
     if (total === 0) {
       await sock.sendMessage(
         remoteJid,
-        { text: `⚔️ *TU MLBB-DEX ESTÁ VACÍA*\n\nTodavía no descubriste ningún héroe de Mobile Legends. ¡Jugá con \`!mlbb\` para empezar a dominarlos!` },
+        { text: `⚔️ *TU MLBB-DEX ESTÁ VACÍA*\n\nTodavía no descubriste ningún héroe de Mobile Legends. ¡Jugá con \`!moba\` para empezar a dominarlos!` },
         { quoted: msg as any }
       );
       return;
@@ -88,7 +88,7 @@ export const mlbbdexCommand: Command = {
       `👤 *Jugador:* @${senderProfile?.phone || "Invocador"}\n` +
       `📊 *Total Dominados:* **${total} héroes**\n\n` +
       `📋 *Héroes en tu lista:*\n${heroDisplay}\n\n` +
-      `_¡Seguí reconociendo avatares con \`!mlbb\`!_`;
+      `_¡Seguí reconociendo avatares con \`!moba\`!_`;
 
     await sock.sendMessage(
       remoteJid,

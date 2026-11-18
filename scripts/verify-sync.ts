@@ -39,7 +39,7 @@ function verifySync(): void {
     wordle: { triggers: ["!wordle"], label: "Wordle" },
     ahorcado: { triggers: ["!ahorcado"], label: "Ahorcado" },
     superhero: { triggers: ["!superheroe", "!comic"], label: "Superhéroes" },
-    mlbb: { triggers: ["!mlbb", "!heroe"], label: "Mobile Legends (MLBB)" },
+    mlbb: { triggers: ["!moba", "!heroe"], label: "Mobile Legends (MLBB)" },
     ruletarusa: { triggers: ["!ruletarusa"], label: "Ruleta Rusa" },
     campominado: { triggers: ["!campominado", "!campo", "!minas"], label: "Campo Minado" },
     tuttifrutti: { triggers: ["!tuttifrutti", "!basta"], label: "Tutti Frutti" },

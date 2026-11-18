@@ -220,7 +220,7 @@ Es posible anteponer etiquetas entre corchetes para alterar la entonación del m
 | `!palabra <intento>` | `!w` | Envía una palabra de 5 letras para intentar descifrar el término oculto. |
 | `!superheroe` | `!heroe` | Desafío para adivinar el héroe o villano mediante pistas graduales. |
 | `!coleccionheroes` | `!misheroes` | Álbum personal con los personajes de cómics coleccionados. |
-| `!mlbbquiz` | `!heromlbb` | Desafío de preguntas sobre habilidades y personajes de Mobile Legends. |
+| `!moba` | `!heroe`, `!heroemlbb`, `!mobilelegends`, `!mlbbquiz` | Desafío para adivinar el héroe de Mobile Legends por su avatar misterioso y pistas de rol. |
 | `!mlbbdex` | — | Registro de personajes de MLBB obtenidos en las trivias. |
 | `!ahorcado` | `!arriesgar` | Ahorcado grupal por categorías temáticas con pozo acumulado de fichas. |
 | `!ruletarusa` | `!disparar` | Desafío de supervivencia con tambor de 6 recámaras y 1 bala. |
