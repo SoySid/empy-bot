@@ -346,7 +346,10 @@ async function connectToWhatsApp(): Promise<void> {
 
       for (const msg of m.messages) {
         const jid = msg.key?.remoteJid || "";
-        if (!TARGET_GROUP_JID || jid !== TARGET_GROUP_JID || !jid.endsWith("@g.us")) {
+        if (!jid || jid === "status@broadcast" || jid.endsWith("@newsletter")) {
+          continue;
+        }
+        if (jid.endsWith("@g.us") && (!TARGET_GROUP_JID || jid !== TARGET_GROUP_JID)) {
           continue;
         }
         const currentQueue = chatQueues.get(jid) || Promise.resolve();
