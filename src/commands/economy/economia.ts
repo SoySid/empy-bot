@@ -26,11 +26,11 @@ export const economiaCommand: Command = {
         `• \`!reclamar\`: Agarrar fajos de plata caídos en el chat.\n\n` +
         `💡 _Tirá \`!billetera\` o \`!tienda\` para empezar._`
       : `🏛️ *GUÍA DE ECONOMÍA (Empyreal)*\n\n` +
-        `🛒 *CUENTA & NEGOCIOS:*\n` +
-        `• \`!billetera\`: Saldo, propiedades y cooldowns.\n` +
-        `• \`!tienda\`: Catálogo (secciones: \`negocios\`, \`lujo\`).\n` +
-        `• \`!diario\`: Cobro pasivo cada 20hs (+ renta de negocios cada 50 msgs).\n` +
-        `• \`!inventario\`: Ver tus propiedades y objetos.\n\n` +
+        `🛒 *CUENTA & TIMBA:*\n` +
+        `• \`!billetera\`: Saldo, colección y cooldowns.\n` +
+        `• \`!tienda\`: Catálogo (sección \`lujo\`).\n` +
+        `• \`!diario\`: Cobro pasivo cada 20hs.\n` +
+        `• \`!inventario\`: Ver tus objetos.\n\n` +
         `🎲 *TIMBA & CALLE:*\n` +
         `• \`!robar @user\`: Asalto al paso (65% de éxito).\n` +
         `• \`!21 <monto>\` / \`!slot <monto>\` / \`!ruleta <color> <monto>\`: Casino.\n\n` +

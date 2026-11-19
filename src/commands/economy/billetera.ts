@@ -91,7 +91,6 @@ export const billeteraCommand: Command = {
         userTitleText +
         `💰 *Saldo:* *$${wallet.balance.toLocaleString("es-AR")}* fichas\n\n` +
         relicText +
-        businessText +
         collectText +
         `📅 *Diario:* ${dailyStatus}`;
 

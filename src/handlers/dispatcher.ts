@@ -223,12 +223,11 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
 
     // Tareas secundarias de grupo en paralelo para no frenar la cola FIFO de mensajes
     if (isGroup) {
-      const sideTasks: Promise<unknown>[] = [
-        handleBusinessPassiveIncome(sock, remoteJid, senderProfile.jid),
-      ];
+      const sideTasks: Promise<unknown>[] = [];
       if (FEATURE_FLAGS.WORK_FISHING_SURVIVAL_ENABLED) {
         sideTasks.push(
           handleDestinyEvents(sock, remoteJid, senderProfile.jid),
+          handleBusinessPassiveIncome(sock, remoteJid, senderProfile.jid),
           consumeHungerOnMessage(sock, remoteJid, senderProfile)
         );
       }
