@@ -62,17 +62,30 @@ function saveMissions(missions: ScheduledMission[]): void {
   fs.writeFileSync(MISSIONS_FILE, JSON.stringify(missions, null, 2), "utf8");
 }
 
+const ARG_OFFSET_MS = -3 * 60 * 60 * 1000;
+
 function computeNextScheduledDate(timeStr: string): Date {
   const [hourStr, minStr] = timeStr.split(":");
   const hour = Number(hourStr);
   const minute = Number(minStr);
-  const now = new Date();
-  const target = new Date(now);
-  target.setHours(hour, minute, 0, 0);
-  if (target.getTime() <= now.getTime()) {
-    target.setDate(target.getDate() + 1);
+
+  const nowUtcMs = Date.now();
+  const argNow = new Date(nowUtcMs + ARG_OFFSET_MS);
+
+  const targetUtcMs = Date.UTC(
+    argNow.getUTCFullYear(),
+    argNow.getUTCMonth(),
+    argNow.getUTCDate(),
+    hour + 3,
+    minute,
+    0,
+    0
+  );
+
+  if (targetUtcMs <= nowUtcMs) {
+    return new Date(targetUtcMs + 24 * 60 * 60 * 1000);
   }
-  return target;
+  return new Date(targetUtcMs);
 }
 
 function expireStaleMissions(missions: ScheduledMission[]): boolean {
@@ -137,6 +150,7 @@ export async function handleOwnerMissionCommand(
     const lines = open.map((m) => {
       const icon = m.status === "pending" ? "⏳" : "💬";
       const when = new Date(m.scheduledFor).toLocaleString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -207,6 +221,7 @@ export async function handleOwnerMissionCommand(
   saveMissions(missions);
 
   const formattedDate = scheduledDate.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
