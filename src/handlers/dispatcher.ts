@@ -119,13 +119,21 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     if (!dmBody.trim()) return;
 
     const dmAuthor = await extractMessageAuthor(msg);
+    const dmAlt = (msg.key as any)?.remoteJidAlt as string | undefined;
     const dmSender = dmAuthor.canonicalJid || dmAuthor.rawSender;
     if (!dmSender || isSenderFlooding(dmSender)) return;
 
-    const isOwner = isBotOwner(null, dmAuthor.canonicalJid) || isBotOwner(null, dmAuthor.rawSender);
+    const dmProfile = await resolveOrRegisterUser(dmAuthor.canonicalJid, msg.pushName || null).catch(() => null);
+    const isOwner =
+      isBotOwner(dmProfile, dmAuthor.canonicalJid) ||
+      isBotOwner(dmProfile, dmAuthor.rawSender) ||
+      (dmAlt ? isBotOwner(dmProfile, dmAlt) : false);
+
+    console.log(`[Dispatcher DM] 📩 de ${remoteJid} (canonical=${dmAuthor.canonicalJid}, owner=${isOwner}): "${dmBody.slice(0, 60)}"`);
+
     if (isOwner && dmBody.trim().toLowerCase().startsWith(`${PREFIX}mision`)) {
       await handleOwnerMissionCommand(sock, remoteJid, dmBody);
-    } else if (hasActiveMissionFor(dmAuthor.phoneDigits, remoteJid)) {
+    } else if (hasActiveMissionFor(dmAuthor.phoneDigits, dmAlt || remoteJid)) {
       await handleMissionTargetDm(sock, remoteJid, dmAuthor.phoneDigits, dmBody);
     }
     return;
