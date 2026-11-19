@@ -24,6 +24,7 @@ import { registerDynamicVoiceCommand } from "./commands/index.js";
 import { initSoundsDirectory } from "./services/sound.service.js";
 import { startMemorySynthesizer, stopMemorySynthesizer } from "./workers/memory-synthesizer.js";
 import { startWeatherRotator, stopWeatherRotator } from "./workers/weather-rotator.js";
+import { startMissionScheduler, stopMissionScheduler } from "./workers/mission-scheduler.js";
 import { flushApiQuotaUsage } from "./services/token.service.js";
 import { dispatchMessage } from "./handlers/dispatcher.js";
 import {
@@ -71,6 +72,7 @@ export async function suspendBot(): Promise<void> {
   isReconnecting = false;
   stopMemorySynthesizer();
   stopWeatherRotator();
+  stopMissionScheduler();
 
   if (currentSock) {
     try {
@@ -104,6 +106,7 @@ export async function unlinkAndResetBot(): Promise<void> {
   isReconnecting = false;
   stopMemorySynthesizer();
   stopWeatherRotator();
+  stopMissionScheduler();
 
   if (currentSock) {
     try {
@@ -195,8 +198,9 @@ async function connectToWhatsApp(): Promise<void> {
   });
   currentSock = sock;
 
-  // Actualizar socket en el rotador de clima
+  // Actualizar socket en el rotador de clima y scheduler de misiones
   startWeatherRotator(sock);
+  startMissionScheduler(sock);
 
   // Manejo del ciclo de vida de la conexión
   sock.ev.on("connection.update", async (update) => {
@@ -226,6 +230,7 @@ async function connectToWhatsApp(): Promise<void> {
         console.log("[WhatsApp] Limpiando credenciales antiguas de 'auth_info' y PostgreSQL para solicitar nuevo QR...");
         stopMemorySynthesizer();
         stopWeatherRotator();
+        stopMissionScheduler();
 
         // Purgar credenciales de PostgreSQL para que no se restauren credenciales muertas en Render
         await clearAuthFromDb().catch((err) => console.warn("[WhatsApp] Error purgando DB auth:", err));
@@ -402,6 +407,7 @@ const handleShutdown = async (signal: string) => {
   console.log(`\n[Shutdown] Recibida señal ${signal}. Deteniendo servicios...`);
   stopMemorySynthesizer();
   stopWeatherRotator();
+  stopMissionScheduler();
   try {
     await flushApiQuotaUsage();
     await syncAuthToDb();

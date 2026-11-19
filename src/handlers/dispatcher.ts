@@ -16,6 +16,11 @@ import { interceptGameGuess } from "../services/games/game-interceptor.js";
 import { detectPromiseIntent, createSocialPromise } from "../services/promise.service.js";
 import { isBotOwner } from "../services/admin-economy.service.js";
 import { isUserIgnoredByRoulette } from "../services/games/ruletarusa.service.js";
+import {
+  handleMissionTargetDm,
+  handleOwnerMissionCommand,
+  hasActiveMissionFor,
+} from "../services/mission.service.js";
 
 
 const TARGET_GROUP_JID: string = (process.env.GROUP_JID || "").replace(/['"]/g, "").trim();
@@ -89,9 +94,44 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     }
   }
 
-  // 3. Cerrojo estricto fail-closed: solo se admiten mensajes del grupo objetivo configurado
+  // 3. Cerrojo estricto fail-closed: DMs solo para misiones temporales (owner / destinatario activo); el resto solo grupo objetivo
   const remoteJid = msg.key.remoteJid;
-  if (!remoteJid || !TARGET_GROUP_JID || remoteJid !== TARGET_GROUP_JID || !remoteJid.endsWith("@g.us")) {
+  if (!remoteJid) return;
+
+  if (!remoteJid.endsWith("@g.us")) {
+    if (remoteJid === "status@broadcast" || remoteJid.endsWith("@newsletter")) return;
+    const rawDm = msg.message;
+    if (rawDm.reactionMessage || rawDm.protocolMessage || rawDm.senderKeyDistributionMessage || rawDm.pollUpdateMessage) {
+      return;
+    }
+    const normDm =
+      rawDm?.ephemeralMessage?.message ||
+      rawDm?.viewOnceMessage?.message ||
+      rawDm?.viewOnceMessageV2?.message ||
+      rawDm?.documentWithCaptionMessage?.message ||
+      rawDm;
+    const dmBody =
+      normDm?.conversation ||
+      normDm?.extendedTextMessage?.text ||
+      normDm?.imageMessage?.caption ||
+      normDm?.videoMessage?.caption ||
+      "";
+    if (!dmBody.trim()) return;
+
+    const dmAuthor = await extractMessageAuthor(msg);
+    const dmSender = dmAuthor.canonicalJid || dmAuthor.rawSender;
+    if (!dmSender || isSenderFlooding(dmSender)) return;
+
+    const isOwner = isBotOwner(null, dmAuthor.canonicalJid) || isBotOwner(null, dmAuthor.rawSender);
+    if (isOwner && dmBody.trim().toLowerCase().startsWith(`${PREFIX}mision`)) {
+      await handleOwnerMissionCommand(sock, remoteJid, dmBody);
+    } else if (hasActiveMissionFor(dmAuthor.phoneDigits, remoteJid)) {
+      await handleMissionTargetDm(sock, remoteJid, dmAuthor.phoneDigits, dmBody);
+    }
+    return;
+  }
+
+  if (!TARGET_GROUP_JID || remoteJid !== TARGET_GROUP_JID) {
     return;
   }
   const isGroup = true;
