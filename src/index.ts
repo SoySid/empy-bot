@@ -19,6 +19,7 @@ import {
 import { refreshReflectionCache } from "./services/db/reflection.service.js";
 import { initLiveBufferFromDb } from "./services/db/message.service.js";
 import { initStickersDirectory, syncStickersFromDb } from "./services/sticker.service.js";
+import { installAudioStickerInspector } from "./services/audio-sticker-inspector.service.js";
 import { syncCustomVoicesFromDb } from "./services/voice.service.js";
 import { registerDynamicVoiceCommand } from "./commands/index.js";
 import { initSoundsDirectory } from "./services/sound.service.js";
@@ -377,6 +378,7 @@ async function connectToWhatsApp(): Promise<void> {
  * Bootstrap de aplicación: Inicializa servicios pesados y workers una única vez.
  */
 async function bootstrap(): Promise<void> {
+  installAudioStickerInspector();
   console.log("[Bootstrap] Inicializando servidor web y servicios...");
   if (!TARGET_GROUP_JID) {
     console.warn("[Seguridad] ⚠️ ADVERTENCIA: GROUP_JID no configurado. Modo fail-closed activo.");
