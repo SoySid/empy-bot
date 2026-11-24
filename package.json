@@ -13,6 +13,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "verify:sync": "tsx scripts/verify-sync.ts",
+    "notion": "tsx scripts/notion-ops.ts",
     "test:astrology": "tsx scripts/test-astrology.ts",
     "sync:auth": "tsx scripts/sync-local-session-to-db.ts",
     "clear:auth": "tsx scripts/clear-db-session.ts",

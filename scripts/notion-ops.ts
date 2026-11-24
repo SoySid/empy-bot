@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getFeedbackItems, updateFeedbackStatus, archiveFeedbackItem, createFeedbackItem } from "../../../../src/services/notion.service.js";
+import { getFeedbackItems, updateFeedbackStatus, archiveFeedbackItem, createFeedbackItem } from "../src/services/notion.service.js";
 
 const [, , action, arg1, arg2, arg3] = process.argv;
 
@@ -22,7 +22,7 @@ async function main() {
 
     case "status": {
       if (!arg1 || !arg2) {
-        console.error("Uso: npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts status <pageId> <Nuevo|En Progreso|Resuelto|Descartado>");
+        console.error("Uso: npx tsx scripts/notion-ops.ts status <pageId> <Nuevo|En Progreso|Resuelto|Descartado>");
         process.exit(1);
       }
       const validStatuses = ["Nuevo", "En Progreso", "Resuelto", "Descartado"] as const;
@@ -37,7 +37,7 @@ async function main() {
 
     case "archive": {
       if (!arg1) {
-        console.error("Uso: npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts archive <pageId>");
+        console.error("Uso: npx tsx scripts/notion-ops.ts archive <pageId>");
         process.exit(1);
       }
       const res = await archiveFeedbackItem(arg1);
@@ -47,15 +47,15 @@ async function main() {
 
     case "create": {
       if (!arg1) {
-        console.error("Uso: npx tsx .agents/skills/agentes-empy/scripts/notion-ops.ts create <titulo> [Bug|Sugerencia|Roadmap|Mejora Técnica] [Alta|Media|Baja]");
+        console.error("Uso: npx tsx scripts/notion-ops.ts create <titulo> [Bug|Sugerencia|Roadmap|Mejora Técnica] [Alta|Media|Baja]");
         process.exit(1);
       }
       const res = await createFeedbackItem({
         title: arg1,
         type: (arg2 as any) || "Mejora Técnica",
         priority: (arg3 as any) || "Media",
-        author: "Jefe Sid (Squad)",
-        detail: "Creado desde el Orquestador /agentes-empy",
+        author: "Empy-Bot CLI",
+        detail: "Creado desde scripts/notion-ops.ts",
       });
       console.log(JSON.stringify(res));
       break;
