@@ -5,6 +5,7 @@ import { searchCommand } from "./search.js";
 import { shutdownCommand } from "./shutdown.js";
 import { reglaCommand } from "./regla.js";
 import { sCommand } from "./s.js";
+import { saCommand } from "./sa.js";
 import { stickerCommand } from "./sticker.js";
 import { audioCommand } from "./audio.js";
 import { tomasCommand } from "./tomas.js";
@@ -120,6 +121,7 @@ import {
 // Comandos estáticos
 const staticCommands: Command[] = [
   sCommand,
+  saCommand,
   stickerCommand,
   audioCommand,
   downloadCommand,

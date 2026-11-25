@@ -290,6 +290,7 @@ Activos que suman rendimientos automáticos al cobro de `!diario`:
 | Comando | Alias | Descripción |
 | :--- | :--- | :--- |
 | `!s` | `!pegatina`, `!toimg`, `!img`, `!togif`, `!gif` | Conversión universal: crea stickers WebP estáticos o animados a partir de fotos/videos, o convierte stickers citados a imagen PNG / video MP4. |
+| `!sa` | `!stickeraudio`, `!audiosticker` | Crea un sticker con sonido nativo de WhatsApp (WebP animado + audio OGG/Opus de hasta 10 s) a partir de un video. |
 | `!sticker <categoría> [nombre]` | `!guardarsticker`, `!savesticker`, `!addsticker` | Guarda un sticker citado en la rotación del bot clasificado por categoría (`bardo`, `burla`, `risa`, `triste`, `wtf`, `triggers`) y lo sincroniza en PostgreSQL. *(Exclusivo del Creador)*. |
 
 #### Triggers dinámicos y rotación
