@@ -128,7 +128,7 @@ async function runTests(): Promise<void> {
   assert.equal(prepared.webpBuffer.toString("ascii", 0, 4), "RIFF");
   assert.equal(prepared.webpBuffer.toString("ascii", 8, 12), "WEBP");
   assert.ok(prepared.webpBuffer.includes(Buffer.from("EXIF")), "El WebP debe incluir chunk EXIF");
-  assert.ok(prepared.webpBuffer.length <= 500 * 1024, "El WebP debe pesar <= 500 KB");
+  assert.ok(prepared.webpBuffer.length <= 800 * 1024, "El WebP debe pesar <= 800 KB");
 
   const meta = await sharp(prepared.webpBuffer, { animated: true }).metadata();
   const totalWebpMs = (meta.delay || []).reduce((acc, d) => acc + d, 0);

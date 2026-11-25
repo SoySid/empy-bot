@@ -18,7 +18,7 @@ export const AUDIO_STICKER_MAX_SOURCE_SEC = 60;
 export const AUDIO_STICKER_MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 export const AUDIO_STICKER_MIME = "audio/ogg; codecs=opus";
 
-const MAX_WEBP_BYTES = 500 * 1024;
+const MAX_WEBP_BYTES = 800 * 1024;
 const MAX_AUDIO_BYTES = 900 * 1024;
 const TEMP_DIR = path.resolve(process.cwd(), "temp");
 const DEFAULT_EMOJI = "🔊";
@@ -257,7 +257,7 @@ async function encodeAnimatedWebp(
     "-vcodec",
     "libwebp",
     "-compression_level",
-    "1",
+    "0",
     "-q:v",
     String(quality),
     outputPath,
@@ -351,9 +351,9 @@ export async function extractAudioStickerFromVideo(
       Math.min(AUDIO_STICKER_MAX_DURATION_SEC, rawDuration)
     );
 
-    // Preset rápido calibrado según duración para entrar en <= 500 KB en una sola pasada
-    const initialFps = targetDuration > 5 ? 8 : 10;
-    const initialQuality = targetDuration > 5 ? 30 : 38;
+    // Preset fluido (15 fps) calibrado con compression_level 0 para mantener velocidad y fluidez
+    const initialFps = 15;
+    const initialQuality = targetDuration > 5 ? 25 : 35;
 
     let [audioBuffer, webpBuffer] = await Promise.all([
       encodeOggOpus(inputPath, oggPath, targetDuration, "48k"),
@@ -371,9 +371,9 @@ export async function extractAudioStickerFromVideo(
       );
     }
 
-    // Si supera 500 KB, reducir fps/calidad pero mantener exactamente la misma duración que el audio
+    // Si supera 800 KB, bajar suavemente a 12 fps manteniendo exactamente la misma duración que el audio
     if (webpBuffer.length > MAX_WEBP_BYTES) {
-      webpBuffer = await encodeAnimatedWebp(inputPath, webpPath, targetDuration, 6, 20);
+      webpBuffer = await encodeAnimatedWebp(inputPath, webpPath, targetDuration, 12, 18);
     }
 
     const webpWithExif = injectWebpExif(webpBuffer);
