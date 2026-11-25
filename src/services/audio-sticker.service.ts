@@ -23,6 +23,58 @@ const MAX_AUDIO_BYTES = 900 * 1024;
 const TEMP_DIR = path.resolve(process.cwd(), "temp");
 const DEFAULT_EMOJI = "🔊";
 
+const MAX_PRIVATE_CONCURRENT_JOBS = 1;
+const MAX_PRIVATE_QUEUED_JOBS = 6;
+let activePrivateJobs = 0;
+const privateJobWaiters: Array<() => void> = [];
+
+export class PrivateMediaQueueFullError extends Error {
+  constructor() {
+    super("Hay varios pedidos en cola en privado. Probá de nuevo en unos segundos.");
+    this.name = "PrivateMediaQueueFullError";
+  }
+}
+
+/**
+ * Serializa tareas multimedia en chats privados (máx. 1 a la vez, fila acotada)
+ * para evitar picos de CPU/RAM en Render que afecten al grupo principal.
+ */
+export async function runPrivateMediaTask<T>(task: () => Promise<T>): Promise<T> {
+  if (activePrivateJobs >= MAX_PRIVATE_CONCURRENT_JOBS) {
+    if (privateJobWaiters.length >= MAX_PRIVATE_QUEUED_JOBS) {
+      throw new PrivateMediaQueueFullError();
+    }
+    await new Promise<void>((resolve) => {
+      privateJobWaiters.push(resolve);
+    });
+  }
+
+  activePrivateJobs++;
+  try {
+    return await task();
+  } finally {
+    activePrivateJobs--;
+    const next = privateJobWaiters.shift();
+    if (next) next();
+  }
+}
+
+/**
+ * Desempaqueta wrappers comunes de WhatsApp (mensajes temporales, documentos con caption, editados)
+ * para acceder al contenido multimedia real tanto en mensajes directos como citados.
+ */
+export function unwrapMediaMessage(raw: any, depth = 0): any {
+  if (!raw || typeof raw !== "object" || depth > 4) return raw;
+  const inner =
+    raw.ephemeralMessage?.message ||
+    raw.documentWithCaptionMessage?.message ||
+    raw.editedMessage?.message;
+  if (inner && inner !== raw) {
+    return unwrapMediaMessage(inner, depth + 1);
+  }
+  return raw;
+}
+
 export type AudioStickerErrorCode =
   | "NO_AUDIO_TRACK"
   | "VIDEO_TOO_LARGE"

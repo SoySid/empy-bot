@@ -5,8 +5,11 @@ import {
   AUDIO_STICKER_MAX_SOURCE_BYTES,
   AUDIO_STICKER_MAX_SOURCE_SEC,
   AudioStickerError,
+  PrivateMediaQueueFullError,
   extractAudioStickerFromVideo,
+  runPrivateMediaTask,
   sendAudioSticker,
+  unwrapMediaMessage,
 } from "../services/audio-sticker.service.js";
 import { modifyBalance } from "../services/economy.service.js";
 import { ECONOMY_CONFIG } from "../config/economy.config.js";
@@ -59,7 +62,9 @@ export const saCommand: Command = {
       return;
     }
 
-    const videoMsg = msg.message?.videoMessage || quotedMsg?.videoMessage;
+    const unwrappedDirect = unwrapMediaMessage(msg.message);
+    const unwrappedQuoted = unwrapMediaMessage(quotedMsg);
+    const videoMsg = unwrappedDirect?.videoMessage || unwrappedQuoted?.videoMessage;
     if (!videoMsg) {
       await sock.sendMessage(
         remoteJid,
@@ -116,13 +121,14 @@ export const saCommand: Command = {
       return;
     }
 
-    try {
+    const isPrivateChat = !remoteJid.endsWith("@g.us");
+    const runTask = async () => {
       if (msg.key) {
         await sock.sendMessage(remoteJid, { react: { text: "⏳", key: msg.key } });
       }
 
       const stream = await downloadContentFromMessage(videoMsg, "video");
-      const videoBuffer = await streamToBuffer(stream);
+      const videoBuffer = await streamToBuffer(stream, AUDIO_STICKER_MAX_SOURCE_BYTES);
 
       const prepared = await extractAudioStickerFromVideo(
         videoBuffer,
@@ -134,11 +140,28 @@ export const saCommand: Command = {
       if (msg.key) {
         await sock.sendMessage(remoteJid, { react: { text: "✅", key: msg.key } });
       }
+    };
+
+    try {
+      if (isPrivateChat) {
+        await runPrivateMediaTask(runTask);
+      } else {
+        await runTask();
+      }
     } catch (error) {
       await modifyBalance(senderJid, ECONOMY_CONFIG.COST_STICKER);
 
       if (msg.key) {
         await sock.sendMessage(remoteJid, { react: { text: "⚠️", key: msg.key } });
+      }
+
+      if (error instanceof PrivateMediaQueueFullError) {
+        await sock.sendMessage(
+          remoteJid,
+          { text: `⏳ ${error.message} Se te reembolsaron las fichas.` },
+          { quoted: msg as any }
+        );
+        return;
       }
 
       if (error instanceof AudioStickerError) {

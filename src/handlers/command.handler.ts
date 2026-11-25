@@ -5,7 +5,24 @@ import { isUserIgnoredByRoulette } from "../services/games/ruletarusa.service.js
 
 const userLastCommandTime = new Map<string, number>();
 const userLastHeavyCommandTime = new Map<string, number>();
-const HEAVY_COMMANDS = new Set(["descargar", "d", "mp3", "s", "sticker", "audio", "shazam", "resumen"]);
+const HEAVY_COMMANDS = new Set([
+  "descargar",
+  "d",
+  "mp3",
+  "s",
+  "pegatina",
+  "toimg",
+  "img",
+  "togif",
+  "gif",
+  "sa",
+  "stickeraudio",
+  "audiosticker",
+  "sticker",
+  "audio",
+  "shazam",
+  "resumen",
+]);
 const GENERAL_COMMAND_COOLDOWN_MS = 1200;
 const HEAVY_COMMAND_COOLDOWN_MS = 6000;
 

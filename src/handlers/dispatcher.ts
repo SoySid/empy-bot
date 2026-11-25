@@ -2,7 +2,14 @@ import { WASocket, proto } from "@whiskeysockets/baileys";
 import { resolveOrRegisterUser, syncGroupParticipants } from "../services/db/user.service.js";
 import { recordIncomingMessage } from "../services/db/message.service.js";
 import { processImplicitFeedback } from "../services/feedback.service.js";
-import { extractMessageAuthor, normalizeToPhoneJid } from "../services/whatsapp-identity.js";
+import {
+  extractDigits,
+  extractMessageAuthor,
+  findGroupParticipant,
+  getCachedGroupMetadata,
+  normalizeToPhoneJid,
+} from "../services/whatsapp-identity.js";
+import { unwrapMediaMessage } from "../services/audio-sticker.service.js";
 import { MessageContext } from "./types.js";
 import { handleTriggerStickers } from "./trigger.handler.js";
 import { handlePrefixCommand } from "./command.handler.js";
@@ -54,6 +61,59 @@ function isSenderFlooding(senderJid: string): boolean {
   return entry.count > MAX_MESSAGES_PER_WINDOW;
 }
 
+const ALLOWED_PRIVATE_STICKER_COMMANDS = new Set([
+  "s",
+  "pegatina",
+  "toimg",
+  "img",
+  "togif",
+  "gif",
+  "sa",
+  "stickeraudio",
+  "audiosticker",
+]);
+
+function extractNormalizedPrefixCommand(body: string): string | null {
+  const trimmed = body.trim();
+  if (!trimmed.startsWith(PREFIX)) return null;
+  const withoutPrefix = trimmed.slice(PREFIX.length).trim();
+  const [commandName] = withoutPrefix.split(/\s+/);
+  if (!commandName) return null;
+  return commandName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+async function isTargetGroupMember(
+  sock: WASocket,
+  candidates: Array<string | undefined | null>
+): Promise<boolean> {
+  if (!TARGET_GROUP_JID) return false;
+  const cleanCandidates = candidates.filter((c): c is string => Boolean(c && c.trim()));
+  if (cleanCandidates.length === 0) return false;
+
+  const groupMeta = await getCachedGroupMetadata(sock, TARGET_GROUP_JID).catch(() => null);
+  const participants = groupMeta?.participants;
+  if (!participants || participants.length === 0) return false;
+
+  for (const candidate of cleanCandidates) {
+    if (findGroupParticipant(participants, candidate)) {
+      return true;
+    }
+    const candDigits = extractDigits(candidate);
+    if (!candDigits) continue;
+    const matchAlt = participants.some((p: any) => {
+      const pnDigits = p?.phoneNumber ? extractDigits(String(p.phoneNumber)) : "";
+      const lidDigits = p?.lid ? extractDigits(String(p.lid)) : "";
+      return (pnDigits && pnDigits === candDigits) || (lidDigits && lidDigits === candDigits);
+    });
+    if (matchAlt) return true;
+  }
+
+  return false;
+}
+
 /**
  * Despachador principal de mensajes de WhatsApp.
  * Valida, filtra anti-spam temprano, deduplica, enriquece el contexto y distribuye secuencialmente a los manejadores.
@@ -94,7 +154,7 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     }
   }
 
-  // 3. Cerrojo estricto fail-closed: DMs solo para misiones temporales (owner / destinatario activo); el resto solo grupo objetivo
+  // 3. Cerrojo estricto fail-closed: DMs solo para misiones activas y !s / !sa de integrantes del grupo objetivo
   const remoteJid = msg.key.remoteJid;
   if (!remoteJid) return;
 
@@ -104,12 +164,11 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     if (rawDm.reactionMessage || rawDm.protocolMessage || rawDm.senderKeyDistributionMessage || rawDm.pollUpdateMessage) {
       return;
     }
-    const normDm =
-      rawDm?.ephemeralMessage?.message ||
+    const normDm = unwrapMediaMessage(
       rawDm?.viewOnceMessage?.message ||
       rawDm?.viewOnceMessageV2?.message ||
-      rawDm?.documentWithCaptionMessage?.message ||
-      rawDm;
+      rawDm
+    );
     const dmBody =
       normDm?.conversation ||
       normDm?.extendedTextMessage?.text ||
@@ -123,19 +182,84 @@ export async function dispatchMessage(sock: WASocket, msg: proto.IWebMessageInfo
     const dmSender = dmAuthor.canonicalJid || dmAuthor.rawSender;
     if (!dmSender || isSenderFlooding(dmSender)) return;
 
-    const dmProfile = await resolveOrRegisterUser(dmAuthor.canonicalJid, msg.pushName || null).catch(() => null);
+    // Validar owner en memoria sin crear perfiles en PostgreSQL para desconocidos
     const isOwner =
-      isBotOwner(dmProfile, dmAuthor.canonicalJid) ||
-      isBotOwner(dmProfile, dmAuthor.rawSender) ||
-      (dmAlt ? isBotOwner(dmProfile, dmAlt) : false);
-
-    console.log(`[Dispatcher DM] 📩 de ${remoteJid} (canonical=${dmAuthor.canonicalJid}, owner=${isOwner}): "${dmBody.slice(0, 60)}"`);
+      isBotOwner(null, dmAuthor.canonicalJid) ||
+      isBotOwner(null, dmAuthor.rawSender) ||
+      (dmAlt ? isBotOwner(null, dmAlt) : false);
 
     if (isOwner && dmBody.trim().toLowerCase().startsWith(`${PREFIX}mision`)) {
+      console.log(`[Dispatcher DM] 📩 de ${remoteJid} (owner=true): "${dmBody.slice(0, 60)}"`);
       await handleOwnerMissionCommand(sock, remoteJid, dmBody);
-    } else if (hasActiveMissionFor(dmAuthor.phoneDigits, dmAlt || remoteJid)) {
-      await handleMissionTargetDm(sock, remoteJid, dmAuthor.phoneDigits, dmBody);
+      return;
     }
+
+    if (hasActiveMissionFor(dmAuthor.phoneDigits, dmAlt || remoteJid)) {
+      console.log(`[Dispatcher DM] 📩 misión activa de ${remoteJid}: "${dmBody.slice(0, 60)}"`);
+      await handleMissionTargetDm(sock, remoteJid, dmAuthor.phoneDigits, dmBody);
+      return;
+    }
+
+    const dmCmd = extractNormalizedPrefixCommand(dmBody);
+    if (!dmCmd || !ALLOWED_PRIVATE_STICKER_COMMANDS.has(dmCmd)) {
+      return;
+    }
+
+    const isMember =
+      isOwner ||
+      (await isTargetGroupMember(sock, [dmAuthor.canonicalJid, dmAuthor.rawSender, dmAlt]));
+    if (!isMember) {
+      return;
+    }
+
+    const effectiveJid =
+      dmAuthor.canonicalJid.endsWith("@s.whatsapp.net")
+        ? dmAuthor.canonicalJid
+        : dmAlt && dmAlt.endsWith("@s.whatsapp.net")
+          ? dmAlt
+          : dmAuthor.canonicalJid || dmAuthor.rawSender;
+
+    const dmProfile = await resolveOrRegisterUser(effectiveJid, msg.pushName || null);
+
+    const dmContextInfo =
+      normDm?.extendedTextMessage?.contextInfo ||
+      normDm?.imageMessage?.contextInfo ||
+      normDm?.videoMessage?.contextInfo ||
+      normDm?.audioMessage?.contextInfo ||
+      normDm?.stickerMessage?.contextInfo;
+
+    const dmQuotedMsg = unwrapMediaMessage(dmContextInfo?.quotedMessage);
+    const dmHasMedia = !!(
+      normDm?.imageMessage ||
+      normDm?.videoMessage ||
+      normDm?.stickerMessage
+    );
+    const dmHasQuotedMedia = !!(
+      dmQuotedMsg?.imageMessage ||
+      dmQuotedMsg?.videoMessage ||
+      dmQuotedMsg?.stickerMessage
+    );
+
+    const dmCtx: MessageContext = {
+      sock,
+      msg,
+      remoteJid,
+      body: dmBody,
+      cleanBody: dmBody.trim(),
+      senderProfile: dmProfile,
+      contextInfo: dmContextInfo,
+      quotedMsg: dmQuotedMsg,
+      quotedParticipant: "",
+      quotedSnippet: "",
+      mentionedJidList: [],
+      botDigits: "",
+      botLidDigits: "",
+      hasMedia: dmHasMedia,
+      hasQuotedMedia: dmHasQuotedMedia,
+    };
+
+    console.log(`[Dispatcher DM] 🎯 !${dmCmd} de integrante ${dmProfile.primaryName} (${remoteJid})`);
+    await handlePrefixCommand(dmCtx);
     return;
   }
 

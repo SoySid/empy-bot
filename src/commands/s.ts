@@ -1,6 +1,12 @@
 import { Command, CommandContext } from "./types.js";
 import { downloadContentFromMessage } from "@whiskeysockets/baileys";
 import { createSticker, createAnimatedSticker, animatedStickerToVideo } from "../services/sticker.service.js";
+import {
+  AUDIO_STICKER_MAX_SOURCE_BYTES,
+  PrivateMediaQueueFullError,
+  runPrivateMediaTask,
+  unwrapMediaMessage,
+} from "../services/audio-sticker.service.js";
 import { modifyBalance } from "../services/economy.service.js";
 import { ECONOMY_CONFIG } from "../config/economy.config.js";
 import { streamToBuffer } from "../services/media.service.js";
@@ -61,6 +67,55 @@ export const sCommand: Command = {
       return;
     }
 
+    const unwrappedDirect = unwrapMediaMessage(msg.message);
+    const unwrappedQuoted = unwrapMediaMessage(quotedMsg);
+
+    const targetSticker = unwrappedQuoted?.stickerMessage || unwrappedDirect?.stickerMessage;
+    const imageMsg = unwrappedDirect?.imageMessage || unwrappedQuoted?.imageMessage;
+    const videoMsg = unwrappedDirect?.videoMessage || unwrappedQuoted?.videoMessage;
+
+    if (imageMsg?.viewOnce === true || videoMsg?.viewOnce === true) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: "⚠️ No hago stickers de fotos o videos de una sola vez por privacidad." },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
+    if (!targetSticker && !imageMsg && !videoMsg) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: "⚠️ Respondé a una foto, video o sticker con `!s`." },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
+    if (videoMsg) {
+      const seconds = Number(videoMsg.seconds || 0);
+      if (seconds > 10) {
+        await sock.sendMessage(
+          remoteJid,
+          { text: "⚠️ El video es muy largo. Máximo 10 segundos para stickers." },
+          { quoted: msg as any }
+        );
+        return;
+      }
+    }
+
+    const mediaFileLength = Number(
+      videoMsg?.fileLength || imageMsg?.fileLength || targetSticker?.fileLength || 0
+    );
+    if (mediaFileLength > AUDIO_STICKER_MAX_SOURCE_BYTES) {
+      await sock.sendMessage(
+        remoteJid,
+        { text: "⚠️ El archivo es demasiado pesado (máximo 20 MB)." },
+        { quoted: msg as any }
+      );
+      return;
+    }
+
     // Cobro por uso de servicio multimedia
     const senderJid = senderProfile?.jid || msg.key?.participant || msg.key?.remoteJid || "";
     const balanceCheck = await modifyBalance(senderJid, -ECONOMY_CONFIG.COST_STICKER);
@@ -76,33 +131,8 @@ export const sCommand: Command = {
       return;
     }
 
-    const targetSticker = (quotedMsg as any)?.stickerMessage || msg.message?.stickerMessage;
-    const imageMsg = msg.message?.imageMessage || (quotedMsg as any)?.imageMessage;
-    const videoMsg = msg.message?.videoMessage || (quotedMsg as any)?.videoMessage;
-
-    if (imageMsg?.viewOnce === true || videoMsg?.viewOnce === true) {
-      // Reembolso por ser viewonce
-      await modifyBalance(senderJid, ECONOMY_CONFIG.COST_STICKER);
-      await sock.sendMessage(
-        remoteJid,
-        { text: "⚠️ No hago stickers de fotos o videos de una sola vez por privacidad." },
-        { quoted: msg as any }
-      );
-      return;
-    }
-
-    if (!targetSticker && !imageMsg && !videoMsg) {
-      // Reembolso por no encontrar multimedia
-      await modifyBalance(senderJid, ECONOMY_CONFIG.COST_STICKER);
-      await sock.sendMessage(
-        remoteJid,
-        { text: "⚠️ Respondé a una foto, video o sticker con `!s`." },
-        { quoted: msg as any }
-      );
-      return;
-    }
-
-    try {
+    const isPrivateChat = !remoteJid.endsWith("@g.us");
+    const runTask = async () => {
       if (msg.key) {
         await sock.sendMessage(remoteJid, { react: { text: "⏳", key: msg.key } });
       }
@@ -111,7 +141,7 @@ export const sCommand: Command = {
       if (targetSticker) {
         const isAnimated = Boolean(targetSticker.isAnimated);
         const stream = await (downloadContentFromMessage as any)(targetSticker, "sticker");
-        const stickerBuffer = await streamToBuffer(stream);
+        const stickerBuffer = await streamToBuffer(stream, AUDIO_STICKER_MAX_SOURCE_BYTES);
 
         if (isAnimated) {
           const videoBuffer = await animatedStickerToVideo(stickerBuffer);
@@ -134,23 +164,11 @@ export const sCommand: Command = {
         }
         return;
       }
-      
+
       // CASO 2: Es un video -> Convertir a sticker animado
       if (videoMsg) {
-        const seconds = videoMsg.seconds || 0;
-        if (seconds > 10) {
-          // Reembolsar si el video es demasiado largo
-          await modifyBalance(senderJid, ECONOMY_CONFIG.COST_STICKER);
-          await sock.sendMessage(
-            remoteJid,
-            { text: "⚠️ El video es muy largo. Máximo 10 segundos para stickers." },
-            { quoted: msg as any }
-          );
-          return;
-        }
-
         const stream = await (downloadContentFromMessage as any)(videoMsg, "video");
-        const mediaBuffer = await streamToBuffer(stream);
+        const mediaBuffer = await streamToBuffer(stream, AUDIO_STICKER_MAX_SOURCE_BYTES);
         const stickerBuffer = await createAnimatedSticker(mediaBuffer);
 
         await sock.sendMessage(
@@ -162,7 +180,7 @@ export const sCommand: Command = {
       // CASO 3: Es una imagen -> Convertir a sticker estático
       else if (imageMsg) {
         const stream = await (downloadContentFromMessage as any)(imageMsg, "image");
-        const mediaBuffer = await streamToBuffer(stream);
+        const mediaBuffer = await streamToBuffer(stream, AUDIO_STICKER_MAX_SOURCE_BYTES);
         const stickerBuffer = await createSticker(mediaBuffer);
 
         await sock.sendMessage(
@@ -175,9 +193,25 @@ export const sCommand: Command = {
       if (msg.key) {
         await sock.sendMessage(remoteJid, { react: { text: "✅", key: msg.key } });
       }
+    };
+
+    try {
+      if (isPrivateChat) {
+        await runPrivateMediaTask(runTask);
+      } else {
+        await runTask();
+      }
     } catch (error) {
-      // Reembolso garantizado en caso de falla técnica
+      // Reembolso garantizado en caso de falla técnica o cola saturada
       await modifyBalance(senderJid, ECONOMY_CONFIG.COST_STICKER);
+      if (error instanceof PrivateMediaQueueFullError) {
+        await sock.sendMessage(
+          remoteJid,
+          { text: `⏳ ${error.message} Se te reembolsaron las fichas.` },
+          { quoted: msg as any }
+        );
+        return;
+      }
       console.error("[Sticker Command] Error:", error);
       await sock.sendMessage(
         remoteJid,
