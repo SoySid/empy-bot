@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { proto } from "@whiskeysockets/baileys";
+import sharp from "sharp";
 import {
   AUDIO_STICKER_MIME,
   AudioStickerError,
@@ -66,8 +67,8 @@ function readWireFields(buf: Uint8Array): WireField[] {
   return out;
 }
 
-function generateTestVideo(withAudio: boolean): Buffer {
-  const outPath = path.join(os.tmpdir(), `empy_sa_test_${Date.now()}_${withAudio ? "av" : "v"}.mp4`);
+function generateTestVideo(withAudio: boolean, durationSec = 3): Buffer {
+  const outPath = path.join(os.tmpdir(), `empy_sa_test_${Date.now()}_${withAudio ? "av" : "v"}_${durationSec}.mp4`);
   try {
     const args = withAudio
       ? [
@@ -77,13 +78,15 @@ function generateTestVideo(withAudio: boolean): Buffer {
           "-f",
           "lavfi",
           "-i",
-          "testsrc=size=320x240:rate=15:duration=3",
+          `testsrc2=size=480x480:rate=24:duration=${durationSec}`,
           "-f",
           "lavfi",
           "-i",
-          "sine=frequency=440:duration=3",
+          `sine=frequency=440:duration=${durationSec}`,
           "-c:v",
           "libx264",
+          "-preset",
+          "ultrafast",
           "-pix_fmt",
           "yuv420p",
           "-c:a",
@@ -98,9 +101,11 @@ function generateTestVideo(withAudio: boolean): Buffer {
           "-f",
           "lavfi",
           "-i",
-          "testsrc=size=320x240:rate=15:duration=2",
+          `testsrc=size=320x240:rate=15:duration=${durationSec}`,
           "-c:v",
           "libx264",
+          "-preset",
+          "ultrafast",
           "-pix_fmt",
           "yuv420p",
           "-an",
@@ -114,20 +119,29 @@ function generateTestVideo(withAudio: boolean): Buffer {
 }
 
 async function runTests(): Promise<void> {
-  console.log("1. Probando extracción FFmpeg (video con audio -> WebP + OGG/Opus)...");
-  const avVideo = generateTestVideo(true);
-  const prepared = await extractAudioStickerFromVideo(avVideo, 3);
+  console.log("1. Probando extracción FFmpeg (video 7s con audio -> WebP + OGG/Opus sincronizados)...");
+  const avVideo = generateTestVideo(true, 7);
+  const t0 = Date.now();
+  const prepared = await extractAudioStickerFromVideo(avVideo, 7);
+  const elapsedMs = Date.now() - t0;
 
   assert.equal(prepared.webpBuffer.toString("ascii", 0, 4), "RIFF");
   assert.equal(prepared.webpBuffer.toString("ascii", 8, 12), "WEBP");
   assert.ok(prepared.webpBuffer.includes(Buffer.from("EXIF")), "El WebP debe incluir chunk EXIF");
   assert.ok(prepared.webpBuffer.length <= 500 * 1024, "El WebP debe pesar <= 500 KB");
 
+  const meta = await sharp(prepared.webpBuffer, { animated: true }).metadata();
+  const totalWebpMs = (meta.delay || []).reduce((acc, d) => acc + d, 0);
+  assert.ok(
+    totalWebpMs >= 6500 && totalWebpMs <= 7500,
+    `Duración visual del WebP (${totalWebpMs}ms) debe coincidir con el audio de 7s`
+  );
+
   assert.equal(prepared.audioBuffer.toString("ascii", 0, 4), "OggS");
   assert.ok(prepared.audioBuffer.length > 0 && prepared.audioBuffer.length <= 900 * 1024);
-  assert.equal(prepared.seconds, 3);
+  assert.equal(prepared.seconds, 7);
   console.log(
-    `   OK: WebP=${(prepared.webpBuffer.length / 1024).toFixed(1)}KB, OGG=${(prepared.audioBuffer.length / 1024).toFixed(1)}KB, dur=${prepared.seconds}s`
+    `   OK en ${elapsedMs}ms: WebP=${(prepared.webpBuffer.length / 1024).toFixed(1)}KB (${totalWebpMs}ms), OGG=${(prepared.audioBuffer.length / 1024).toFixed(1)}KB, dur=${prepared.seconds}s`
   );
 
   console.log("2. Probando rechazo de video sin audio...");
@@ -216,7 +230,7 @@ async function runTests(): Promise<void> {
     const decodedAudio = proto.Message.AudioMessage.decode(audioField.bytes);
     assert.equal(decodedAudio.mimetype, AUDIO_STICKER_MIME);
     assert.equal(decodedAudio.ptt, false);
-    assert.equal(decodedAudio.seconds, 3);
+    assert.equal(decodedAudio.seconds, 7);
   };
 
   // Top-level encode

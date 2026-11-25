@@ -243,10 +243,12 @@ async function encodeAnimatedWebp(
   await runFfmpeg([
     "-loglevel",
     "error",
+    "-threads",
+    "0",
     "-i",
     inputPath,
     "-t",
-    String(durationSec),
+    durationSec.toFixed(3),
     "-vf",
     `scale=512:512:force_original_aspect_ratio=increase,crop=512:512,fps=${fps},setsar=1`,
     "-loop",
@@ -255,7 +257,7 @@ async function encodeAnimatedWebp(
     "-vcodec",
     "libwebp",
     "-compression_level",
-    "4",
+    "1",
     "-q:v",
     String(quality),
     outputPath,
@@ -276,7 +278,7 @@ async function encodeOggOpus(
       "-i",
       inputPath,
       "-t",
-      String(durationSec),
+      durationSec.toFixed(3),
       "-vn",
       "-map",
       "0:a:0",
@@ -342,20 +344,24 @@ export async function extractAudioStickerFromVideo(
   try {
     await fs.promises.writeFile(inputPath, videoBuffer);
 
-    let audioBuffer = await encodeOggOpus(
-      inputPath,
-      oggPath,
-      AUDIO_STICKER_MAX_DURATION_SEC,
-      "48k"
+    const probedSource = await probeDurationSeconds(inputPath);
+    const rawDuration = probedSource ?? hintSeconds ?? AUDIO_STICKER_MAX_DURATION_SEC;
+    const targetDuration = Math.max(
+      0.5,
+      Math.min(AUDIO_STICKER_MAX_DURATION_SEC, rawDuration)
     );
 
+    // Preset rápido calibrado según duración para entrar en <= 500 KB en una sola pasada
+    const initialFps = targetDuration > 5 ? 8 : 10;
+    const initialQuality = targetDuration > 5 ? 30 : 38;
+
+    let [audioBuffer, webpBuffer] = await Promise.all([
+      encodeOggOpus(inputPath, oggPath, targetDuration, "48k"),
+      encodeAnimatedWebp(inputPath, webpPath, targetDuration, initialFps, initialQuality),
+    ]);
+
     if (audioBuffer.length > MAX_AUDIO_BYTES) {
-      audioBuffer = await encodeOggOpus(
-        inputPath,
-        oggPath,
-        AUDIO_STICKER_MAX_DURATION_SEC,
-        "24k"
-      );
+      audioBuffer = await encodeOggOpus(inputPath, oggPath, targetDuration, "24k");
     }
 
     if (audioBuffer.length > MAX_AUDIO_BYTES) {
@@ -365,30 +371,21 @@ export async function extractAudioStickerFromVideo(
       );
     }
 
-    const probedDuration = await probeDurationSeconds(oggPath);
-    const rawDuration = probedDuration ?? hintSeconds ?? AUDIO_STICKER_MAX_DURATION_SEC;
-    const clampedDuration = Math.max(
-      1,
-      Math.min(AUDIO_STICKER_MAX_DURATION_SEC, Math.round(rawDuration))
-    );
-
-    let webpBuffer = await encodeAnimatedWebp(inputPath, webpPath, clampedDuration, 12, 45);
+    // Si supera 500 KB, reducir fps/calidad pero mantener exactamente la misma duración que el audio
     if (webpBuffer.length > MAX_WEBP_BYTES) {
-      webpBuffer = await encodeAnimatedWebp(
-        inputPath,
-        webpPath,
-        Math.min(clampedDuration, 6),
-        8,
-        28
-      );
+      webpBuffer = await encodeAnimatedWebp(inputPath, webpPath, targetDuration, 6, 20);
     }
 
     const webpWithExif = injectWebpExif(webpBuffer);
+    const clampedSeconds = Math.max(
+      1,
+      Math.min(AUDIO_STICKER_MAX_DURATION_SEC, Math.round(targetDuration))
+    );
 
     return {
       webpBuffer: webpWithExif,
       audioBuffer,
-      seconds: clampedDuration,
+      seconds: clampedSeconds,
     };
   } finally {
     await cleanup();
